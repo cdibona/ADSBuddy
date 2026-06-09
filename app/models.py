@@ -42,6 +42,9 @@ class User(Base):
     triggers: Mapped[list["Trigger"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
     )
+    channels: Mapped[list["NotificationChannel"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class UserSession(Base):
@@ -229,4 +232,60 @@ class TriggerFiring(Base):
     __table_args__ = (
         Index("ix_trigger_firings_trigger_fired", "trigger_id", "fired_at"),
         Index("ix_trigger_firings_fired", "fired_at"),
+    )
+
+
+# ---- Notifications ---------------------------------------------------------
+
+CHANNEL_KINDS = ("discord", "email", "webhook", "sms_twilio")
+
+
+class NotificationChannel(Base):
+    """A per-user delivery destination. `config` is kind-specific JSON.
+
+    - discord:    {"webhook_url": "...", "username": "ADSBuddy"}
+    - email:      {"to_address": "user@example.com"}
+    - webhook:    {"url": "...", "auth_header": "Bearer ..." (optional)}
+    - sms_twilio: {"to_phone": "+15551234567"}
+    """
+
+    __tablename__ = "notification_channels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    user: Mapped[User] = relationship(back_populates="channels")
+
+
+class NotificationDelivery(Base):
+    """One row per delivery attempt — success or failure."""
+
+    __tablename__ = "notification_deliveries"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    # Null when this delivery was a "send test", not tied to a firing.
+    firing_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("trigger_firings.id", ondelete="SET NULL"), nullable=True
+    )
+    channel_id: Mapped[int] = mapped_column(
+        ForeignKey("notification_channels.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)  # "sent" | "failed"
+    error: Mapped[str | None] = mapped_column(Text)
+    is_test: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    __table_args__ = (
+        Index("ix_notification_deliveries_channel_at", "channel_id", "created_at"),
     )

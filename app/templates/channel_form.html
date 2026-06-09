@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — ADSBuddy{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post" action="{{ action }}" class="card stack trigger-form">
+
+  <label>Name
+    <input name="name" required maxlength="128"
+           value="{{ channel.name if channel else kind_label }}">
+    <small class="muted">Display label only.</small>
+  </label>
+
+  <label class="checkbox">
+    <input type="checkbox" name="is_active" value="true"
+           {% if channel is none or channel.is_active %}checked{% endif %}>
+    Active (deliveries only attempted when this is checked)
+  </label>
+
+  {% if kind == "discord" %}
+    <fieldset>
+      <legend>Discord</legend>
+      <label>Webhook URL
+        <input name="webhook_url" required
+               placeholder="https://discord.com/api/webhooks/.../..."
+               value="{{ (channel.config.get('webhook_url') if channel else '') or '' }}">
+        <small class="muted">
+          Create one under Server Settings → Integrations → Webhooks in Discord.
+        </small>
+      </label>
+      <label>Bot display name (optional)
+        <input name="username" placeholder="ADSBuddy"
+               value="{{ (channel.config.get('username') if channel else '') or '' }}">
+      </label>
+    </fieldset>
+  {% elif kind == "email" %}
+    <fieldset>
+      <legend>Email</legend>
+      <label>Recipient address
+        <input name="to_address" required type="email"
+               placeholder="you@example.com"
+               value="{{ (channel.config.get('to_address') if channel else '') or '' }}">
+      </label>
+      <small class="muted">
+        Requires SMTP credentials in
+        <a href="/admin/settings">admin settings</a> (<code>smtp_host</code>,
+        <code>smtp_port</code>, <code>smtp_username</code>,
+        <code>smtp_password</code>, <code>smtp_from</code>).
+      </small>
+    </fieldset>
+  {% elif kind == "webhook" %}
+    <fieldset>
+      <legend>Generic HTTP webhook</legend>
+      <label>URL
+        <input name="url" required
+               placeholder="https://example.com/adsbuddy"
+               value="{{ (channel.config.get('url') if channel else '') or '' }}">
+        <small class="muted">
+          We POST JSON with <code>trigger</code> and <code>firing</code> objects.
+        </small>
+      </label>
+      <label>Authorization header (optional)
+        <input name="auth_header"
+               placeholder="Bearer abc123 or Basic ..."
+               value="{{ (channel.config.get('auth_header') if channel else '') or '' }}">
+      </label>
+    </fieldset>
+  {% elif kind == "sms_twilio" %}
+    <fieldset>
+      <legend>SMS via Twilio</legend>
+      <label>Recipient phone number (E.164)
+        <input name="to_phone" required
+               placeholder="+15551234567"
+               value="{{ (channel.config.get('to_phone') if channel else '') or '' }}">
+      </label>
+      <small class="muted">
+        Requires Twilio creds in
+        <a href="/admin/settings">admin settings</a> (<code>twilio_account_sid</code>,
+        <code>twilio_auth_token</code>, <code>twilio_from_number</code>).
+      </small>
+    </fieldset>
+  {% endif %}
+
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a class="btn-secondary" href="/profile">Cancel</a>
+  </div>
+</form>
+{% endblock %}

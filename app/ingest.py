@@ -19,9 +19,9 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import flight_routes, triggers as trigger_engine
+from app import flight_routes, notifications, triggers as trigger_engine
 from app.database import SessionLocal
-from app.models import Aircraft, Sighting
+from app.models import Aircraft, Sighting, TriggerFiring
 from app.settings_store import get as get_setting
 
 log = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
         t.origin_icaos.strip() or t.destination_icaos.strip() for t in active_triggers
     )
 
-    firings = 0
+    new_firings: list[TriggerFiring] = []
     for entry in entries:
         hex_id = _strip(entry.get("hex"))
         if not hex_id:
@@ -183,13 +183,20 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
                 origin_icao=origin,
                 destination_icao=destination,
             )
-            firings += await trigger_engine.evaluate_and_record(
-                session, active_triggers, facts
+            new_firings.extend(
+                await trigger_engine.evaluate_and_record(session, active_triggers, facts)
             )
 
+    # Commit firings first so they get IDs and survive even if delivery crashes.
     await session.commit()
-    if firings:
-        log.info("Trigger firings this tick: %d", firings)
+    if new_firings:
+        log.info("Trigger firings this tick: %d", len(new_firings))
+        try:
+            await notifications.deliver_for_firings(session, client, new_firings)
+            await session.commit()
+        except Exception:
+            log.exception("Notification dispatch failed; firings are still recorded.")
+            await session.rollback()
     return len(entries)
 
 

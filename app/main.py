@@ -15,6 +15,7 @@ from app import (
     routes_admin,
     routes_auth,
     routes_pages,
+    routes_profile,
     routes_triggers,
 )
 from app.database import SessionLocal
@@ -44,6 +45,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(routes_auth.router)
 app.include_router(routes_pages.router)
 app.include_router(routes_triggers.router)
+app.include_router(routes_profile.router)
 app.include_router(routes_admin.router)
 
 

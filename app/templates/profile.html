@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Profile — ADSBuddy{% endblock %}
+{% block content %}
+<h1>Profile — {{ user.username }}</h1>
+
+<div class="card">
+  <h2>Notification channels</h2>
+  <p class="muted">
+    Every trigger you own delivers to all of your <strong>active</strong> channels.
+    "Send test" exercises the same delivery code path the trigger uses, so the
+    success/failure tells you whether the channel is wired up correctly.
+  </p>
+
+  <div class="add-row">
+    {% for kind, label in kinds %}
+      <a class="btn-secondary" href="/profile/channels/new?kind={{ kind }}">+ {{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <table class="grid">
+    <thead><tr>
+      <th>Kind</th><th>Name</th><th>Destination</th><th>Active</th><th>Last delivery</th><th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for c in channels %}
+      {% set last = last_by_channel.get(c.id) %}
+      <tr>
+        <td>{{ kind_label[c.kind] }}</td>
+        <td>{{ c.name }}</td>
+        <td>
+          {% if c.kind == "discord" %}<code>{{ (c.config.get("webhook_url") or "")[:60] }}{% if c.config.get("webhook_url") and c.config["webhook_url"]|length > 60 %}…{% endif %}</code>
+          {% elif c.kind == "email" %}<code>{{ c.config.get("to_address") }}</code>
+          {% elif c.kind == "webhook" %}<code>{{ (c.config.get("url") or "")[:60] }}{% if c.config.get("url") and c.config["url"]|length > 60 %}…{% endif %}</code>
+          {% elif c.kind == "sms_twilio" %}<code>{{ c.config.get("to_phone") }}</code>
+          {% endif %}
+        </td>
+        <td>{{ "yes" if c.is_active else "no" }}</td>
+        <td>
+          {% if last %}
+            <span class="status status-{{ last.status }}">{{ last.status }}</span>
+            {% if last.is_test %}<span class="badge">test</span>{% endif %}
+            <br>
+            <span class="muted">{{ last.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+            {% if last.error %}<br><span class="muted" title="{{ last.error }}">{{ last.error[:80] }}{% if last.error|length > 80 %}…{% endif %}</span>{% endif %}
+          {% else %}
+            <span class="muted">never</span>
+          {% endif %}
+        </td>
+        <td class="row-actions">
+          <a href="/profile/channels/{{ c.id }}/edit">Edit</a>
+          <form method="post" action="/profile/channels/{{ c.id }}/test" class="inline">
+            <button type="submit">Send test</button>
+          </form>
+          <form method="post" action="/profile/channels/{{ c.id }}/delete" class="inline"
+                onsubmit="return confirm('Delete channel {{ c.name }}?');">
+            <button type="submit" class="danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">No channels yet. Add one with the buttons above.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

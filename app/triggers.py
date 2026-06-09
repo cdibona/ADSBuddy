@@ -98,16 +98,17 @@ async def evaluate_and_record(
     session: AsyncSession,
     triggers: Iterable[Trigger],
     facts: AircraftFacts,
-) -> int:
+) -> list[TriggerFiring]:
     """Evaluate every trigger against one aircraft and record firings.
 
-    Returns the number of new firings created (0 or more).
+    Returns the list of newly-added (uncommitted) TriggerFiring rows.
+    Caller commits.
     """
     if not triggers:
-        return 0
+        return []
     now = datetime.now(timezone.utc)
     now_year = now.year
-    created = 0
+    created: list[TriggerFiring] = []
     for trigger in triggers:
         if not matches(trigger, facts, now_year):
             continue
@@ -125,20 +126,19 @@ async def evaluate_and_record(
         ).first()
         if already:
             continue
-        session.add(
-            TriggerFiring(
-                trigger_id=trigger.id,
-                icao_hex=facts.icao_hex,
-                callsign=facts.callsign,
-                registration=facts.registration,
-                type_code=facts.type_code,
-                year=facts.year,
-                lat=facts.lat,
-                lon=facts.lon,
-                altitude_baro=facts.altitude_baro,
-                origin_icao=facts.origin_icao,
-                destination_icao=facts.destination_icao,
-            )
+        firing = TriggerFiring(
+            trigger_id=trigger.id,
+            icao_hex=facts.icao_hex,
+            callsign=facts.callsign,
+            registration=facts.registration,
+            type_code=facts.type_code,
+            year=facts.year,
+            lat=facts.lat,
+            lon=facts.lon,
+            altitude_baro=facts.altitude_baro,
+            origin_icao=facts.origin_icao,
+            destination_icao=facts.destination_icao,
         )
-        created += 1
+        session.add(firing)
+        created.append(firing)
     return created

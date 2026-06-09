@@ -127,3 +127,8 @@ a.btn:hover, a.btn-secondary:hover { text-decoration: none; opacity: 0.9; }
 
 ul.cond { margin: 0; padding-left: 1.1rem; }
 ul.cond li { margin: 0; }
+
+.add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
+.status { font-weight: 600; padding: 0 0.35rem; border-radius: 3px; }
+.status-sent { color: var(--ok); }
+.status-failed { color: var(--danger); }

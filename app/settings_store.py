@@ -79,6 +79,62 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
             "How long to trust a cached adsbdb.com lookup before re-querying."
         ),
     ),
+    # ---- Notification dispatch ---------------------------------------------
+    SettingSpec(
+        key="notifications_enabled",
+        default="true",
+        description=(
+            "Master switch. When false, trigger firings are still recorded "
+            "but no channels are dispatched (useful for debugging or maintenance)."
+        ),
+    ),
+    SettingSpec(
+        key="smtp_host",
+        default="",
+        description="SMTP server host for the 'email' channel kind (blank = email disabled).",
+    ),
+    SettingSpec(
+        key="smtp_port",
+        default="587",
+        description="SMTP server port. 587 for STARTTLS, 465 for SMTPS, 25 for plaintext.",
+    ),
+    SettingSpec(
+        key="smtp_username",
+        default="",
+        description="SMTP auth username (blank = no auth).",
+    ),
+    SettingSpec(
+        key="smtp_password",
+        default="",
+        description="SMTP auth password.",
+        secret=True,
+    ),
+    SettingSpec(
+        key="smtp_from",
+        default="",
+        description="From: address used on outgoing notification emails.",
+    ),
+    SettingSpec(
+        key="smtp_use_tls",
+        default="true",
+        description="Use STARTTLS on submit (true/false). Set false for plaintext (port 25) only.",
+    ),
+    SettingSpec(
+        key="twilio_account_sid",
+        default="",
+        description="Twilio Account SID for the 'sms_twilio' channel kind.",
+    ),
+    SettingSpec(
+        key="twilio_auth_token",
+        default="",
+        description="Twilio Auth Token.",
+        secret=True,
+    ),
+    SettingSpec(
+        key="twilio_from_number",
+        default="",
+        description="Twilio sender phone number in E.164 (e.g. +15551234567).",
+    ),
 )
 
 
