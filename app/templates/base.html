@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ADSBuddy{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  <header class="topbar">
+    <div class="brand">
+      <a href="/">ADSBuddy</a>
+    </div>
+    <nav class="nav">
+      {% if user %}
+        <a href="/">Map</a>
+        <a href="/aircraft">Recent</a>
+        <a href="/triggers">Triggers</a>
+        <a href="/firings">Firings</a>
+        {% if user.is_admin %}
+          <a href="/admin">Users</a>
+          <a href="/admin/settings">Settings</a>
+        {% endif %}
+        <span class="user">{{ user.username }}{% if user.is_admin %} (admin){% endif %}</span>
+        <form method="post" action="/logout" class="inline">
+          <button type="submit" class="link">Sign out</button>
+        </form>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="{% block main_class %}content{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

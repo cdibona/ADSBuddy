@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ site_title }} — Map{% endblock %}
+{% block body_class %}map{% endblock %}
+{% block main_class %}map-frame{% endblock %}
+{% block content %}
+<iframe
+  src="{{ radio_base_url }}/"
+  title="tar1090 map ({{ radio_base_url }})"
+  loading="eager"
+  referrerpolicy="no-referrer"
+  allow="geolocation"
+></iframe>
+{% endblock %}

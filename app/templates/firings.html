@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Trigger firings — ADSBuddy{% endblock %}
+{% block content %}
+<h1>Trigger firings</h1>
+<p class="muted">Most recent 200, newest first.</p>
+<table class="grid">
+  <thead><tr>
+    <th>When (UTC)</th>
+    <th>Trigger</th>
+    <th>Aircraft</th>
+    <th>Callsign</th>
+    <th>Type</th>
+    <th>Year</th>
+    <th>Route</th>
+    <th>Altitude</th>
+  </tr></thead>
+  <tbody>
+    {% for f, t in rows %}
+    <tr>
+      <td>{{ f.fired_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+      <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
+      <td><code>{{ f.icao_hex }}</code>{% if f.registration %} / {{ f.registration }}{% endif %}</td>
+      <td>{{ f.callsign or "" }}</td>
+      <td>{{ f.type_code or "" }}</td>
+      <td>{{ f.year or "" }}</td>
+      <td>{{ (f.origin_icao or "?") }} → {{ (f.destination_icao or "?") }}</td>
+      <td>{{ f.altitude_baro or "" }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

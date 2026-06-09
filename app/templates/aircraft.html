@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Recent aircraft — ADSBuddy{% endblock %}
+{% block content %}
+<h1>Recent aircraft</h1>
+<p class="muted">Most recently seen 200 aircraft, newest first.</p>
+<table class="grid">
+  <thead>
+    <tr>
+      <th>Hex</th><th>Reg</th><th>Type</th><th>Description</th>
+      <th>Owner / Operator</th><th>Year</th><th>Last seen (UTC)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in aircraft %}
+    <tr>
+      <td><code>{{ a.icao_hex }}</code></td>
+      <td>{{ a.registration or "" }}</td>
+      <td>{{ a.type_code or "" }}</td>
+      <td>{{ a.description or "" }}</td>
+      <td>{{ a.owner_op or "" }}</td>
+      <td>{{ a.year or "" }}</td>
+      <td>{{ a.last_seen.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">No aircraft seen yet — the ingester may still be warming up.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

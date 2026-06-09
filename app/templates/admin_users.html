@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Users — ADSBuddy admin{% endblock %}
+{% block content %}
+<h1>Users</h1>
+
+<table class="grid">
+  <thead><tr><th>Username</th><th>Role</th><th>Active</th><th>Created</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td>{{ "admin" if u.is_admin else "user" }}</td>
+      <td>{{ "yes" if u.is_active else "no" }}</td>
+      <td>{{ u.created_at.strftime("%Y-%m-%d") }}</td>
+      <td class="row-actions">
+        <form method="post" action="/admin/users/{{ u.id }}/password" class="inline">
+          <input type="password" name="password" placeholder="new password" required minlength="6">
+          <button type="submit">Reset password</button>
+        </form>
+        {% if u.id != user.id and u.is_active %}
+        <form method="post" action="/admin/users/{{ u.id }}/deactivate" class="inline">
+          <button type="submit" class="danger">Deactivate</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Create user</h2>
+<form method="post" action="/admin/users" class="card stack">
+  <label>Username <input name="username" required></label>
+  <label>Password <input type="password" name="password" required minlength="6"></label>
+  <label class="checkbox"><input type="checkbox" name="is_admin" value="true"> Admin</label>
+  <button type="submit">Create</button>
+</form>
+{% endblock %}

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.template
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+README.md
+LICENSE
+node_modules

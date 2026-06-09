@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — ADSBuddy{% endblock %}
+{% block content %}
+<h1>{{ title }}</h1>
+<form method="post" action="{{ action }}" class="card stack trigger-form">
+  <label>Name
+    <input name="name" required maxlength="128"
+           value="{{ trigger.name if trigger else '' }}">
+  </label>
+
+  <label>Notes
+    <textarea name="notes" rows="2">{{ trigger.notes if trigger else '' }}</textarea>
+  </label>
+
+  <label class="checkbox">
+    <input type="checkbox" name="is_active" value="true"
+           {% if trigger is none or trigger.is_active %}checked{% endif %}>
+    Active
+  </label>
+
+  <fieldset>
+    <legend>Aircraft identity (any match)</legend>
+    <label>Tail numbers (registrations)
+      <input name="tail_patterns" placeholder="e.g. N123AB, N9*FN"
+             value="{{ trigger.tail_patterns if trigger else '' }}">
+      <small class="muted">Comma-separated. <code>*</code> wildcard supported.</small>
+    </label>
+    <label>Flight callsigns
+      <input name="flight_patterns" placeholder="e.g. SKW3470, DAL*"
+             value="{{ trigger.flight_patterns if trigger else '' }}">
+      <small class="muted">Comma-separated. <code>*</code> wildcard supported.</small>
+    </label>
+    <label>ICAO type codes
+      <input name="type_codes" placeholder="e.g. B738, B739, C172"
+             value="{{ trigger.type_codes if trigger else '' }}">
+      <small class="muted">Exact match. The <code>t</code> field from the radio (e.g. B39M, E75L).</small>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend>Age</legend>
+    <div class="grid-2">
+      <label>Min year built
+        <input type="number" name="min_year"
+               value="{{ trigger.min_year if (trigger and trigger.min_year is not none) else '' }}">
+      </label>
+      <label>Max year built
+        <input type="number" name="max_year"
+               value="{{ trigger.max_year if (trigger and trigger.max_year is not none) else '' }}">
+      </label>
+      <label>Min age (years)
+        <input type="number" name="min_age_years" placeholder="e.g. 50 for &gt;= 50yo"
+               value="{{ trigger.min_age_years if (trigger and trigger.min_age_years is not none) else '' }}">
+      </label>
+      <label>Max age (years)
+        <input type="number" name="max_age_years"
+               value="{{ trigger.max_age_years if (trigger and trigger.max_age_years is not none) else '' }}">
+      </label>
+    </div>
+    <small class="muted">Use min/max age for relative ("older than 50 years"); min/max year for absolute.</small>
+  </fieldset>
+
+  <fieldset>
+    <legend>Route (requires <code>route_lookup_enabled</code>)</legend>
+    <label>Origin ICAO codes
+      <input name="origin_icaos" placeholder="e.g. KSEA, KBFI"
+             value="{{ trigger.origin_icaos if trigger else '' }}">
+    </label>
+    <label>Destination ICAO codes
+      <input name="destination_icaos" placeholder="e.g. KSEA, KPAE"
+             value="{{ trigger.destination_icaos if trigger else '' }}">
+    </label>
+    <small class="muted">4-letter ICAO codes only. Origin/destination is fetched from adsbdb.com by callsign.</small>
+  </fieldset>
+
+  <label>Cooldown (seconds)
+    <input type="number" name="cooldown_seconds" min="0"
+           value="{{ trigger.cooldown_seconds if trigger else 3600 }}">
+    <small class="muted">Same (trigger, aircraft) won't re-fire within this window.</small>
+  </label>
+
+  <div class="actions">
+    <button type="submit">Save</button>
+    <a class="btn-secondary" href="/triggers">Cancel</a>
+  </div>
+</form>
+{% endblock %}

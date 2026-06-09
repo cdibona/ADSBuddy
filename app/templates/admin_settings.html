@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Settings — ADSBuddy admin{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<p class="muted">Runtime config stored in Postgres. Changes take effect on next read by the relevant subsystem.</p>
+
+{% for s in settings %}
+<form method="post" action="/admin/settings/{{ s.key }}" class="card setting">
+  <div class="setting-head">
+    <code>{{ s.key }}</code>
+    {% if s.secret %}<span class="badge">secret</span>{% endif %}
+  </div>
+  <p class="muted">{{ s.description }}</p>
+  <div class="setting-row">
+    {% if s.secret %}
+      <input type="password" name="value" value="{{ s.value }}" placeholder="(unset)">
+    {% else %}
+      <input type="text" name="value" value="{{ s.value }}">
+    {% endif %}
+    <button type="submit">Save</button>
+  </div>
+</form>
+{% endfor %}
+{% endblock %}

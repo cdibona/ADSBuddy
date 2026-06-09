@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - adsbuddy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      ADSBUDDY_SECRET_KEY: ${ADSBUDDY_SECRET_KEY}
+      ADSBUDDY_ADMIN_USERNAME: ${ADSBUDDY_ADMIN_USERNAME}
+      ADSBUDDY_ADMIN_PASSWORD: ${ADSBUDDY_ADMIN_PASSWORD}
+      ADSBUDDY_TEST_MODE: ${ADSBUDDY_TEST_MODE:-0}
+    ports:
+      # Bind only to localhost and the tailnet IP — never to 0.0.0.0.
+      # ADSBUDDY_TAILNET_IP comes from .env (run `tailscale ip -4` to find it).
+      - "127.0.0.1:${ADSBUDDY_PORT}:8000"
+      - "${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}:8000"
+
+volumes:
+  adsbuddy_pgdata:
