@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import flight_routes, notifications, triggers as trigger_engine
@@ -27,6 +29,8 @@ from app.settings_store import get as get_setting
 log = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL = 5.0
+_CLEANUP_INTERVAL = 3600.0  # run at most once per hour
+_last_cleanup: float = 0.0
 
 
 def _coerce_int(value: Any) -> int | None:
@@ -52,6 +56,83 @@ def _strip(value: Any) -> str | None:
         return None
     s = str(value).strip()
     return s or None
+
+
+def _parse_retention_days(raw: str | None) -> int | None:
+    """Parse sightings_retention_days setting.
+
+    Returns None if cleanup is disabled (value <= 0).
+    Falls back to 30 days on invalid/missing input.
+    """
+    if raw is None or raw.strip() == "":
+        return 30
+    try:
+        days = int(raw.strip())
+    except ValueError:
+        return 30
+    if days <= 0:
+        return None  # disabled
+    return days
+
+
+async def _maybe_cleanup_sightings() -> None:
+    """Prune old sightings rows — at most once per ``_CLEANUP_INTERVAL`` seconds.
+
+    Runs in its own session, independent of the ingest tick session.
+    Failure is non-fatal: logs a warning and resets the timer for a retry.
+    """
+    global _last_cleanup
+    now = time.monotonic()
+    if now - _last_cleanup < _CLEANUP_INTERVAL:
+        return
+    _last_cleanup = now
+
+    t0 = time.monotonic()
+    total_deleted = 0
+    cutoff: datetime | None = None
+    try:
+        async with SessionLocal() as session:
+            raw = await get_setting(session, "sightings_retention_days")
+            days = _parse_retention_days(raw)
+            if days is None:
+                log.debug("Sightings retention disabled; skipping cleanup.")
+                return
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            batch_size = 5_000
+            while True:
+                # Two-step batch delete: select IDs first, then delete.
+                # Avoids the PostgreSQL restriction on mutating a table
+                # that appears in a subquery of the same DELETE statement.
+                id_rows = (
+                    await session.execute(
+                        select(Sighting.id)
+                        .where(Sighting.seen_at < cutoff)
+                        .limit(batch_size)
+                    )
+                ).scalars().all()
+                if not id_rows:
+                    break
+                result = await session.execute(
+                    delete(Sighting).where(Sighting.id.in_(id_rows))
+                )
+                total_deleted += result.rowcount
+                await session.commit()
+    except Exception:
+        log.warning("Sightings cleanup failed; will retry next cycle.", exc_info=True)
+        _last_cleanup = 0.0  # reset so we retry sooner
+        return
+
+    elapsed = time.monotonic() - t0
+    cutoff_str = cutoff.strftime("%Y-%m-%d") if cutoff else "?"
+    if total_deleted:
+        log.info(
+            "Sightings cleanup: deleted %d rows older than %s (%.1fs).",
+            total_deleted,
+            cutoff_str,
+            elapsed,
+        )
+    else:
+        log.debug("Sightings cleanup: nothing to prune (cutoff %s).", cutoff_str)
 
 
 async def _upsert_aircraft(session: AsyncSession, entry: dict[str, Any]) -> Aircraft | None:
@@ -147,6 +228,7 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
     )
 
     new_firings: list[TriggerFiring] = []
+    blocked_total = 0
     for entry in entries:
         hex_id = _strip(entry.get("hex"))
         if not hex_id:
@@ -183,14 +265,24 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
                 origin_icao=origin,
                 destination_icao=destination,
             )
-            new_firings.extend(
-                await trigger_engine.evaluate_and_record(session, active_triggers, facts)
+            firings, blocked = await trigger_engine.evaluate_and_record(
+                session, active_triggers, facts
             )
+            new_firings.extend(firings)
+            blocked_total += blocked
 
-    # Commit firings first so they get IDs and survive even if delivery crashes.
+    # Commit sightings/aircraft first so they survive even if delivery crashes.
     await session.commit()
+
+    log.info(
+        "Tick: %d aircraft, %d active trigger(s), %d firing(s), %d cooldown-blocked.",
+        len(entries),
+        len(active_triggers),
+        len(new_firings),
+        blocked_total,
+    )
+
     if new_firings:
-        log.info("Trigger firings this tick: %d", len(new_firings))
         try:
             await notifications.deliver_for_firings(session, client, new_firings)
             await session.commit()
@@ -213,10 +305,10 @@ async def run_forever(stop_event: asyncio.Event) -> None:
                             interval = max(1.0, float(raw))
                         except ValueError:
                             pass
-                    count = await _tick(client, session)
-                log.debug("Ingested %d aircraft entries.", count)
+                    await _tick(client, session)
             except Exception:
                 log.exception("Ingest tick failed; will retry.")
+            await _maybe_cleanup_sightings()
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=interval)
             except asyncio.TimeoutError:

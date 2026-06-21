@@ -60,8 +60,21 @@
     <small class="muted">Use min/max age for relative ("older than 50 years"); min/max year for absolute.</small>
   </fieldset>
 
-  <fieldset>
-    <legend>Route (requires <code>route_lookup_enabled</code>)</legend>
+  {% if not route_lookup_enabled %}
+  <p class="muted route-disabled-note">
+    Route lookup is off — origin/destination conditions won't match until
+    {% if user.is_admin %}<a href="/admin/settings">enabled in Settings</a>{% else %}an admin enables it in Settings{% endif %}.
+    Values entered here are saved.
+  </p>
+  {% endif %}
+  <fieldset{% if not route_lookup_enabled %} class="fieldset-disabled"{% endif %}>
+    <legend>Route
+      {% if route_lookup_enabled %}
+        <span class="badge badge-active">enabled</span>
+      {% else %}
+        <span class="badge badge-paused">disabled</span>
+      {% endif %}
+    </legend>
     <label>Origin ICAO codes
       <input name="origin_icaos" placeholder="e.g. KSEA, KBFI"
              value="{{ trigger.origin_icaos if trigger else '' }}">

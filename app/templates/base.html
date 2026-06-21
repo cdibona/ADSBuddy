@@ -13,14 +13,15 @@
     </div>
     <nav class="nav">
       {% if user %}
-        <a href="/">Map</a>
-        <a href="/aircraft">Recent</a>
-        <a href="/triggers">Triggers</a>
-        <a href="/firings">Firings</a>
-        <a href="/profile">Profile</a>
+        {% set path = request.url.path %}
+        <a href="/" {% if path == "/" %}aria-current="page"{% endif %}>Map</a>
+        <a href="/aircraft" {% if path.startswith("/aircraft") %}aria-current="page"{% endif %}>Aircraft</a>
+        <a href="/triggers" {% if path.startswith("/triggers") %}aria-current="page"{% endif %}>Triggers</a>
+        <a href="/firings" {% if path.startswith("/firings") %}aria-current="page"{% endif %}>Firings</a>
+        <a href="/profile" {% if path.startswith("/profile") %}aria-current="page"{% endif %}>Profile</a>
         {% if user.is_admin %}
-          <a href="/admin">Users</a>
-          <a href="/admin/settings">Settings</a>
+          <a href="/admin" {% if path == "/admin" %}aria-current="page"{% endif %}>Users</a>
+          <a href="/admin/settings" {% if path == "/admin/settings" %}aria-current="page"{% endif %}>Settings</a>
         {% endif %}
         <span class="user">{{ user.username }}{% if user.is_admin %} (admin){% endif %}</span>
         <form method="post" action="/logout" class="inline">
@@ -29,6 +30,9 @@
       {% endif %}
     </nav>
   </header>
+  {% if flash is defined and flash %}
+  <div class="flash flash-{{ flash[0] }}" role="alert">{{ flash[1] }}</div>
+  {% endif %}
   <main class="{% block main_class %}content{% endblock %}">
     {% block content %}{% endblock %}
   </main>

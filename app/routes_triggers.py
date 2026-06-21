@@ -3,21 +3,45 @@
 A non-admin user only sees and can edit their own triggers and firings.
 An admin can see everyone's (the listings include an owner column).
 """
+
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+import math
+import urllib.parse
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app import settings_store
 from app.database import get_session
 from app.deps import require_user
-from app.models import Trigger, TriggerFiring, User
+from app.models import NotificationDelivery, Trigger, TriggerFiring, User
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+
+FLASH_COOKIE = "adsbuddy_flash"
+_DEFAULT_PER_PAGE = 100
+_MAX_PER_PAGE = 200
+
+
+def _set_flash(response: RedirectResponse, level: str, message: str) -> None:
+    encoded = urllib.parse.quote(message)
+    response.set_cookie(
+        FLASH_COOKIE, f"{level}:{encoded}", max_age=120, httponly=True, samesite="lax"
+    )
+
+
+def _pop_flash(request: Request) -> tuple[str, str] | None:
+    raw = request.cookies.get(FLASH_COOKIE)
+    if not raw:
+        return None
+    level, _, encoded = raw.partition(":")
+    return level, urllib.parse.unquote(encoded)
 
 
 def _strip_or_empty(value: str | None) -> str:
@@ -36,11 +60,20 @@ def _int_or_none(raw: str | None) -> int | None:
         raise HTTPException(status_code=400, detail=f"Expected integer, got {raw!r}")
 
 
-async def _load_trigger(
-    session: AsyncSession, trigger_id: int, actor: User
-) -> Trigger:
+def _delivery_label(has_sent: bool | None, has_failed: bool | None) -> str:
+    """Map delivery aggregate flags to a display label. Failed takes priority."""
+    if has_failed:
+        return "failed"
+    if has_sent:
+        return "sent"
+    return "pending"
+
+
+async def _load_trigger(session: AsyncSession, trigger_id: int, actor: User) -> Trigger:
     row = await session.execute(
-        select(Trigger).where(Trigger.id == trigger_id).options(selectinload(Trigger.owner))
+        select(Trigger)
+        .where(Trigger.id == trigger_id)
+        .options(selectinload(Trigger.owner))
     )
     trigger = row.scalar_one_or_none()
     if trigger is None:
@@ -51,30 +84,51 @@ async def _load_trigger(
     return trigger
 
 
+async def _get_route_lookup_enabled(db: AsyncSession) -> bool:
+    value = await settings_store.get(db, "route_lookup_enabled")
+    return (value or "true").lower() == "true"
+
+
 @router.get("/triggers", response_class=HTMLResponse)
 async def triggers_list(
     request: Request,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
-    stmt = select(Trigger).options(selectinload(Trigger.owner)).order_by(Trigger.created_at.desc())
+    stmt = (
+        select(Trigger)
+        .options(selectinload(Trigger.owner))
+        .order_by(Trigger.created_at.desc())
+    )
     if not user.is_admin:
         stmt = stmt.where(Trigger.owner_id == user.id)
     triggers = (await db.execute(stmt)).scalars().all()
-    return templates.TemplateResponse(
-        request, "triggers.html", {"user": user, "triggers": triggers}
+    flash = _pop_flash(request)
+    response = templates.TemplateResponse(
+        request, "triggers.html", {"user": user, "triggers": triggers, "flash": flash}
     )
+    if flash:
+        response.delete_cookie(FLASH_COOKIE)
+    return response
 
 
 @router.get("/triggers/new", response_class=HTMLResponse)
 async def trigger_new_form(
     request: Request,
     user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_session),
 ):
+    route_lookup_enabled = await _get_route_lookup_enabled(db)
     return templates.TemplateResponse(
         request,
         "trigger_form.html",
-        {"user": user, "trigger": None, "action": "/triggers/new", "title": "New trigger"},
+        {
+            "user": user,
+            "trigger": None,
+            "action": "/triggers/new",
+            "title": "New trigger",
+            "route_lookup_enabled": route_lookup_enabled,
+        },
     )
 
 
@@ -106,7 +160,9 @@ async def trigger_new_submit(
     _apply_form_to_trigger(trigger, form)
     db.add(trigger)
     await db.commit()
-    return RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    _set_flash(resp, "success", f"Trigger '{trigger.name}' created.")
+    return resp
 
 
 @router.get("/triggers/{trigger_id}/edit", response_class=HTMLResponse)
@@ -117,6 +173,7 @@ async def trigger_edit_form(
     db: AsyncSession = Depends(get_session),
 ):
     trigger = await _load_trigger(db, trigger_id, user)
+    route_lookup_enabled = await _get_route_lookup_enabled(db)
     return templates.TemplateResponse(
         request,
         "trigger_form.html",
@@ -125,6 +182,7 @@ async def trigger_edit_form(
             "trigger": trigger,
             "action": f"/triggers/{trigger.id}/edit",
             "title": f"Edit trigger: {trigger.name}",
+            "route_lookup_enabled": route_lookup_enabled,
         },
     )
 
@@ -140,7 +198,24 @@ async def trigger_edit_submit(
     form = dict(await request.form())
     _apply_form_to_trigger(trigger, form)
     await db.commit()
-    return RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    _set_flash(resp, "success", f"Trigger '{trigger.name}' saved.")
+    return resp
+
+
+@router.post("/triggers/{trigger_id}/toggle")
+async def trigger_toggle(
+    trigger_id: int,
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_session),
+):
+    trigger = await _load_trigger(db, trigger_id, user)
+    trigger.is_active = not trigger.is_active
+    await db.commit()
+    label = "activated" if trigger.is_active else "paused"
+    resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    _set_flash(resp, "success", f"Trigger '{trigger.name}' {label}.")
+    return resp
 
 
 @router.post("/triggers/{trigger_id}/delete")
@@ -150,26 +225,89 @@ async def trigger_delete(
     db: AsyncSession = Depends(get_session),
 ):
     trigger = await _load_trigger(db, trigger_id, user)
+    name = trigger.name
     await db.delete(trigger)
     await db.commit()
-    return RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
+    _set_flash(resp, "success", f"Trigger '{name}' deleted.")
+    return resp
 
 
 @router.get("/firings", response_class=HTMLResponse)
 async def firings_list(
     request: Request,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(_DEFAULT_PER_PAGE, ge=1, le=_MAX_PER_PAGE),
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
-    stmt = (
+    # --- count total (1 query) ---
+    count_stmt = (
+        select(func.count())
+        .select_from(TriggerFiring)
+        .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+    )
+    if not user.is_admin:
+        count_stmt = count_stmt.where(Trigger.owner_id == user.id)
+    total: int = (await db.execute(count_stmt)).scalar_one()
+
+    # Clamp page to valid range.
+    total_pages = max(1, math.ceil(total / per_page))
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+    start = offset + 1 if total else 0
+    end = min(offset + per_page, total)
+
+    # --- fetch page ---
+    rows_stmt = (
         select(TriggerFiring, Trigger)
         .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
         .order_by(TriggerFiring.fired_at.desc())
-        .limit(200)
+        .limit(per_page)
+        .offset(offset)
     )
     if not user.is_admin:
-        stmt = stmt.where(Trigger.owner_id == user.id)
-    rows = (await db.execute(stmt)).all()
-    return templates.TemplateResponse(
-        request, "firings.html", {"user": user, "rows": rows}
+        rows_stmt = rows_stmt.where(Trigger.owner_id == user.id)
+    rows = (await db.execute(rows_stmt)).all()
+
+    # --- batch-load delivery status (1 query for the whole page) ---
+    firing_ids = [f.id for f, _t in rows]
+    delivery_status: dict[int, str] = {}
+    if firing_ids:
+        ds_rows = (
+            await db.execute(
+                select(
+                    NotificationDelivery.firing_id,
+                    func.bool_or(NotificationDelivery.status == "sent").label("has_sent"),
+                    func.bool_or(NotificationDelivery.status == "failed").label("has_failed"),
+                )
+                .where(
+                    NotificationDelivery.firing_id.in_(firing_ids),
+                    NotificationDelivery.is_test.is_(False),
+                )
+                .group_by(NotificationDelivery.firing_id)
+            )
+        ).all()
+        for ds in ds_rows:
+            delivery_status[ds.firing_id] = _delivery_label(ds.has_sent, ds.has_failed)
+
+    flash = _pop_flash(request)
+    response = templates.TemplateResponse(
+        request,
+        "firings.html",
+        {
+            "user": user,
+            "rows": rows,
+            "delivery_status": delivery_status,
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "start": start,
+            "end": end,
+            "flash": flash,
+        },
     )
+    if flash:
+        response.delete_cookie(FLASH_COOKIE)
+    return response

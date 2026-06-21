@@ -7,6 +7,7 @@ recording side does the DB work.
 from __future__ import annotations
 
 import fnmatch
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
@@ -15,6 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Trigger, TriggerFiring
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -98,19 +101,28 @@ async def evaluate_and_record(
     session: AsyncSession,
     triggers: Iterable[Trigger],
     facts: AircraftFacts,
-) -> list[TriggerFiring]:
+) -> tuple[list[TriggerFiring], int]:
     """Evaluate every trigger against one aircraft and record firings.
 
-    Returns the list of newly-added (uncommitted) TriggerFiring rows.
+    Returns ``(new_firings, blocked_count)`` where ``blocked_count`` is the
+    number of triggers that matched but were suppressed by cooldown.
     Caller commits.
     """
-    if not triggers:
-        return []
+    trigger_list = list(triggers)
+    if not trigger_list:
+        return [], 0
     now = datetime.now(timezone.utc)
     now_year = now.year
     created: list[TriggerFiring] = []
-    for trigger in triggers:
+    blocked = 0
+    for trigger in trigger_list:
         if not matches(trigger, facts, now_year):
+            log.debug(
+                "trigger %d (%s): no match for %s",
+                trigger.id,
+                trigger.name,
+                facts.icao_hex,
+            )
             continue
         threshold = now - timedelta(seconds=max(0, trigger.cooldown_seconds))
         already = (
@@ -125,7 +137,20 @@ async def evaluate_and_record(
             )
         ).first()
         if already:
+            log.debug(
+                "trigger %d (%s): cooldown active for %s",
+                trigger.id,
+                trigger.name,
+                facts.icao_hex,
+            )
+            blocked += 1
             continue
+        log.debug(
+            "trigger %d (%s): FIRED for %s",
+            trigger.id,
+            trigger.name,
+            facts.icao_hex,
+        )
         firing = TriggerFiring(
             trigger_id=trigger.id,
             icao_hex=facts.icao_hex,
@@ -141,4 +166,4 @@ async def evaluate_and_record(
         )
         session.add(firing)
         created.append(firing)
-    return created
+    return created, blocked

@@ -135,6 +135,15 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         default="",
         description="Twilio sender phone number in E.164 (e.g. +15551234567).",
     ),
+    SettingSpec(
+        key="sightings_retention_days",
+        default="30",
+        description=(
+            "How many days of sightings to retain. The background ingester prunes "
+            "rows older than this threshold once per hour. Set to 0 or leave blank "
+            "to disable automatic cleanup. Default: 30."
+        ),
+    ),
 )
 
 

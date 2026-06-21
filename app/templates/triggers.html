@@ -27,7 +27,13 @@
     <tr>
       <td><strong>{{ t.name }}</strong>{% if t.notes %}<br><span class="muted">{{ t.notes }}</span>{% endif %}</td>
       {% if user.is_admin %}<td>{{ t.owner.username }}</td>{% endif %}
-      <td>{{ "yes" if t.is_active else "no" }}</td>
+      <td>
+        {% if t.is_active %}
+          <span class="badge badge-active">Active</span>
+        {% else %}
+          <span class="badge badge-paused">Paused</span>
+        {% endif %}
+      </td>
       <td>
         <ul class="cond">
           {% if t.tail_patterns %}<li><b>tail</b>: <code>{{ t.tail_patterns }}</code></li>{% endif %}
@@ -53,6 +59,11 @@
       </td>
       <td>{{ t.cooldown_seconds }}s</td>
       <td class="row-actions">
+        <form method="post" action="/triggers/{{ t.id }}/toggle" class="inline">
+          <button type="submit" class="{{ 'btn-pause' if t.is_active else 'btn-activate' }}">
+            {{ "Pause" if t.is_active else "Activate" }}
+          </button>
+        </form>
         <a href="/triggers/{{ t.id }}/edit">Edit</a>
         <form method="post" action="/triggers/{{ t.id }}/delete" class="inline"
               onsubmit="return confirm('Delete trigger {{ t.name }}?');">

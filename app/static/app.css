@@ -4,7 +4,7 @@
   --panel-2: #1d242d;
   --border: #2a323d;
   --text: #e6edf3;
-  --muted: #8b949e;
+  --muted: #9ca8b3;
   --accent: #4ea4ff;
   --danger: #ff6b6b;
   --ok: #3fb950;
@@ -132,3 +132,177 @@ ul.cond li { margin: 0; }
 .status { font-weight: 600; padding: 0 0.35rem; border-radius: 3px; }
 .status-sent { color: var(--ok); }
 .status-failed { color: var(--danger); }
+
+/* ── Trigger active/paused badges ───────────────────────────────────────── */
+.badge-active {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(63, 185, 80, 0.15); color: var(--ok);
+  border: 1px solid rgba(63, 185, 80, 0.35);
+}
+.badge-paused {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(139, 148, 158, 0.15); color: var(--muted);
+  border: 1px solid rgba(139, 148, 158, 0.35);
+}
+
+/* ── Active nav link ────────────────────────────────────────────────────── */
+.nav a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ── Flash messages ─────────────────────────────────────────────────────── */
+.flash {
+  padding: 0.6rem 1.5rem;
+  font-size: 0.875em;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.flash-success { background: rgba(63, 185, 80, 0.12); color: var(--ok); border-bottom: 1px solid rgba(63, 185, 80, 0.25); }
+.flash-error   { background: rgba(255, 107, 107, 0.12); color: var(--danger); border-bottom: 1px solid rgba(255, 107, 107, 0.25); }
+.flash-info    { background: rgba(78, 164, 255, 0.12); color: var(--accent); border-bottom: 1px solid rgba(78, 164, 255, 0.25); }
+
+/* ── Toggle button (pause / activate) ──────────────────────────────────── */
+.btn-toggle {
+  padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer;
+  font: inherit; font-size: 0.8em; border: 1px solid var(--border);
+  background: var(--panel-2); color: var(--muted);
+}
+.btn-toggle:hover { color: var(--text); border-color: var(--muted); }
+
+/* ── Route fieldset disabled state ─────────────────────────────────────── */
+.fieldset-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.route-disabled-note {
+  font-size: 0.8em; color: var(--muted);
+  padding: 0.4rem 0.6rem; margin-bottom: 0.4rem;
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  border-radius: 4px;
+}
+
+/* ── Route fieldset legend badge ────────────────────────────────────────── */
+.legend-badge {
+  display: inline-block; padding: 0.1rem 0.45rem; border-radius: 99px;
+  font-size: 0.7em; font-weight: 600; vertical-align: middle; margin-left: 0.4rem;
+  background: rgba(63, 185, 80, 0.12); color: var(--ok); border: 1px solid rgba(63, 185, 80, 0.3);
+}
+.legend-badge.off {
+  background: rgba(139, 148, 158, 0.12); color: var(--muted); border-color: rgba(139, 148, 158, 0.3);
+}
+
+/* ── Delivery status badges (firings table) ────────────────────────────── */
+.badge-sent {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(63, 185, 80, 0.15); color: var(--ok);
+  border: 1px solid rgba(63, 185, 80, 0.35);
+}
+.badge-failed {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(255, 107, 107, 0.15); color: var(--danger);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+}
+.badge-pending {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(156, 168, 179, 0.12); color: var(--muted);
+  border: 1px solid rgba(156, 168, 179, 0.3);
+}
+
+/* ── Pagination ────────────────────────────────────────────────────────── */
+.pagination {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-top: 1rem; padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875em;
+}
+.pagination a {
+  padding: 0.3rem 0.65rem;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--accent);
+}
+.pagination a:hover { text-decoration: none; border-color: var(--accent); }
+.pagination .disabled {
+  padding: 0.3rem 0.65rem;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--muted); cursor: default;
+}
+.pg-info { color: var(--muted); }
+
+/* ── Focus-visible ─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Suppress focus ring for mouse clicks; only show for keyboard navigation */
+:focus:not(:focus-visible) { outline: none; }
+
+/* ── Responsive table wrapper ──────────────────────────────────────────── */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Mobile adjustments ────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .content { padding: 0.75rem; }
+  .topbar { gap: 0.75rem; flex-wrap: wrap; }
+  .page-head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .trigger-form .grid-2 { grid-template-columns: 1fr; }
+  .pagination { flex-wrap: wrap; gap: 0.5rem; }
+}
+
+/* —— Delivery status badges ————————————————————————————————————————————— */
+.badge-sent {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(63, 185, 80, 0.15); color: var(--ok);
+  border: 1px solid rgba(63, 185, 80, 0.35);
+}
+.badge-failed {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(255, 107, 107, 0.15); color: var(--danger);
+  border: 1px solid rgba(255, 107, 107, 0.35);
+}
+.badge-pending {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(156, 168, 179, 0.15); color: var(--muted);
+  border: 1px solid rgba(156, 168, 179, 0.35);
+}
+
+/* —— Responsive table ——————————————————————————————————————————————————— */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* —— Pagination ————————————————————————————————————————————————————————— */
+.pagination {
+  display: flex; align-items: center; gap: 0.75rem;
+  margin-top: 1rem; font-size: 0.875em;
+}
+.pagination a { color: var(--accent); }
+.pagination .disabled { color: var(--muted); cursor: default; }
+.pg-info { color: var(--muted); }
+
+/* —— Focus-visible ——————————————————————————————————————————————————————— */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* —— Mobile / responsive ————————————————————————————————————————————————— */
+@media (max-width: 640px) {
+  .content { padding: 0.9rem; }
+  .topbar { gap: 0.75rem; padding: 0.5rem 0.75rem; flex-wrap: wrap; }
+  .page-head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .trigger-form .grid-2 { grid-template-columns: 1fr; }
+  table.grid th, table.grid td { font-size: 0.8em; padding: 0.35rem 0.4rem; }
+  .pagination { flex-wrap: wrap; }
+}

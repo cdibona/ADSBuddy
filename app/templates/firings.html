@@ -1,8 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Trigger firings — ADSBuddy{% endblock %}
 {% block content %}
-<h1>Trigger firings</h1>
-<p class="muted">Most recent 200, newest first.</p>
+<div class="page-head">
+  <h1>Trigger firings</h1>
+</div>
+<p class="muted">
+  {% if total %}
+    {{ start }}–{{ end }} of {{ total }} firing{{ "s" if total != 1 else "" }}, newest first.
+  {% else %}
+    No firings yet.
+  {% endif %}
+</p>
+<div class="table-scroll">
 <table class="grid">
   <thead><tr>
     <th>When (UTC)</th>
@@ -13,9 +22,11 @@
     <th>Year</th>
     <th>Route</th>
     <th>Altitude</th>
+    <th>Notified</th>
   </tr></thead>
   <tbody>
     {% for f, t in rows %}
+    {% set dlabel = delivery_status.get(f.id, "pending") %}
     <tr>
       <td>{{ f.fired_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
       <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
@@ -23,12 +34,33 @@
       <td>{{ f.callsign or "" }}</td>
       <td>{{ f.type_code or "" }}</td>
       <td>{{ f.year or "" }}</td>
-      <td>{{ (f.origin_icao or "?") }} → {{ (f.destination_icao or "?") }}</td>
+      <td>{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
       <td>{{ f.altitude_baro or "" }}</td>
+      <td>
+        <span class="badge-{{ dlabel }}">
+          {{ dlabel | capitalize }}
+        </span>
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="8" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
+    <tr><td colspan="9" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
     {% endfor %}
   </tbody>
 </table>
+</div>
+{% if total_pages > 1 %}
+<div class="pagination">
+  <span class="pg-info">Page {{ page }} / {{ total_pages }}</span>
+  {% if page > 1 %}
+  <a href="?page={{ page - 1 }}&per_page={{ per_page }}">&larr; Prev</a>
+  {% else %}
+  <span class="disabled">&larr; Prev</span>
+  {% endif %}
+  {% if page < total_pages %}
+  <a href="?page={{ page + 1 }}&per_page={{ per_page }}">Next &rarr;</a>
+  {% else %}
+  <span class="disabled">Next &rarr;</span>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}
