@@ -1,0 +1,19 @@
+[Unit]
+Description=ADSBuddy (Docker Compose stack)
+Documentation=https://github.com/cdibona/ADSBuddy
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/cdibona/ADSBuddy
+# Bring the stack up on boot. Compose reads .env from WorkingDirectory.
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+# Container builds/pulls can take a while on first run; don't time out.
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
