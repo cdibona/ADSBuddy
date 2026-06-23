@@ -287,6 +287,7 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
                 callsign=callsign,
                 registration=aircraft.registration,
                 type_code=aircraft.type_code,
+                owner_op=aircraft.owner_op,
                 year=aircraft.year,
                 lat=_coerce_float(entry.get("lat")),
                 lon=_coerce_float(entry.get("lon")),

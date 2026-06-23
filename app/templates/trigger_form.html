@@ -47,6 +47,11 @@
              value="{{ trigger.type_codes if trigger else (prefill.get('type') or '') }}">
       <small class="muted">Exact match. The <code>t</code> field from the radio (e.g. B39M, E75L).</small>
     </label>
+    <label>Owner / Operator
+      <input name="owner_patterns" placeholder="e.g. Lifeflight, United"
+             value="{{ trigger.owner_patterns if trigger else (prefill.get('owner') or '') }}">
+      <small class="muted">Comma-separated substrings (case-insensitive); "United" matches "United Air Lines Inc". <code>*</code> wildcard supported.</small>
+    </label>
   </fieldset>
 
   <fieldset>

@@ -28,6 +28,7 @@ class AircraftFacts:
     callsign: str | None
     registration: str | None
     type_code: str | None
+    owner_op: str | None
     year: int | None
     lat: float | None
     lon: float | None
@@ -36,8 +37,8 @@ class AircraftFacts:
     destination_icao: str | None
 
 
-def _csv(field: str) -> list[str]:
-    return [v.strip().lower() for v in field.split(",") if v.strip()]
+def _csv(field: str | None) -> list[str]:
+    return [v.strip().lower() for v in (field or "").split(",") if v.strip()]
 
 
 def _pattern_match(pattern: str, value: str) -> bool:
@@ -63,6 +64,26 @@ def _any_exact(values: list[str], value: str | None) -> bool:
     return value.lower() in values
 
 
+def _any_contains(patterns: list[str], value: str | None) -> bool:
+    """Match if any pattern is a substring of value (case-insensitive).
+
+    Wildcards (`*`/`?`) switch a pattern to a full fnmatch instead. Used for
+    owner/operator, which is free-form text ("United Air Lines Inc").
+    """
+    if not patterns:
+        return True
+    if value is None:
+        return False
+    v = value.lower()
+    for p in patterns:
+        if "*" in p or "?" in p:
+            if fnmatch.fnmatchcase(v, p):
+                return True
+        elif p in v:
+            return True
+    return False
+
+
 def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
     """Pure predicate. All non-empty fields must match (AND)."""
     if not _any_pattern(_csv(trigger.tail_patterns), facts.registration):
@@ -70,6 +91,8 @@ def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
     if not _any_pattern(_csv(trigger.flight_patterns), facts.callsign):
         return False
     if not _any_exact(_csv(trigger.type_codes), facts.type_code):
+        return False
+    if not _any_contains(_csv(trigger.owner_patterns), facts.owner_op):
         return False
     if not _any_exact(_csv(trigger.origin_icaos), facts.origin_icao):
         return False

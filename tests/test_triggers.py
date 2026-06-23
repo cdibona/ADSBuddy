@@ -38,6 +38,7 @@ def _make_trigger(**kw) -> SimpleNamespace:
         tail_patterns="",
         flight_patterns="",
         type_codes="",
+        owner_patterns="",
         origin_icaos="",
         destination_icaos="",
         min_year=None,
@@ -56,6 +57,7 @@ def _make_facts(**kw) -> AircraftFacts:
         callsign="UAL123",
         registration="N12345",
         type_code="B738",
+        owner_op="United Air Lines Inc",
         year=2010,
         lat=37.6,
         lon=-122.4,
@@ -346,3 +348,33 @@ class TestEvaluateAndRecord:
         assert len(firings) == 1
         assert firings[0].trigger_id == 1
         assert blocked == 1
+
+
+# ---------------------------------------------------------------------------
+# Owner / operator matching
+# ---------------------------------------------------------------------------
+
+class TestOwnerMatch:
+    def test_substring_match_case_insensitive(self):
+        t = _make_trigger(owner_patterns="united")
+        assert matches(t, _make_facts(owner_op="United Air Lines Inc"), NOW_YEAR)
+
+    def test_no_match(self):
+        t = _make_trigger(owner_patterns="delta")
+        assert not matches(t, _make_facts(owner_op="United Air Lines Inc"), NOW_YEAR)
+
+    def test_any_of_multiple(self):
+        t = _make_trigger(owner_patterns="delta, lifeflight")
+        assert matches(t, _make_facts(owner_op="LIFEFLIGHT OF MAINE"), NOW_YEAR)
+
+    def test_wildcard(self):
+        t = _make_trigger(owner_patterns="life*")
+        assert matches(t, _make_facts(owner_op="Lifeflight"), NOW_YEAR)
+
+    def test_none_owner_does_not_match_when_required(self):
+        t = _make_trigger(owner_patterns="united")
+        assert not matches(t, _make_facts(owner_op=None), NOW_YEAR)
+
+    def test_empty_pattern_is_wildcard(self):
+        t = _make_trigger(owner_patterns="")
+        assert matches(t, _make_facts(owner_op=None), NOW_YEAR)

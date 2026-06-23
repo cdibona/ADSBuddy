@@ -166,9 +166,11 @@ class Trigger(Base):
     """A user-defined alert rule. All non-empty fields are AND-combined.
 
     String pattern fields (`tail_patterns`, `flight_patterns`, `type_codes`,
-    `origin_icaos`, `destination_icaos`) hold comma-separated values; matching
-    is case-insensitive. `tail_patterns` and `flight_patterns` accept `*` as
-    a wildcard.
+    `owner_patterns`, `origin_icaos`, `destination_icaos`) hold comma-separated
+    values; matching is case-insensitive. `tail_patterns` and `flight_patterns`
+    accept `*` as a wildcard. `owner_patterns` matches as a case-insensitive
+    substring (so "United" matches "United Air Lines Inc"), and also accepts
+    `*`/`?` wildcards.
     """
 
     __tablename__ = "triggers"
@@ -184,6 +186,7 @@ class Trigger(Base):
     tail_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     flight_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     type_codes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    owner_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     origin_icaos: Mapped[str] = mapped_column(Text, nullable=False, default="")
     destination_icaos: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
