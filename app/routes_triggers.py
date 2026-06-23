@@ -402,8 +402,9 @@ async def firings_list(
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
+    now = datetime.now(timezone.utc)
     bucket = _normalize_firings_bucket(since)
-    cutoff = _firings_since_cutoff(bucket, datetime.now(timezone.utc))
+    cutoff = _firings_since_cutoff(bucket, now)
 
     # --- count total (1 query) ---
     count_stmt = (
@@ -478,6 +479,7 @@ async def firings_list(
             "start": start,
             "end": end,
             "since": bucket,
+            "loaded_at": now,
             "flash": flash,
         },
     )

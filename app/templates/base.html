@@ -24,6 +24,7 @@
         {% if user.is_admin %}
           <a href="/admin" {% if path == "/admin" %}aria-current="page"{% endif %}>Users</a>
           <a href="/admin/settings" {% if path == "/admin/settings" %}aria-current="page"{% endif %}>Settings</a>
+          <a href="/admin/diagnostics" {% if path == "/admin/diagnostics" %}aria-current="page"{% endif %}>Diagnostics</a>
         {% endif %}
         <span class="user">{{ user.username }}{% if user.is_admin %} (admin){% endif %}</span>
         <form method="post" action="/logout" class="inline">

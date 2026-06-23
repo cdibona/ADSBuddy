@@ -223,7 +223,8 @@ class TestFilterBarRendering:
             rows=[(firing, trig)],
             delivery_status={1: "sent"},
             total=1, page=1, per_page=100, total_pages=1,
-            start=1, end=1, since="24h", flash=None,
+            start=1, end=1, since="24h",
+            loaded_at=datetime(2026, 6, 23, 16, 0, tzinfo=timezone.utc), flash=None,
         )
         # Time-bucket chips present, with the active one marked.
         assert 'href="/firings?since=today"' in out

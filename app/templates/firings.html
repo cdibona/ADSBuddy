@@ -3,6 +3,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Trigger firings</h1>
+  <span class="refresh-note">Updated {{ loaded_at.strftime("%H:%M:%S UTC") }} · auto-refreshes every 30s</span>
 </div>
 
 <div class="filter-bar">
@@ -91,4 +92,12 @@
   {% endif %}
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Keep the firings list fresh without a manual reload; preserves the current
+  // URL (filters + page).
+  setTimeout(function () { location.reload(); }, 30000);
+</script>
 {% endblock %}

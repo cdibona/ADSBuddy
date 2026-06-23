@@ -1,16 +1,25 @@
 """Admin pages: user management and the settings editor."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import version
 from app.database import get_session
 from app.deps import require_admin
-from app.models import Setting, User
+from app.models import (
+    NotificationChannel,
+    NotificationDelivery,
+    Setting,
+    Trigger,
+    TriggerFiring,
+    User,
+)
 from app.security import hash_password
 from app.settings_store import set_value
 
@@ -102,6 +111,94 @@ async def admin_settings_get(
     )
     return templates.TemplateResponse(
         request, "admin_settings.html", {"user": user, "settings": settings}
+    )
+
+
+@router.get("/diagnostics", response_class=HTMLResponse)
+async def admin_diagnostics(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Read-only debugging surface over the firing/delivery audit trails.
+
+    Surfaces what we already record (trigger_firings, notification_deliveries)
+    so issues like 'fired but I can't see why a notify failed' don't require a
+    DB shell. Admin-only.
+    """
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(hours=24)
+
+    firings_24h = (
+        await db.execute(
+            select(func.count()).select_from(TriggerFiring).where(
+                TriggerFiring.fired_at >= since
+            )
+        )
+    ).scalar_one()
+
+    deliv_counts = (
+        await db.execute(
+            select(NotificationDelivery.status, func.count())
+            .where(
+                NotificationDelivery.created_at >= since,
+                NotificationDelivery.is_test.is_(False),
+            )
+            .group_by(NotificationDelivery.status)
+        )
+    ).all()
+    sent_24h = sum(c for s, c in deliv_counts if s == "sent")
+    failed_24h = sum(c for s, c in deliv_counts if s == "failed")
+    tests_24h = (
+        await db.execute(
+            select(func.count()).select_from(NotificationDelivery).where(
+                NotificationDelivery.created_at >= since,
+                NotificationDelivery.is_test.is_(True),
+            )
+        )
+    ).scalar_one()
+
+    # Recent delivery failures (any time) — the first thing to check when a
+    # notification doesn't arrive. firing/trigger are outer-joined (tests have none).
+    fail_rows = (
+        await db.execute(
+            select(NotificationDelivery, NotificationChannel, User, TriggerFiring, Trigger)
+            .join(NotificationChannel, NotificationChannel.id == NotificationDelivery.channel_id)
+            .join(User, User.id == NotificationChannel.user_id)
+            .outerjoin(TriggerFiring, TriggerFiring.id == NotificationDelivery.firing_id)
+            .outerjoin(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .where(NotificationDelivery.status == "failed")
+            .order_by(NotificationDelivery.created_at.desc())
+            .limit(50)
+        )
+    ).all()
+
+    # Recent delivery attempts of any status (the full trace for a firing).
+    recent_rows = (
+        await db.execute(
+            select(NotificationDelivery, NotificationChannel, User, TriggerFiring, Trigger)
+            .join(NotificationChannel, NotificationChannel.id == NotificationDelivery.channel_id)
+            .join(User, User.id == NotificationChannel.user_id)
+            .outerjoin(TriggerFiring, TriggerFiring.id == NotificationDelivery.firing_id)
+            .outerjoin(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .order_by(NotificationDelivery.created_at.desc())
+            .limit(100)
+        )
+    ).all()
+
+    return templates.TemplateResponse(
+        request,
+        "admin_diagnostics.html",
+        {
+            "user": user,
+            "now": now,
+            "firings_24h": firings_24h,
+            "sent_24h": sent_24h,
+            "failed_24h": failed_24h,
+            "tests_24h": tests_24h,
+            "fail_rows": fail_rows,
+            "recent_rows": recent_rows,
+        },
     )
 
 

@@ -576,3 +576,30 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   .setting-compact { grid-template-columns: 1fr auto; }
   .setting-compact .setting-key { grid-column: 1 / -1; }
 }
+
+/* —— Admin diagnostics ─────────────────────────────────────────────────── */
+.diag-cards { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; }
+.diag-card {
+  flex: 1 1 120px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.diag-card.diag-bad { border-color: rgba(255, 107, 107, 0.5); }
+.diag-num { font-size: 1.5rem; font-weight: 600; }
+.diag-card.diag-bad .diag-num { color: var(--danger); }
+.diag-label { font-size: 0.78em; color: var(--muted); }
+.diag-error {
+  color: var(--danger);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82em;
+  overflow-wrap: anywhere;
+  max-width: 40ch;
+}
+
+/* —— Auto-refresh status line ──────────────────────────────────────────── */
+.refresh-note { font-size: 0.8em; color: var(--muted); }
