@@ -195,6 +195,15 @@ class Trigger(Base):
     min_age_years: Mapped[int | None] = mapped_column(Integer)
     max_age_years: Mapped[int | None] = mapped_column(Integer)
 
+    # Geofence: fire only when the aircraft is within radius_miles of the center.
+    # geofence_center is the raw user input (lat,lon / US ZIP / ICAO airport),
+    # resolved to center_lat/center_lon at save time. An unresolved center
+    # (lat/lon NULL) leaves the geofence inactive until re-saved.
+    geofence_center: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    center_lat: Mapped[float | None] = mapped_column(Float)
+    center_lon: Mapped[float | None] = mapped_column(Float)
+    radius_miles: Mapped[float | None] = mapped_column(Float)
+
     cooldown_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=3600)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow

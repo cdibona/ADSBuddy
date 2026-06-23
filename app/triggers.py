@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import fnmatch
 import logging
+import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable
@@ -84,6 +85,38 @@ def _any_contains(patterns: list[str], value: str | None) -> bool:
     return False
 
 
+_EARTH_RADIUS_MILES = 3958.7613
+
+
+def haversine_miles(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Great-circle distance in statute miles."""
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlam = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlam / 2) ** 2
+    return 2 * _EARTH_RADIUS_MILES * math.asin(math.sqrt(a))
+
+
+def _within_geofence(trigger: Trigger, facts: AircraftFacts) -> bool:
+    """True if no active geofence, or the aircraft is inside it.
+
+    An unresolved center (lat/lon NULL) is treated as no geofence so a trigger
+    isn't silently dead; the UI flags it as unresolved instead.
+    """
+    if (
+        trigger.center_lat is None
+        or trigger.center_lon is None
+        or trigger.radius_miles is None
+    ):
+        return True
+    if facts.lat is None or facts.lon is None:
+        return False
+    return (
+        haversine_miles(facts.lat, facts.lon, trigger.center_lat, trigger.center_lon)
+        <= trigger.radius_miles
+    )
+
+
 def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
     """Pure predicate. All non-empty fields must match (AND)."""
     if not _any_pattern(_csv(trigger.tail_patterns), facts.registration):
@@ -111,6 +144,8 @@ def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
     if trigger.max_age_years is not None and (
         year is None or (now_year - year) > trigger.max_age_years
     ):
+        return False
+    if not _within_geofence(trigger, facts):
         return False
     return True
 

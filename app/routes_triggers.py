@@ -18,7 +18,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import settings_store, version
+import httpx
+
+from app import geocode, settings_store, version
 from app.database import get_session
 from app.deps import require_user
 from app.models import NotificationDelivery, Trigger, TriggerFiring, User
@@ -83,6 +85,44 @@ def _int_or_none(raw: str | None) -> int | None:
         raise HTTPException(status_code=400, detail=f"Expected integer, got {raw!r}")
 
 
+def _float_or_none(raw: str | None) -> float | None:
+    if raw is None:
+        return None
+    raw = raw.strip()
+    if raw == "":
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Expected a number, got {raw!r}")
+
+
+async def _apply_geofence(trigger: Trigger, form: dict[str, str]) -> str | None:
+    """Set the trigger's geofence from the form, resolving the center.
+
+    Returns a warning message if the center couldn't be resolved (the trigger
+    is still saved, just with an inactive geofence), else None.
+    """
+    raw = _strip_or_empty(form.get("geofence_center"))
+    trigger.geofence_center = raw
+    if not raw:
+        trigger.center_lat = trigger.center_lon = trigger.radius_miles = None
+        return None
+    radius = _float_or_none(form.get("geofence_radius_miles"))
+    trigger.radius_miles = radius if (radius and radius > 0) else 25.0
+    async with httpx.AsyncClient() as client:
+        center = await geocode.resolve_center(raw, client)
+    if center is None:
+        trigger.center_lat = trigger.center_lon = None
+        return (
+            f"Couldn't resolve geofence center {raw!r} (use 'lat,lon', a US ZIP, "
+            "or an ICAO code like KSEA). The trigger is saved but the geofence "
+            "is inactive until the center resolves."
+        )
+    trigger.center_lat, trigger.center_lon = center.lat, center.lon
+    return None
+
+
 def _delivery_label(has_sent: bool | None, has_failed: bool | None) -> str:
     """Map delivery aggregate flags to a display label. Failed takes priority."""
     if has_failed:
@@ -140,6 +180,11 @@ def trigger_condition_items(t: Trigger) -> list[tuple[str, str]]:
         items.append(("origin", t.origin_icaos))
     if t.destination_icaos:
         items.append(("destination", t.destination_icaos))
+    if t.geofence_center:
+        if t.center_lat is not None and t.center_lon is not None and t.radius_miles is not None:
+            items.append(("within", f"{t.radius_miles:g} mi of {t.geofence_center}"))
+        else:
+            items.append(("within", f"{t.geofence_center} (unresolved)"))
     return items
 
 
@@ -319,10 +364,14 @@ async def trigger_new_submit(
     form = dict(await request.form())
     trigger = Trigger(owner_id=user.id, name="")
     _apply_form_to_trigger(trigger, form)
+    warning = await _apply_geofence(trigger, form)
     db.add(trigger)
     await db.commit()
     resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
-    _set_flash(resp, "success", f"Trigger '{trigger.name}' created.")
+    if warning:
+        _set_flash(resp, "error", warning)
+    else:
+        _set_flash(resp, "success", f"Trigger '{trigger.name}' created.")
     return resp
 
 
@@ -360,9 +409,13 @@ async def trigger_edit_submit(
     trigger = await _load_trigger(db, trigger_id, user)
     form = dict(await request.form())
     _apply_form_to_trigger(trigger, form)
+    warning = await _apply_geofence(trigger, form)
     await db.commit()
     resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
-    _set_flash(resp, "success", f"Trigger '{trigger.name}' saved.")
+    if warning:
+        _set_flash(resp, "error", warning)
+    else:
+        _set_flash(resp, "success", f"Trigger '{trigger.name}' saved.")
     return resp
 
 

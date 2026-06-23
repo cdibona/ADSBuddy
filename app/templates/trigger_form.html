@@ -103,6 +103,27 @@
     <small class="muted">4-letter ICAO codes only. Origin/destination is fetched from adsbdb.com by callsign.</small>
   </fieldset>
 
+  <fieldset>
+    <legend>Geofence</legend>
+    <div class="grid-2">
+      <label>Center
+        <input name="geofence_center" placeholder="e.g. KSEA, 98101, or 47.63,-122.53"
+               value="{{ trigger.geofence_center if trigger else '' }}">
+        <small class="muted">ICAO airport, US ZIP, or <code>lat,lon</code>. Resolved when you save.</small>
+      </label>
+      <label>Radius (miles)
+        <input type="number" name="geofence_radius_miles" min="0" step="any" placeholder="e.g. 40"
+               value="{{ trigger.radius_miles if (trigger and trigger.radius_miles is not none) else '' }}">
+        <small class="muted">Fires when the aircraft is within this many miles of the center. Default 25.</small>
+      </label>
+    </div>
+    {% if trigger and trigger.geofence_center and trigger.center_lat is none %}
+    <small class="muted route-disabled-note">Center "{{ trigger.geofence_center }}" hasn't resolved yet — geofence inactive. Re-save to retry.</small>
+    {% elif trigger and trigger.center_lat is not none %}
+    <small class="muted">Resolved to {{ "%.4f"|format(trigger.center_lat) }}, {{ "%.4f"|format(trigger.center_lon) }}.</small>
+    {% endif %}
+  </fieldset>
+
   <label>Cooldown (seconds)
     <input type="number" name="cooldown_seconds" min="0"
            value="{{ trigger.cooldown_seconds if trigger else 3600 }}">

@@ -45,6 +45,10 @@ def _make_trigger(**kw) -> SimpleNamespace:
         max_year=None,
         min_age_years=None,
         max_age_years=None,
+        geofence_center="",
+        center_lat=None,
+        center_lon=None,
+        radius_miles=None,
         is_active=True,
     )
     defaults.update(kw)
@@ -378,3 +382,64 @@ class TestOwnerMatch:
     def test_empty_pattern_is_wildcard(self):
         t = _make_trigger(owner_patterns="")
         assert matches(t, _make_facts(owner_op=None), NOW_YEAR)
+
+
+# ---------------------------------------------------------------------------
+# Geofence matching
+# ---------------------------------------------------------------------------
+
+from app.triggers import haversine_miles  # noqa: E402
+
+
+class TestHaversine:
+    def test_zero_distance(self):
+        assert haversine_miles(47.6, -122.3, 47.6, -122.3) == pytest.approx(0, abs=1e-6)
+
+    def test_known_distance_sea_to_pdx(self):
+        # KSEA (47.45,-122.31) to KPDX (45.59,-122.60) ~ 129 statute miles.
+        d = haversine_miles(47.4499, -122.3118, 45.5887, -122.5975)
+        assert d == pytest.approx(129, abs=5)
+
+
+class TestGeofenceMatch:
+    def test_inside_radius_matches(self):
+        t = _make_trigger(center_lat=47.45, center_lon=-122.31, radius_miles=40)
+        assert matches(t, _make_facts(lat=47.60, lon=-122.33), NOW_YEAR)
+
+    def test_outside_radius_no_match(self):
+        t = _make_trigger(center_lat=47.45, center_lon=-122.31, radius_miles=40)
+        # ~130 miles away (near Portland) — outside 40mi.
+        assert not matches(t, _make_facts(lat=45.59, lon=-122.60), NOW_YEAR)
+
+    def test_aircraft_without_position_no_match(self):
+        t = _make_trigger(center_lat=47.45, center_lon=-122.31, radius_miles=40)
+        assert not matches(t, _make_facts(lat=None, lon=None), NOW_YEAR)
+
+    def test_unresolved_center_is_inactive(self):
+        # center_lat/lon NULL -> geofence ignored (other conditions still apply).
+        t = _make_trigger(geofence_center="KZZZ", center_lat=None, center_lon=None, radius_miles=40)
+        assert matches(t, _make_facts(lat=10.0, lon=10.0), NOW_YEAR)
+
+    def test_geofence_and_other_condition_combine(self):
+        t = _make_trigger(tail_patterns="N424LF", center_lat=47.45, center_lon=-122.31, radius_miles=40)
+        assert matches(t, _make_facts(registration="N424LF", lat=47.6, lon=-122.33), NOW_YEAR)
+        assert not matches(t, _make_facts(registration="N999XX", lat=47.6, lon=-122.33), NOW_YEAR)
+
+
+class TestGeocodeParse:
+    def test_parse_latlon(self):
+        from app.geocode import parse_latlon
+
+        c = parse_latlon("47.63, -122.53")
+        assert c is not None and c.lat == pytest.approx(47.63) and c.lon == pytest.approx(-122.53)
+
+    def test_parse_latlon_rejects_out_of_range(self):
+        from app.geocode import parse_latlon
+
+        assert parse_latlon("200,0") is None
+
+    def test_parse_latlon_rejects_non_latlon(self):
+        from app.geocode import parse_latlon
+
+        assert parse_latlon("KSEA") is None
+        assert parse_latlon("98101") is None
