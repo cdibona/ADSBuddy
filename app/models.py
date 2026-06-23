@@ -273,8 +273,14 @@ class NotificationDelivery(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     # Null when this delivery was a "send test", not tied to a firing.
+    # Indexed: the ON DELETE SET NULL fires for every cascade-deleted firing
+    # when a trigger is removed, so an unindexed firing_id meant a full-table
+    # scan per firing (deletes hung for minutes on large delivery tables).
     firing_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("trigger_firings.id", ondelete="SET NULL"), nullable=True
+        BigInteger,
+        ForeignKey("trigger_firings.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     channel_id: Mapped[int] = mapped_column(
         ForeignKey("notification_channels.id", ondelete="CASCADE"), nullable=False
