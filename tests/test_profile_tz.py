@@ -102,3 +102,38 @@ class TestNavAndProfile:
         assert "alice" in out
         assert 'href="/admin"' not in out
         assert "Logout" in out
+
+
+class TestChannelFormDefaults:
+    def _render(self, channel):
+        import types
+        from app.routes_profile import templates
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/profile/channels/new"))
+        return templates.env.get_template("channel_form.html").render(
+            request=req, user=types.SimpleNamespace(username="a", is_admin=False),
+            channel=channel, kind="webhook", kind_label="Webhook",
+            action="/profile/channels/new?kind=webhook", title="New Webhook channel")
+
+    def test_new_channel_defaults_disabled(self):
+        out = self._render(None)
+        # The Active checkbox must NOT be checked for a brand-new channel.
+        import re
+        m = re.search(r'name="is_active"[^>]*>', out)
+        assert m and "checked" not in m.group(0)
+
+    def test_config_input_not_required(self):
+        # An empty/invalid webhook must be savable (e.g. to disable it),
+        # so the URL field must not block submit with `required`.
+        out = self._render(None)
+        import re
+        m = re.search(r'name="url"[^>]*>', out)
+        assert m and "required" not in m.group(0)
+
+    def test_existing_active_channel_stays_checked(self):
+        import types
+        ch = types.SimpleNamespace(name="Sink", is_active=True,
+                                   config={"url": "http://x"})
+        out = self._render(ch)
+        import re
+        m = re.search(r'name="is_active"[^>]*>', out)
+        assert m and "checked" in m.group(0)

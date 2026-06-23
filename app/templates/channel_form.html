@@ -12,15 +12,16 @@
 
   <label class="checkbox">
     <input type="checkbox" name="is_active" value="true"
-           {% if channel is none or channel.is_active %}checked{% endif %}>
+           {% if channel and channel.is_active %}checked{% endif %}>
     Active (deliveries only attempted when this is checked)
   </label>
+  <small class="muted">New channels start disabled — fill in the destination below, save, then check Active once it's ready.</small>
 
   {% if kind == "discord" %}
     <fieldset>
       <legend>Discord</legend>
       <label>Webhook URL
-        <input name="webhook_url" required
+        <input name="webhook_url"
                placeholder="https://discord.com/api/webhooks/.../..."
                value="{{ (channel.config.get('webhook_url') if channel else '') or '' }}">
         <small class="muted">
@@ -36,7 +37,7 @@
     <fieldset>
       <legend>Email</legend>
       <label>Recipient address
-        <input name="to_address" required type="email"
+        <input name="to_address" type="email"
                placeholder="you@example.com"
                value="{{ (channel.config.get('to_address') if channel else '') or '' }}">
       </label>
@@ -51,7 +52,7 @@
     <fieldset>
       <legend>Generic HTTP webhook</legend>
       <label>URL
-        <input name="url" required
+        <input name="url"
                placeholder="https://example.com/adsbuddy"
                value="{{ (channel.config.get('url') if channel else '') or '' }}">
         <small class="muted">
@@ -68,7 +69,7 @@
     <fieldset>
       <legend>SMS via Twilio</legend>
       <label>Recipient phone number (E.164)
-        <input name="to_phone" required
+        <input name="to_phone"
                placeholder="+15551234567"
                value="{{ (channel.config.get('to_phone') if channel else '') or '' }}">
       </label>
