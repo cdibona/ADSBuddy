@@ -48,11 +48,19 @@ class TestRegistrationUrl:
 
 
 class TestTypeUrl:
-    def test_type_code_returns_wikipedia_url(self):
+    def test_known_code_links_directly_to_article(self):
+        # B738 (737-800) resolves to the 737 Next Generation article, not a search.
         url = type_url("B738")
-        assert url is not None
-        assert "wikipedia.org" in url
-        assert "B738" in url
+        assert url == "https://en.wikipedia.org/wiki/Boeing_737_Next_Generation"
+        assert "Special:Search" not in url
+
+    def test_known_code_is_case_insensitive(self):
+        assert type_url("b738") == type_url("B738")
+
+    def test_variants_collapse_to_family_article(self):
+        # All 737 MAX codes point at the same article.
+        assert type_url("B38M") == type_url("B39M")
+        assert "Boeing_737_MAX" in type_url("B38M")
 
     def test_none_returns_none(self):
         assert type_url(None) is None
@@ -63,11 +71,23 @@ class TestTypeUrl:
     def test_whitespace_only_returns_none(self):
         assert type_url("  ") is None
 
-    def test_type_code_is_url_encoded(self):
-        url = type_url("A320neo")
-        assert url is not None
-        assert "wikipedia.org" in url
-        assert "A320neo" in url
+    def test_unknown_code_falls_back_to_search(self):
+        url = type_url("ZZZZ")
+        assert "Special:Search" in url
+        assert "ZZZZ" in url
+
+    def test_unknown_code_prefers_description_in_search(self):
+        url = type_url("ZZZZ", "EMBRAER EMB-505 Phenom 300")
+        assert "Special:Search" in url
+        assert "Phenom" in url
+        # The opaque code should not be what we search for when we have a name.
+        assert "ZZZZ" not in url
+
+    def test_known_code_ignores_description(self):
+        # A curated code wins even if a quirky per-airframe description exists.
+        assert type_url("B737", "Boeing C-40B") == (
+            "https://en.wikipedia.org/wiki/Boeing_737_Next_Generation"
+        )
 
 
 class TestOpenskyUrl:

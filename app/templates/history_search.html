@@ -97,7 +97,7 @@
       <td>
         {% if a.type_code %}
           {{ a.type_code }}
-          {% set turl = type_url(a.type_code) %}
+          {% set turl = type_url(a.type_code, a.description) %}
           {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
         {% else %}
           <span class="muted">—</span>
