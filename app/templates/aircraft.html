@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Recent aircraft — ADSBuddy{% endblock %}
 {% block content %}
-<h1>Recent aircraft</h1>
+<div class="page-head">
+  <h1>Recent aircraft</h1>
+</div>
 <p class="muted">
   {% if reg_active %}
     Most recent 200 aircraft with a registration starting <strong>{{ reg_active }}</strong>, newest first.

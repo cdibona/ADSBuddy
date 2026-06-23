@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Profile — ADSBuddy{% endblock %}
 {% block content %}
-<h1>Profile — {{ user.username }}</h1>
+<div class="page-head">
+  <h1>Profile — {{ user.username }}</h1>
+</div>
+<p class="muted">Your account settings and notification channels for trigger deliveries.</p>
 
 <div class="card stack">
   <h2>Settings</h2>

@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Settings — ADSBuddy admin{% endblock %}
 {% block content %}
-<h1>Admin</h1>
-{% include "_admin_nav.html" %}
+<div class="page-head">
+  <h1>Admin — Settings</h1>
+</div>
 <p class="muted">Runtime config stored in Postgres. Changes take effect on next read by the relevant subsystem.</p>
+{% include "_admin_nav.html" %}
 
 <div class="settings-list">
 {% for s in settings %}

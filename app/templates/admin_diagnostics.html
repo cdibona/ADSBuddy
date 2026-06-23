@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Diagnostics — ADSBuddy admin{% endblock %}
 {% block content %}
-<h1>Admin</h1>
-{% include "_admin_nav.html" %}
+<div class="page-head">
+  <h1>Admin — Diagnostics</h1>
+</div>
 <p class="muted">Firing &amp; notification-delivery audit trail. Loaded {{ now | localdt("%Y-%m-%d %H:%M:%S %Z") }}.</p>
+{% include "_admin_nav.html" %}
 
 <div class="diag-cards">
   <div class="diag-card"><span class="diag-num">{{ firings_24h }}</span><span class="diag-label">firings (24h)</span></div>

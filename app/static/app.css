@@ -115,6 +115,7 @@ table.grid td { font-family: var(--font-data); font-size: 0.9em; }
 form.inline { display: inline-block; margin: 0; }
 
 .page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.empty-state { text-align:center; color:var(--muted); padding:var(--s6) var(--s4); border:1px dashed var(--border); border-radius:var(--radius); background:var(--panel); }
 .btn, .btn-secondary {
   display: inline-block; padding: 0.45rem 0.9rem; border-radius: var(--radius);
   text-decoration: none; font-weight: var(--fw-bold);
