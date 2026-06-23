@@ -68,6 +68,8 @@ def _make_facts(**kw) -> AircraftFacts:
         altitude_baro=35000,
         origin_icao="KSFO",
         destination_icao="KLAX",
+        squawk=None,
+        emergency=None,
     )
     defaults.update(kw)
     return AircraftFacts(**defaults)
@@ -352,6 +354,15 @@ class TestEvaluateAndRecord:
         assert len(firings) == 1
         assert firings[0].trigger_id == 1
         assert blocked == 1
+
+    def test_firing_snapshot_captures_squawk_emergency(self):
+        # evaluate_and_record copies squawk/emergency from facts onto the firing
+        t = _make_trigger(tail_patterns="N12345")
+        facts = _make_facts(registration="N12345", squawk="7700", emergency="general")
+        session = _make_session(first_result=None)
+        firings, _ = self._run(session, [t], facts)
+        assert firings[0].squawk == "7700"
+        assert firings[0].emergency == "general"
 
 
 # ---------------------------------------------------------------------------

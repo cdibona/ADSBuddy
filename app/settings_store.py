@@ -164,6 +164,14 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
             "to disable automatic cleanup. Default: 30."
         ),
     ),
+    SettingSpec(
+        key="site_base_url",
+        default="",
+        description=(
+            "Absolute base URL (e.g. https://webstag.tail41807.ts.net:8443) used to "
+            "build links in notifications. Blank = links omitted."
+        ),
+    ),
 )
 
 

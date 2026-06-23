@@ -30,6 +30,8 @@ class AircraftFacts:
     registration: str | None
     type_code: str | None
     owner_op: str | None
+    squawk: str | None
+    emergency: str | None
     year: int | None
     lat: float | None
     lon: float | None
@@ -215,6 +217,8 @@ async def evaluate_and_record(
             callsign=facts.callsign,
             registration=facts.registration,
             type_code=facts.type_code,
+            squawk=facts.squawk,
+            emergency=facts.emergency,
             year=facts.year,
             lat=facts.lat,
             lon=facts.lon,

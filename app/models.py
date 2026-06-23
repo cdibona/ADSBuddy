@@ -235,6 +235,8 @@ class TriggerFiring(Base):
     callsign: Mapped[str | None] = mapped_column(String(16))
     registration: Mapped[str | None] = mapped_column(String(16))
     type_code: Mapped[str | None] = mapped_column(String(8))
+    squawk: Mapped[str | None] = mapped_column(String(8))
+    emergency: Mapped[str | None] = mapped_column(String(16))
     year: Mapped[int | None] = mapped_column(Integer)
     lat: Mapped[float | None] = mapped_column(Float)
     lon: Mapped[float | None] = mapped_column(Float)
