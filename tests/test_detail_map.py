@@ -52,8 +52,10 @@ class TestDetailMapRendering:
         out = tpl.render(
             request=req, user=admin, aircraft=_aircraft(), sightings=[], firings_rows=[],
             map_points=[
+                {"lat": 47.4, "lon": -122.2, "t": "2026-06-23 15:59:00 UTC",
+                 "source": "local_radio", "color": "#4ea4ff", "alt": 9000, "flight": "UAL1", "track": 270.0},
                 {"lat": 47.5, "lon": -122.3, "t": "2026-06-23 16:00:00 UTC",
-                 "source": "local_radio", "color": "#4ea4ff", "alt": 10000, "flight": "UAL1"},
+                 "source": "local_radio", "color": "#4ea4ff", "alt": 10000, "flight": "UAL1", "track": 280.0},
             ],
             map_sources=[{"source": "local_radio", "color": "#4ea4ff"}],
             receiver={"lat": 47.6323, "lon": -122.5269, "label": "Local radio"},
@@ -66,6 +68,10 @@ class TestDetailMapRendering:
         assert "(station)" in out
         # Receiver coords reach the JS payload.
         assert "47.6323" in out
+        # Path direction indicators present.
+        assert "Latest report" in out
+        assert "Track start" in out
+        assert "direction of travel" in out
 
     def test_no_points_shows_placeholder_and_no_leaflet(self, req, admin):
         from app.routes_pages import templates

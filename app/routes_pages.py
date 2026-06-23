@@ -28,6 +28,8 @@ from app.settings_store import get_required
 _VALID_HEX_RE = re.compile(r"^[0-9a-f]{1,8}$")
 _VALID_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _HISTORY_PER_PAGE = 50
+# How many recent position-bearing sightings to plot as the detail-page path.
+_MAP_POSITION_LIMIT = 250
 
 # A–Z quick-jump letters for the recent-aircraft registration filter.
 _REG_LETTERS = tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
@@ -152,13 +154,25 @@ async def aircraft_detail(
         firings_stmt = firings_stmt.where(Trigger.owner_id == user.id)
     firings_rows = (await db.execute(firings_stmt)).all()
 
-    # ---- Map data: positioned sightings in chronological order, colored by
-    # source, plus the receiving station's location (learned by the ingester).
+    # ---- Map data: pull a deeper, position-bearing slice (independent of the
+    # 10-row table above) so the map can draw an actual flight path, not just
+    # the last handful of points. Newest-first from the DB, mapped oldest→newest.
+    map_rows = (
+        await db.execute(
+            select(Sighting)
+            .where(
+                Sighting.icao_hex == hex_lower,
+                Sighting.lat.is_not(None),
+                Sighting.lon.is_not(None),
+            )
+            .order_by(Sighting.seen_at.desc())
+            .limit(_MAP_POSITION_LIMIT)
+        )
+    ).scalars().all()
+
     color_by_source: dict[str, str] = {}
     map_points: list[dict] = []
-    for s in reversed(sightings):  # sightings come newest-first; map oldest→newest
-        if s.lat is None or s.lon is None:
-            continue
+    for s in reversed(map_rows):  # oldest → newest, so the path runs forward in time
         if s.source not in color_by_source:
             color_by_source[s.source] = _SOURCE_PALETTE[
                 len(color_by_source) % len(_SOURCE_PALETTE)
@@ -172,6 +186,7 @@ async def aircraft_detail(
                 "color": color_by_source[s.source],
                 "alt": s.altitude_baro,
                 "flight": s.flight,
+                "track": s.track,  # heading in degrees, for direction arrows
             }
         )
     map_sources = [{"source": src, "color": clr} for src, clr in color_by_source.items()]

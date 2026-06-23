@@ -83,6 +83,7 @@
     <span class="legend-item"><span class="legend-dot legend-receiver"></span>{{ receiver.label }} (station)</span>
     {% endif %}
   </div>
+  <p class="muted map-hint">Arrows show direction of travel; the bold arrow marks the latest report. Click any point for time, altitude and heading.</p>
   {% else %}
   <p class="muted">No positioned sightings to map yet.</p>
   {% endif %}
@@ -176,27 +177,69 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    const latlngs = [];
-    points.forEach(function (p, i) {
-      const newest = (i === points.length - 1);
-      const marker = L.circleMarker([p.lat, p.lon], {
-        radius: newest ? 7 : 5,
-        color: p.color, weight: newest ? 3 : 2,
-        fillColor: p.color, fillOpacity: newest ? 0.9 : 0.55
+    const latlngs = points.map(function (p) { return [p.lat, p.lon]; });
+
+    // Great-circle bearing from a -> b, degrees clockwise from north.
+    function bearing(a, b) {
+      const toR = Math.PI / 180, toD = 180 / Math.PI;
+      const dLon = (b[1] - a[1]) * toR;
+      const y = Math.sin(dLon) * Math.cos(b[0] * toR);
+      const x = Math.cos(a[0] * toR) * Math.sin(b[0] * toR) -
+                Math.sin(a[0] * toR) * Math.cos(b[0] * toR) * Math.cos(dLon);
+      return (Math.atan2(y, x) * toD + 360) % 360;
+    }
+    // A "▲" glyph points north at 0°; rotating by heading aims it along travel.
+    function arrowIcon(deg, color, size) {
+      return L.divIcon({
+        className: 'track-arrow',
+        html: '<div style="transform:rotate(' + deg + 'deg);color:' + color +
+              ';font-size:' + size + 'px">▲</div>',
+        iconSize: [size, size], iconAnchor: [size / 2, size / 2]
+      });
+    }
+
+    // The path itself.
+    if (latlngs.length > 1) {
+      L.polyline(latlngs, { color: '#4ea4ff', weight: 3, opacity: 0.75 }).addTo(map);
+    }
+
+    // Each report as a small dot with the details at that moment.
+    points.forEach(function (p) {
+      const m = L.circleMarker([p.lat, p.lon], {
+        radius: 3.5, color: p.color, weight: 1.5, fillColor: p.color, fillOpacity: 0.55
       });
       const alt = (p.alt !== null && p.alt !== undefined) ? (p.alt + ' ft') : '—';
       const fl = p.flight ? (' · ' + p.flight) : '';
-      marker.bindPopup(
-        '<b>' + p.source + '</b>' + (newest ? ' · latest' : '') + '<br>' +
-        p.t + '<br>' + p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + '<br>alt ' + alt + fl
-      );
-      marker.addTo(map);
-      latlngs.push([p.lat, p.lon]);
+      const hdg = (p.track !== null && p.track !== undefined) ? (' · hdg ' + Math.round(p.track) + '°') : '';
+      m.bindPopup('<b>' + p.source + '</b><br>' + p.t + '<br>' +
+        p.lat.toFixed(4) + ', ' + p.lon.toFixed(4) + '<br>alt ' + alt + fl + hdg);
+      m.addTo(map);
     });
 
+    // Direction-of-travel arrows spaced along the path (computed per segment).
     if (latlngs.length > 1) {
-      L.polyline(latlngs, { color: '#9ca8b3', weight: 2, opacity: 0.5, dashArray: '4 5' }).addTo(map);
+      const step = Math.max(1, Math.floor(latlngs.length / 8));
+      for (let i = step; i < latlngs.length; i += step) {
+        const deg = bearing(latlngs[i - 1], latlngs[i]);
+        L.marker(latlngs[i], { icon: arrowIcon(deg, '#9ec9ff', 13), interactive: false }).addTo(map);
+      }
     }
+
+    // Start (oldest) marker.
+    L.circleMarker(latlngs[0], {
+      radius: 5, color: '#3fb950', weight: 2, fillColor: 'transparent', fillOpacity: 0
+    }).bindPopup('Track start<br>' + points[0].t).addTo(map);
+
+    // Latest report: a bold arrow rotated to its heading (location at last report).
+    const last = points[points.length - 1];
+    const lastHdg = (last.track !== null && last.track !== undefined)
+      ? last.track
+      : (latlngs.length > 1 ? bearing(latlngs[latlngs.length - 2], latlngs[latlngs.length - 1]) : 0);
+    L.marker(latlngs[latlngs.length - 1], { icon: arrowIcon(lastHdg, last.color, 22), zIndexOffset: 1000 })
+      .bindPopup('<b>Latest report</b><br>' + last.t + '<br>' +
+        last.lat.toFixed(4) + ', ' + last.lon.toFixed(4) +
+        ((last.track !== null && last.track !== undefined) ? ('<br>heading ' + Math.round(last.track) + '°') : ''))
+      .addTo(map);
 
     const bounds = L.latLngBounds(latlngs);
     if (receiver) {

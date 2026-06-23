@@ -4,21 +4,20 @@
 <h1>Settings</h1>
 <p class="muted">Runtime config stored in Postgres. Changes take effect on next read by the relevant subsystem.</p>
 
+<div class="settings-list">
 {% for s in settings %}
-<form method="post" action="/admin/settings/{{ s.key }}" class="card setting">
-  <div class="setting-head">
-    <code>{{ s.key }}</code>
-    {% if s.secret %}<span class="badge">secret</span>{% endif %}
+<form method="post" action="/admin/settings/{{ s.key }}" class="setting-compact">
+  <div class="setting-key">
+    <code>{{ s.key }}</code>{% if s.secret %} <span class="badge">secret</span>{% endif %}
   </div>
-  <p class="muted">{{ s.description }}</p>
-  <div class="setting-row">
-    {% if s.secret %}
-      <input type="password" name="value" value="{{ s.value }}" placeholder="(unset)">
-    {% else %}
-      <input type="text" name="value" value="{{ s.value }}">
-    {% endif %}
-    <button type="submit">Save</button>
-  </div>
+  {% if s.secret %}
+    <input type="password" name="value" value="{{ s.value }}" placeholder="(unset)">
+  {% else %}
+    <input type="text" name="value" value="{{ s.value }}">
+  {% endif %}
+  <button type="submit">Save</button>
+  {% if s.description %}<p class="setting-desc">{{ s.description }}</p>{% endif %}
 </form>
 {% endfor %}
+</div>
 {% endblock %}
