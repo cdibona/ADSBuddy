@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}History search — ADSBuddy{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Aircraft history search</h1>
+</div>
+
+<form method="get" action="/history" class="card stack">
+  <div class="filter-grid">
+    <label>Tail / Registration
+      <input name="tail" placeholder="e.g. N12345 or partial N123" value="{{ form.tail }}">
+    </label>
+    <label>ICAO hex
+      <input name="hex" placeholder="e.g. a1b2c3" value="{{ form.hex }}">
+    </label>
+    <label>Callsign (flight)
+      <input name="callsign" placeholder="e.g. UAL123 or partial UAL" value="{{ form.callsign }}">
+    </label>
+    <label>Type code
+      <input name="type" placeholder="e.g. B738 or partial B73" value="{{ form.type }}">
+    </label>
+    <label>Owner / Operator
+      <input name="owner" placeholder="e.g. United or partial" value="{{ form.owner }}">
+    </label>
+    <label>Year
+      <input name="year" placeholder="e.g. 2005" value="{{ form.year }}" type="number" min="1900" max="2100">
+    </label>
+    <label>Route (origin or destination ICAO)
+      <input name="route" placeholder="e.g. KSFO or partial KS" value="{{ form.route }}">
+    </label>
+    <label>From date (YYYY-MM-DD)
+      <input name="start_date" placeholder="e.g. 2024-01-01" value="{{ form.start_date }}" type="date">
+    </label>
+    <label>To date (YYYY-MM-DD)
+      <input name="end_date" placeholder="e.g. 2024-12-31" value="{{ form.end_date }}" type="date">
+    </label>
+  </div>
+  <div class="filter-actions">
+    <button type="submit" class="btn-primary">Search</button>
+    <a href="/history" class="btn-secondary">Clear</a>
+  </div>
+</form>
+
+{% if errors %}
+<div class="flash flash-error" role="alert">
+  {% for err in errors %}
+  <div>{{ err }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if searched %}
+<div class="results-header">
+  {% if total %}
+  <p class="muted">
+    {{ start }}–{{ end }} of {{ total }} aircraft, most recently seen first.
+  </p>
+  {% else %}
+  <p class="muted">No aircraft matched your search. Try broader filters.</p>
+  {% endif %}
+</div>
+
+{% if aircraft %}
+<div class="table-scroll">
+<table class="grid">
+  <thead>
+    <tr>
+      <th>Hex</th>
+      <th>Reg / Tail</th>
+      <th>Type</th>
+      <th>Owner / Operator</th>
+      <th>Year</th>
+      <th>Last seen (UTC)</th>
+      <th>Recent callsign</th>
+      <th>Recent route</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in aircraft %}
+    {% set s = recent_sightings.get(a.icao_hex) %}
+    <tr>
+      <td>
+        <a href="/aircraft/{{ a.icao_hex }}"><code>{{ a.icao_hex }}</code></a>
+        {% set ourl = opensky_url(a.icao_hex) %}
+        {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="OpenSky Network">&#x2197;</a>{% endif %}
+      </td>
+      <td>
+        {% if a.registration %}
+          {{ a.registration }}
+          {% set rurl = registration_url(a.registration) %}
+          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if a.type_code %}
+          {{ a.type_code }}
+          {% set turl = type_url(a.type_code) %}
+          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}
+      </td>
+      <td>{{ a.owner_op or "" }}</td>
+      <td>{{ a.year or "" }}</td>
+      <td>{{ a.last_seen.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td>{{ (s.flight if s and s.flight else "") }}</td>
+      <td>
+        {% if s and (s.origin_icao or s.destination_icao) %}
+          {{ s.origin_icao or "?" }} &rarr; {{ s.destination_icao or "?" }}
+        {% endif %}
+      </td>
+      <td>
+        <a href="/aircraft/{{ a.icao_hex }}" class="btn-small">Detail</a>
+        {% set tpurl = trigger_prefill_url(a.icao_hex, a.registration, a.type_code, a.year, a.owner_op) %}
+        {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  <span class="pg-info">Page {{ page }} / {{ total_pages }}</span>
+  {% if page > 1 %}
+  <a href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}page={{ page - 1 }}">&larr; Prev</a>
+  {% else %}
+  <span class="disabled">&larr; Prev</span>
+  {% endif %}
+  {% if page < total_pages %}
+  <a href="?{{ filter_qs }}{% if filter_qs %}&{% endif %}page={{ page + 1 }}">Next &rarr;</a>
+  {% else %}
+  <span class="disabled">Next &rarr;</span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endif %}
+{% endif %}
+
+{% endblock %}
