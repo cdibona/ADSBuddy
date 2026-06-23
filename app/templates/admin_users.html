@@ -9,11 +9,11 @@
   <tbody>
     {% for u in users %}
     <tr>
-      <td>{{ u.username }}</td>
-      <td>{{ "admin" if u.is_admin else "user" }}</td>
-      <td>{{ "yes" if u.is_active else "no" }}</td>
-      <td>{{ u.created_at | localdt("%Y-%m-%d") }}</td>
-      <td class="row-actions">
+      <td data-label="Username">{{ u.username }}</td>
+      <td data-label="Role">{{ "admin" if u.is_admin else "user" }}</td>
+      <td data-label="Active">{{ "yes" if u.is_active else "no" }}</td>
+      <td data-label="Created">{{ u.created_at | localdt("%Y-%m-%d") }}</td>
+      <td data-label="" class="row-actions">
         <form method="post" action="/admin/users/{{ u.id }}/password" class="inline">
           <input type="password" name="password" placeholder="new password" required minlength="6">
           <button type="submit">Reset password</button>

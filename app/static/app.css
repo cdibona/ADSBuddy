@@ -666,3 +666,18 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   border-color: var(--accent);
   font-weight: var(--fw-bold);
 }
+
+@media (max-width: 640px) {
+  table.grid, table.grid thead, table.grid tbody, table.grid tr, table.grid td { display:block; width:100%; }
+  table.grid thead { position:absolute; left:-9999px; }       /* hide header row */
+  table.grid tr {
+    margin:0 0 var(--s3); border:1px solid var(--border);
+    border-radius:var(--radius); background:var(--panel); padding:var(--s3);
+  }
+  table.grid td { border:0; padding:var(--s1) 0; display:flex; gap:var(--s3); justify-content:space-between; }
+  table.grid td::before {
+    content:attr(data-label); color:var(--muted); font-family:var(--font-ui);
+    font-size:.72em; text-transform:uppercase; letter-spacing:.04em; flex:0 0 8rem;
+  }
+  table.grid td[data-label=""]::before, table.grid td.cell-actions::before { content:""; }
+}

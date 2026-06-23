@@ -104,10 +104,10 @@
     <tbody>
       {% for s in sightings %}
       <tr>
-        <td>{{ s.seen_at | localdt }}</td>
-        <td>{{ s.flight or "—" }}</td>
-        <td>{{ (s.altitude_baro|string ~ " ft") if s.altitude_baro else "—" }}</td>
-        <td>{{ (s.origin_icao or "?") }} &rarr; {{ (s.destination_icao or "?") }}</td>
+        <td data-label="Time">{{ s.seen_at | localdt }}</td>
+        <td data-label="Callsign">{{ s.flight or "—" }}</td>
+        <td data-label="Altitude">{{ (s.altitude_baro|string ~ " ft") if s.altitude_baro else "—" }}</td>
+        <td data-label="Route">{{ (s.origin_icao or "?") }} &rarr; {{ (s.destination_icao or "?") }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -136,19 +136,19 @@
     <tbody>
       {% for f, t in firings_rows %}
       <tr>
-        <td>{{ f.fired_at | localdt }}</td>
-        <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
-        <td>{{ f.callsign or "—" }}</td>
-        <td>
+        <td data-label="Time">{{ f.fired_at | localdt }}</td>
+        <td data-label="Trigger"><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
+        <td data-label="Callsign">{{ f.callsign or "—" }}</td>
+        <td data-label="Type">
           {% if f.type_code %}
             {{ f.type_code }}
             {% set turl = type_url(f.type_code) %}
             {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
           {% else %}—{% endif %}
         </td>
-        <td>{{ f.year or "—" }}</td>
-        <td>{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
-        <td>{{ (f.altitude_baro|string ~ " ft") if f.altitude_baro else "—" }}</td>
+        <td data-label="Year">{{ f.year or "—" }}</td>
+        <td data-label="Route">{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
+        <td data-label="Altitude">{{ (f.altitude_baro|string ~ " ft") if f.altitude_baro else "—" }}</td>
       </tr>
       {% endfor %}
     </tbody>

@@ -39,9 +39,9 @@
     {% for f, t in rows %}
     {% set dlabel = delivery_status.get(f.id, "pending") %}
     <tr>
-      <td>{{ f.fired_at | localdt }}</td>
-      <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
-      <td>
+      <td data-label="When">{{ f.fired_at | localdt }}</td>
+      <td data-label="Trigger"><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
+      <td data-label="Aircraft">
         <a href="/aircraft/{{ f.icao_hex }}"><code>{{ f.icao_hex }}</code></a>
         {% if f.registration %}
           / {{ f.registration }}
@@ -49,23 +49,23 @@
           {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
         {% endif %}
       </td>
-      <td>{{ f.callsign or "" }}</td>
-      <td>
+      <td data-label="Callsign">{{ f.callsign or "" }}</td>
+      <td data-label="Type">
         {% if f.type_code %}
           {{ f.type_code }}
           {% set turl = type_url(f.type_code) %}
           {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
         {% endif %}
       </td>
-      <td>{{ f.year or "" }}</td>
-      <td>{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
-      <td>{{ f.altitude_baro or "" }}</td>
-      <td>
+      <td data-label="Year">{{ f.year or "" }}</td>
+      <td data-label="Route">{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
+      <td data-label="Altitude">{{ f.altitude_baro or "" }}</td>
+      <td data-label="Notified">
         <span class="badge-{{ dlabel }}">
           {{ dlabel | capitalize }}
         </span>
       </td>
-      <td class="cell-actions">
+      <td data-label="" class="cell-actions">
         <a href="/aircraft/{{ f.icao_hex }}" class="btn-small">Detail</a>
         {% set tpurl = trigger_prefill_url(f.icao_hex, f.registration, f.type_code, f.year) %}
         {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}

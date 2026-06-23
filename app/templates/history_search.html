@@ -90,12 +90,12 @@
     {% for a in aircraft %}
     {% set s = recent_sightings.get(a.icao_hex) %}
     <tr>
-      <td>
+      <td data-label="Hex">
         <a href="/aircraft/{{ a.icao_hex }}"><code>{{ a.icao_hex }}</code></a>
         {% set ourl = opensky_url(a.icao_hex) %}
         {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="OpenSky Network">&#x2197;</a>{% endif %}
       </td>
-      <td>
+      <td data-label="Reg / Tail">
         {% if a.registration %}
           {{ a.registration }}
           {% set rurl = registration_url(a.registration) %}
@@ -104,7 +104,7 @@
           <span class="muted">—</span>
         {% endif %}
       </td>
-      <td>
+      <td data-label="Type">
         {% if a.type_code %}
           {{ a.type_code }}
           {% set turl = type_url(a.type_code, a.description) %}
@@ -113,16 +113,16 @@
           <span class="muted">—</span>
         {% endif %}
       </td>
-      <td>{{ a.owner_op or "" }}</td>
-      <td>{{ a.year or "" }}</td>
-      <td>{{ a.last_seen | localdt("%Y-%m-%d %H:%M") }}</td>
-      <td>{{ (s.flight if s and s.flight else "") }}</td>
-      <td>
+      <td data-label="Owner / Operator">{{ a.owner_op or "" }}</td>
+      <td data-label="Year">{{ a.year or "" }}</td>
+      <td data-label="Last seen">{{ a.last_seen | localdt("%Y-%m-%d %H:%M") }}</td>
+      <td data-label="Recent callsign">{{ (s.flight if s and s.flight else "") }}</td>
+      <td data-label="Recent route">
         {% if s and (s.origin_icao or s.destination_icao) %}
           {{ s.origin_icao or "?" }} &rarr; {{ s.destination_icao or "?" }}
         {% endif %}
       </td>
-      <td>
+      <td data-label="Last position">
         {% if s and s.lat is not none and s.lon is not none %}
           <span title="At {{ s.seen_at | localdt('%Y-%m-%d %H:%M:%S %Z') }} via {{ s.source }}">
             {{ "%.4f"|format(s.lat) }}, {{ "%.4f"|format(s.lon) }}
@@ -131,7 +131,7 @@
           <span class="muted">—</span>
         {% endif %}
       </td>
-      <td class="cell-actions">
+      <td data-label="" class="cell-actions">
         <a href="/aircraft/{{ a.icao_hex }}" class="btn-small">Detail</a>
         {% set tpurl = trigger_prefill_url(a.icao_hex, a.registration, a.type_code, a.year, a.owner_op) %}
         {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}

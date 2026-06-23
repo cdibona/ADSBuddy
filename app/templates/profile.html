@@ -46,17 +46,17 @@
     {% for c in channels %}
       {% set last = last_by_channel.get(c.id) %}
       <tr>
-        <td>{{ kind_label[c.kind] }}</td>
-        <td>{{ c.name }}</td>
-        <td>
+        <td data-label="Kind">{{ kind_label[c.kind] }}</td>
+        <td data-label="Name">{{ c.name }}</td>
+        <td data-label="Destination">
           {% if c.kind == "discord" %}<code>{{ (c.config.get("webhook_url") or "")[:60] }}{% if c.config.get("webhook_url") and c.config["webhook_url"]|length > 60 %}…{% endif %}</code>
           {% elif c.kind == "email" %}<code>{{ c.config.get("to_address") }}</code>
           {% elif c.kind == "webhook" %}<code>{{ (c.config.get("url") or "")[:60] }}{% if c.config.get("url") and c.config["url"]|length > 60 %}…{% endif %}</code>
           {% elif c.kind == "sms_twilio" %}<code>{{ c.config.get("to_phone") }}</code>
           {% endif %}
         </td>
-        <td>{{ "yes" if c.is_active else "no" }}</td>
-        <td>
+        <td data-label="Active">{{ "yes" if c.is_active else "no" }}</td>
+        <td data-label="Last delivery">
           {% if last %}
             <span class="status status-{{ last.status }}">{{ last.status }}</span>
             {% if last.is_test %}<span class="badge">test</span>{% endif %}
@@ -67,7 +67,7 @@
             <span class="muted">never</span>
           {% endif %}
         </td>
-        <td class="row-actions">
+        <td data-label="" class="row-actions">
           <a href="/profile/channels/{{ c.id }}/edit">Edit</a>
           <form method="post" action="/profile/channels/{{ c.id }}/test" class="inline">
             <button type="submit">Send test</button>
