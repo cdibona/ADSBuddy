@@ -682,3 +682,20 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   }
   table.grid td[data-label=""]::before, table.grid td.cell-actions::before { content:""; }
 }
+
+/* —— Quick day/night switch (topbar, near username) ───────────────────────── */
+.theme-switch {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0.15rem 0.45rem;
+  line-height: 1;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+}
+.theme-switch:hover { border-color: var(--accent); }
+.theme-switch-icon::before { content: "🌙"; }        /* night: tap to go day */
+[data-theme="day"] .theme-switch-icon::before { content: "☀️"; }  /* day: tap to go night */

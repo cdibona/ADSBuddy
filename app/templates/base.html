@@ -20,6 +20,11 @@
           el.setAttribute('aria-pressed', el.getAttribute('data-set-theme') === v);
         });
       };
+      // Quick switch: force the opposite of the current mode (overrides OS/auto).
+      window.__toggleTheme = function () {
+        var cur = document.documentElement.getAttribute('data-theme');
+        window.__setTheme(cur === 'day' ? 'night' : 'day');
+      };
     } catch (e) {}
   })();
   </script>
@@ -42,8 +47,12 @@
         <a href="/history" {% if path.startswith("/history") %}aria-current="page"{% endif %}>History</a>
         <a href="/triggers" {% if path.startswith("/triggers") %}aria-current="page"{% endif %}>Triggers</a>
         <a href="/firings" {% if path.startswith("/firings") %}aria-current="page"{% endif %}>Firings</a>
+        <button type="button" class="theme-switch" onclick="__toggleTheme()"
+                aria-label="Toggle day / night" title="Toggle day / night (overrides your OS setting)">
+          <span class="theme-switch-icon"></span>
+        </button>
         <details class="user-menu">
-          <summary>{{ user.username }}{% if user.is_admin %} <span class="user-admin">admin</span>{% endif %}</summary>
+          <summary>{{ user.username }}</summary>
           <div class="user-menu-items">
             <a href="/profile">Profile</a>
             {% if user.is_admin %}
