@@ -199,7 +199,7 @@ class Trigger(Base):
 
     owner: Mapped[User] = relationship(back_populates="triggers")
     firings: Mapped[list["TriggerFiring"]] = relationship(
-        back_populates="trigger", cascade="all, delete-orphan"
+        back_populates="trigger", cascade="all, delete-orphan", passive_deletes=True
     )
 
 
