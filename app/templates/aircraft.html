@@ -23,7 +23,7 @@
   <thead>
     <tr>
       <th>Hex</th><th>Reg</th><th>Type</th><th>Description</th>
-      <th>Owner / Operator</th><th>Year</th><th>Last seen (UTC)</th><th>Actions</th>
+      <th>Owner / Operator</th><th>Year</th><th>Last seen</th><th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -51,7 +51,7 @@
       <td>{{ a.description or "" }}</td>
       <td>{{ a.owner_op or "" }}</td>
       <td>{{ a.year or "" }}</td>
-      <td>{{ a.last_seen.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+      <td>{{ a.last_seen | localdt }}</td>
       <td class="cell-actions">
         <a href="/aircraft/{{ a.icao_hex }}" class="btn-small">Detail</a>
         {% set tpurl = trigger_prefill_url(a.icao_hex, a.registration, a.type_code, a.year, a.owner_op) %}

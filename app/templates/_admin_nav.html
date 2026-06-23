@@ -1,0 +1,5 @@
+<nav class="subnav">
+  <a href="/admin"{% if request.url.path == "/admin" %} aria-current="page"{% endif %}>Users</a>
+  <a href="/admin/settings"{% if request.url.path == "/admin/settings" %} aria-current="page"{% endif %}>Settings</a>
+  <a href="/admin/diagnostics"{% if request.url.path == "/admin/diagnostics" %} aria-current="page"{% endif %}>Diagnostics</a>
+</nav>

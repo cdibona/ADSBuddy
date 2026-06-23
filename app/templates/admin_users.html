@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Users — ADSBuddy admin{% endblock %}
 {% block content %}
-<h1>Users</h1>
+<h1>Admin</h1>
+{% include "_admin_nav.html" %}
 
 <table class="grid">
   <thead><tr><th>Username</th><th>Role</th><th>Active</th><th>Created</th><th>Actions</th></tr></thead>
@@ -11,7 +12,7 @@
       <td>{{ u.username }}</td>
       <td>{{ "admin" if u.is_admin else "user" }}</td>
       <td>{{ "yes" if u.is_active else "no" }}</td>
-      <td>{{ u.created_at.strftime("%Y-%m-%d") }}</td>
+      <td>{{ u.created_at | localdt("%Y-%m-%d") }}</td>
       <td class="row-actions">
         <form method="post" action="/admin/users/{{ u.id }}/password" class="inline">
           <input type="password" name="password" placeholder="new password" required minlength="6">

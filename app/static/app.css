@@ -56,7 +56,8 @@ body.auth { justify-content: flex-start; }
 .card.stack > * + * { margin-top: 0.5rem; }
 .card label { display: block; }
 .card label + label { margin-top: 0.6rem; }
-.card input[type=text], .card input[type=password] {
+.card input[type=text], .card input[type=password],
+.card input[type=email], .card select {
   width: 100%; padding: 0.5rem 0.6rem;
   background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
   color: var(--text); font: inherit;
@@ -604,3 +605,73 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 
 /* —— Auto-refresh status line ──────────────────────────────────────────── */
 .refresh-note { font-size: 0.8em; color: var(--muted); }
+
+/* —— User dropdown menu (nav) ─────────────────────────────────────────────── */
+.user-menu { position: relative; }
+.user-menu > summary {
+  list-style: none;
+  cursor: pointer;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.user-menu > summary::-webkit-details-marker { display: none; }
+.user-menu > summary::after { content: "▾"; color: var(--muted); font-size: 0.8em; }
+.user-admin {
+  font-size: 0.68em; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.04em; border: 1px solid var(--border);
+  border-radius: 99px; padding: 0.02rem 0.4rem;
+}
+.user-menu-items {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.45rem);
+  min-width: 170px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+.user-menu-items a,
+.user-menu-items .menu-logout {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  color: var(--text);
+  background: none;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.user-menu-items a:hover,
+.user-menu-items .menu-logout:hover { background: var(--panel-2); text-decoration: none; }
+.user-menu-items form { margin: 0; }
+.menu-sep { height: 1px; background: var(--border); margin: 0.3rem 0.2rem; }
+
+/* —— Admin sub-navigation tabs ────────────────────────────────────────────── */
+.subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 0 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.subnav a {
+  padding: 0.4rem 0.85rem;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.subnav a:hover { color: var(--text); text-decoration: none; }
+.subnav a[aria-current="page"] {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}

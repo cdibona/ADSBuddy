@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import notifications, version
+from app import notifications, timefmt, version
 from app.database import get_session
 from app.deps import require_user
 from app.models import (
@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 version.register(templates)
+timefmt.register(templates)
 
 CHANNEL_KIND_LABELS = {
     "discord": "Discord",
@@ -117,6 +118,20 @@ async def profile(
             "last_by_channel": last_by_channel,
         },
     )
+
+
+@router.post("/profile/settings")
+async def profile_settings_save(
+    request: Request,
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_session),
+):
+    form = dict(await request.form())
+    tz = _strip(form.get("timezone")) or "UTC"
+    user.timezone = tz if timefmt.is_valid_tz(tz) else "UTC"
+    user.email = _strip(form.get("email")) or None
+    await db.commit()
+    return RedirectResponse(url="/profile", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/profile/channels/new", response_class=HTMLResponse)

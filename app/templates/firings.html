@@ -3,7 +3,7 @@
 {% block content %}
 <div class="page-head">
   <h1>Trigger firings</h1>
-  <span class="refresh-note">Updated {{ loaded_at.strftime("%H:%M:%S UTC") }} · auto-refreshes every 30s</span>
+  <span class="refresh-note">Updated {{ loaded_at | localdt("%H:%M:%S %Z") }} · auto-refreshes every 30s</span>
 </div>
 
 <div class="filter-bar">
@@ -24,7 +24,7 @@
 <div class="table-scroll">
 <table class="grid">
   <thead><tr>
-    <th>When (UTC)</th>
+    <th>When</th>
     <th>Trigger</th>
     <th>Aircraft</th>
     <th>Callsign</th>
@@ -39,7 +39,7 @@
     {% for f, t in rows %}
     {% set dlabel = delivery_status.get(f.id, "pending") %}
     <tr>
-      <td>{{ f.fired_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+      <td>{{ f.fired_at | localdt }}</td>
       <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
       <td>
         <a href="/aircraft/{{ f.icao_hex }}"><code>{{ f.icao_hex }}</code></a>

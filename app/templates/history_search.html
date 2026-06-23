@@ -79,7 +79,7 @@
       <th>Type</th>
       <th>Owner / Operator</th>
       <th>Year</th>
-      <th>Last seen (UTC)</th>
+      <th>Last seen</th>
       <th>Recent callsign</th>
       <th>Recent route</th>
       <th>Last position</th>
@@ -115,7 +115,7 @@
       </td>
       <td>{{ a.owner_op or "" }}</td>
       <td>{{ a.year or "" }}</td>
-      <td>{{ a.last_seen.strftime("%Y-%m-%d %H:%M") }}</td>
+      <td>{{ a.last_seen | localdt("%Y-%m-%d %H:%M") }}</td>
       <td>{{ (s.flight if s and s.flight else "") }}</td>
       <td>
         {% if s and (s.origin_icao or s.destination_icao) %}
@@ -124,7 +124,7 @@
       </td>
       <td>
         {% if s and s.lat is not none and s.lon is not none %}
-          <span title="At {{ s.seen_at.strftime('%Y-%m-%d %H:%M:%S UTC') }} via {{ s.source }}">
+          <span title="At {{ s.seen_at | localdt('%Y-%m-%d %H:%M:%S %Z') }} via {{ s.source }}">
             {{ "%.4f"|format(s.lat) }}, {{ "%.4f"|format(s.lon) }}
           </span>
         {% else %}

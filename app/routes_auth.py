@@ -22,11 +22,12 @@ from app.security import (
 )
 
 log = logging.getLogger(__name__)
-from app import version
+from app import timefmt, version
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 version.register(templates)
+timefmt.register(templates)
 
 
 async def _start_session(

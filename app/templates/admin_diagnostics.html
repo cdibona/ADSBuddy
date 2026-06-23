@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Diagnostics — ADSBuddy admin{% endblock %}
 {% block content %}
-<h1>Diagnostics</h1>
-<p class="muted">Firing &amp; notification-delivery audit trail. Loaded {{ now.strftime("%Y-%m-%d %H:%M:%S UTC") }}.</p>
+<h1>Admin</h1>
+{% include "_admin_nav.html" %}
+<p class="muted">Firing &amp; notification-delivery audit trail. Loaded {{ now | localdt("%Y-%m-%d %H:%M:%S %Z") }}.</p>
 
 <div class="diag-cards">
   <div class="diag-card"><span class="diag-num">{{ firings_24h }}</span><span class="diag-label">firings (24h)</span></div>
@@ -17,12 +18,12 @@
   <div class="table-scroll">
   <table class="grid">
     <thead><tr>
-      <th>When (UTC)</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th><th>Error</th>
+      <th>When</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th><th>Error</th>
     </tr></thead>
     <tbody>
       {% for d, ch, owner, firing, trig in fail_rows %}
       <tr>
-        <td>{{ d.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ d.created_at | localdt }}</td>
         <td>{{ ch.name }} <span class="muted">({{ ch.kind }})</span></td>
         <td>{{ owner.username }}</td>
         <td>{{ trig.name if trig else "—" }}{% if d.is_test %} <span class="badge">test</span>{% endif %}</td>
@@ -49,12 +50,12 @@
   <div class="table-scroll">
   <table class="grid">
     <thead><tr>
-      <th>When (UTC)</th><th>Status</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th>
+      <th>When</th><th>Status</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th>
     </tr></thead>
     <tbody>
       {% for d, ch, owner, firing, trig in recent_rows %}
       <tr>
-        <td>{{ d.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ d.created_at | localdt }}</td>
         <td><span class="badge-{{ d.status }}">{{ d.status | capitalize }}</span>{% if d.is_test %} <span class="badge">test</span>{% endif %}</td>
         <td>{{ ch.name }} <span class="muted">({{ ch.kind }})</span></td>
         <td>{{ owner.username }}</td>

@@ -3,6 +3,27 @@
 {% block content %}
 <h1>Profile — {{ user.username }}</h1>
 
+<div class="card stack">
+  <h2>Settings</h2>
+  <form method="post" action="/profile/settings" class="stack">
+    <label>Email
+      <input type="email" name="email" value="{{ user.email or '' }}" placeholder="you@example.com">
+      <small class="muted">The address associated with your account. (Per-trigger email
+      destinations are set up as channels below.)</small>
+    </label>
+    <label>Time zone
+      <select name="timezone">
+        {% for tz in common_timezones %}
+        <option value="{{ tz }}"{% if user.timezone == tz %} selected{% endif %}>{{ tz }}</option>
+        {% endfor %}
+      </select>
+      <small class="muted">All times across the app are shown in this zone.</small>
+    </label>
+    <button type="submit">Save settings</button>
+  </form>
+  <p class="muted">Sign-in with Google/GitHub (OAuth) is planned; linked accounts will appear here.</p>
+</div>
+
 <div class="card">
   <h2>Notification channels</h2>
   <p class="muted">
@@ -40,7 +61,7 @@
             <span class="status status-{{ last.status }}">{{ last.status }}</span>
             {% if last.is_test %}<span class="badge">test</span>{% endif %}
             <br>
-            <span class="muted">{{ last.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</span>
+            <span class="muted">{{ last.created_at | localdt }}</span>
             {% if last.error %}<br><span class="muted" title="{{ last.error }}">{{ last.error[:80] }}{% if last.error|length > 80 %}…{% endif %}</span>{% endif %}
           {% else %}
             <span class="muted">never</span>

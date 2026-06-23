@@ -61,10 +61,10 @@
     <dd>{{ aircraft.year or "—" }}</dd>
 
     <dt>First seen</dt>
-    <dd>{{ aircraft.first_seen.strftime("%Y-%m-%d %H:%M UTC") }}</dd>
+    <dd>{{ aircraft.first_seen | localdt("%Y-%m-%d %H:%M %Z") }}</dd>
 
     <dt>Last seen</dt>
-    <dd>{{ aircraft.last_seen.strftime("%Y-%m-%d %H:%M UTC") }}</dd>
+    <dd>{{ aircraft.last_seen | localdt("%Y-%m-%d %H:%M %Z") }}</dd>
   </dl>
 </div>
 
@@ -96,7 +96,7 @@
   <div class="table-scroll">
   <table class="grid">
     <thead><tr>
-      <th>Time (UTC)</th>
+      <th>Time</th>
       <th>Callsign</th>
       <th>Altitude</th>
       <th>Route</th>
@@ -104,7 +104,7 @@
     <tbody>
       {% for s in sightings %}
       <tr>
-        <td>{{ s.seen_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ s.seen_at | localdt }}</td>
         <td>{{ s.flight or "—" }}</td>
         <td>{{ (s.altitude_baro|string ~ " ft") if s.altitude_baro else "—" }}</td>
         <td>{{ (s.origin_icao or "?") }} &rarr; {{ (s.destination_icao or "?") }}</td>
@@ -125,7 +125,7 @@
   <div class="table-scroll">
   <table class="grid">
     <thead><tr>
-      <th>Time (UTC)</th>
+      <th>Time</th>
       <th>Trigger</th>
       <th>Callsign</th>
       <th>Type</th>
@@ -136,7 +136,7 @@
     <tbody>
       {% for f, t in firings_rows %}
       <tr>
-        <td>{{ f.fired_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ f.fired_at | localdt }}</td>
         <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
         <td>{{ f.callsign or "—" }}</td>
         <td>

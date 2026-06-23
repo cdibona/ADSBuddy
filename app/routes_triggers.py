@@ -20,7 +20,7 @@ from sqlalchemy.orm import selectinload
 
 import httpx
 
-from app import geocode, settings_store, version
+from app import geocode, settings_store, timefmt, version
 from app.database import get_session
 from app.deps import require_user
 from app.models import NotificationDelivery, Trigger, TriggerFiring, User
@@ -43,6 +43,7 @@ templates.env.globals.update(
     trigger_prefill_url=trigger_prefill_url,
 )
 version.register(templates)
+timefmt.register(templates)
 # Defined below; registered here so triggers.html can summarize conditions.
 templates.env.globals.update(trigger_condition_items=lambda t: trigger_condition_items(t))
 

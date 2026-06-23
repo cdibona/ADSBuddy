@@ -20,16 +20,20 @@
         <a href="/history" {% if path.startswith("/history") %}aria-current="page"{% endif %}>History</a>
         <a href="/triggers" {% if path.startswith("/triggers") %}aria-current="page"{% endif %}>Triggers</a>
         <a href="/firings" {% if path.startswith("/firings") %}aria-current="page"{% endif %}>Firings</a>
-        <a href="/profile" {% if path.startswith("/profile") %}aria-current="page"{% endif %}>Profile</a>
-        {% if user.is_admin %}
-          <a href="/admin" {% if path == "/admin" %}aria-current="page"{% endif %}>Users</a>
-          <a href="/admin/settings" {% if path == "/admin/settings" %}aria-current="page"{% endif %}>Settings</a>
-          <a href="/admin/diagnostics" {% if path == "/admin/diagnostics" %}aria-current="page"{% endif %}>Diagnostics</a>
-        {% endif %}
-        <span class="user">{{ user.username }}{% if user.is_admin %} (admin){% endif %}</span>
-        <form method="post" action="/logout" class="inline">
-          <button type="submit" class="link">Sign out</button>
-        </form>
+        <details class="user-menu">
+          <summary>{{ user.username }}{% if user.is_admin %} <span class="user-admin">admin</span>{% endif %}</summary>
+          <div class="user-menu-items">
+            <a href="/profile">Profile</a>
+            {% if user.is_admin %}
+            <div class="menu-sep"></div>
+            <a href="/admin">Admin</a>
+            {% endif %}
+            <div class="menu-sep"></div>
+            <form method="post" action="/logout">
+              <button type="submit" class="menu-logout">Logout</button>
+            </form>
+          </div>
+        </details>
       {% endif %}
     </nav>
   </header>

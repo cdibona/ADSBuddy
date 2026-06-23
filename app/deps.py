@@ -34,6 +34,8 @@ async def current_user_optional(
         return None
     if not user.is_active:
         return None
+    # Stash the tz so the localdt template filter can localize timestamps.
+    request.state.user_tz = user.timezone or "UTC"
     return user
 
 

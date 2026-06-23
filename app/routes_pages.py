@@ -13,7 +13,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import version
+from app import timefmt, version
 from app.aircraft_helpers import opensky_url, registration_url, trigger_prefill_url, type_url
 from app.database import get_session
 from app.deps import current_user_optional, require_user
@@ -83,6 +83,7 @@ templates.env.globals.update(
     trigger_prefill_url=trigger_prefill_url,
 )
 version.register(templates)
+timefmt.register(templates)
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -194,7 +195,7 @@ async def aircraft_detail(
             {
                 "lat": s.lat,
                 "lon": s.lon,
-                "t": s.seen_at.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "t": timefmt.format_dt(s.seen_at, user.timezone, "%Y-%m-%d %H:%M:%S %Z"),
                 "source": s.source,
                 "color": color_by_source[s.source],
                 "alt": s.altitude_baro,

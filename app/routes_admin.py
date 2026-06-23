@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import version
+from app import timefmt, version
 from app.database import get_session
 from app.deps import require_admin
 from app.models import (
@@ -26,6 +26,7 @@ from app.settings_store import set_value
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory="app/templates")
 version.register(templates)
+timefmt.register(templates)
 
 
 @router.get("", response_class=HTMLResponse)
