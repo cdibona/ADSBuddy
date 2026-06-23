@@ -26,7 +26,7 @@
     <th>Name</th>
     {% if user.is_admin %}<th>Owner</th>{% endif %}
     <th>Active</th>
-    <th>Conditions</th>
+    <th class="col-conditions">Conditions</th>
     <th>Cooldown</th>
     <th>Actions</th>
   </tr></thead>
@@ -42,28 +42,20 @@
           <span class="badge badge-paused">Paused</span>
         {% endif %}
       </td>
-      <td>
+      <td class="col-conditions">
+        {% set items = trigger_condition_items(t) %}
+        {% if items %}
         <ul class="cond">
-          {% if t.tail_patterns %}<li><b>tail</b>: <code>{{ t.tail_patterns }}</code></li>{% endif %}
-          {% if t.flight_patterns %}<li><b>flight</b>: <code>{{ t.flight_patterns }}</code></li>{% endif %}
-          {% if t.type_codes %}<li><b>type</b>: <code>{{ t.type_codes }}</code></li>{% endif %}
-          {% if t.min_year is not none or t.max_year is not none %}
-            <li><b>year</b>:
-              {% if t.min_year is not none %}≥ {{ t.min_year }}{% endif %}
-              {% if t.min_year is not none and t.max_year is not none %} and {% endif %}
-              {% if t.max_year is not none %}≤ {{ t.max_year }}{% endif %}
-            </li>
-          {% endif %}
-          {% if t.min_age_years is not none or t.max_age_years is not none %}
-            <li><b>age</b>:
-              {% if t.min_age_years is not none %}≥ {{ t.min_age_years }}y{% endif %}
-              {% if t.min_age_years is not none and t.max_age_years is not none %} and {% endif %}
-              {% if t.max_age_years is not none %}≤ {{ t.max_age_years }}y{% endif %}
-            </li>
-          {% endif %}
-          {% if t.origin_icaos %}<li><b>origin</b>: <code>{{ t.origin_icaos }}</code></li>{% endif %}
-          {% if t.destination_icaos %}<li><b>destination</b>: <code>{{ t.destination_icaos }}</code></li>{% endif %}
+          {% for label, value in items[:3] %}
+          <li><b>{{ label }}</b>: <code>{{ value }}</code></li>
+          {% endfor %}
         </ul>
+        {% if items|length > 3 %}
+        <a class="cond-more" href="/triggers/{{ t.id }}/edit">+{{ items|length - 3 }} more…</a>
+        {% endif %}
+        {% else %}
+        <span class="muted">any aircraft</span>
+        {% endif %}
       </td>
       <td>{{ t.cooldown_seconds }}s</td>
       <td class="row-actions">

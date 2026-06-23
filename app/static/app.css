@@ -128,6 +128,17 @@ a.btn:hover, a.btn-secondary:hover { text-decoration: none; opacity: 0.9; }
 ul.cond { margin: 0; padding-left: 1.1rem; }
 ul.cond li { margin: 0; }
 
+/* Triggers table: keep the Conditions column from dominating the row. Cap it
+   near 30% and wrap long comma-separated values instead of overflowing. */
+table.grid th.col-conditions,
+table.grid td.col-conditions {
+  width: 30%;
+  max-width: 30%;
+}
+td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
+.cond-more { font-size: 0.8em; color: var(--muted); }
+.cond-more:hover { color: var(--accent); }
+
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
 .status { font-weight: 600; padding: 0 0.35rem; border-radius: 3px; }
 .status-sent { color: var(--ok); }

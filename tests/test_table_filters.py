@@ -108,6 +108,73 @@ class TestRegLetterFilter:
 # Filter-bar template rendering
 # ---------------------------------------------------------------------------
 
+class TestTriggerConditionItems:
+    def _trigger(self, **kw):
+        from app.models import Trigger
+
+        defaults = dict(id=1, owner_id=1, name="t", tail_patterns="", flight_patterns="",
+                        type_codes="", origin_icaos="", destination_icaos="",
+                        min_year=None, max_year=None, min_age_years=None, max_age_years=None)
+        defaults.update(kw)
+        return Trigger(**defaults)
+
+    def test_empty_trigger_has_no_items(self):
+        from app.routes_triggers import trigger_condition_items
+
+        assert trigger_condition_items(self._trigger()) == []
+
+    def test_collects_active_conditions_in_order(self):
+        from app.routes_triggers import trigger_condition_items
+
+        t = self._trigger(tail_patterns="N1*", type_codes="B738", min_year=1990, max_year=2000)
+        items = trigger_condition_items(t)
+        labels = [lbl for lbl, _ in items]
+        assert labels == ["tail", "type", "year"]
+        assert dict(items)["year"] == "≥ 1990 and ≤ 2000"
+
+    def test_age_range_one_sided(self):
+        from app.routes_triggers import trigger_condition_items
+
+        t = self._trigger(min_age_years=50)
+        assert dict(trigger_condition_items(t))["age"] == "≥ 50y"
+
+
+class TestTriggersConditionsRendering:
+    def _ctx(self, triggers):
+        return dict(
+            request=types.SimpleNamespace(url=types.SimpleNamespace(path="/triggers")),
+            user=types.SimpleNamespace(username="admin", is_admin=False, id=1),
+            triggers=triggers, status="all",
+            counts={"all": len(triggers), "active": 0, "paused": 0}, flash=None,
+        )
+
+    def test_subset_and_more_link(self):
+        from app.routes_triggers import templates
+        from app.models import Trigger
+
+        # 5 conditions -> show 3, summarize "+2 more".
+        t = Trigger(id=7, owner_id=1, name="busy", is_active=True, notes="",
+                    tail_patterns="N1*", flight_patterns="UAL*", type_codes="B738",
+                    origin_icaos="KSFO", destination_icaos="KJFK",
+                    min_year=None, max_year=None, min_age_years=None, max_age_years=None,
+                    cooldown_seconds=3600)
+        out = templates.env.get_template("triggers.html").render(**self._ctx([t]))
+        assert "+2 more" in out
+        assert 'class="col-conditions"' in out
+
+    def test_no_conditions_shows_any_aircraft(self):
+        from app.routes_triggers import templates
+        from app.models import Trigger
+
+        t = Trigger(id=8, owner_id=1, name="catch-all", is_active=True, notes="",
+                    tail_patterns="", flight_patterns="", type_codes="",
+                    origin_icaos="", destination_icaos="",
+                    min_year=None, max_year=None, min_age_years=None, max_age_years=None,
+                    cooldown_seconds=3600)
+        out = templates.env.get_template("triggers.html").render(**self._ctx([t]))
+        assert "any aircraft" in out
+
+
 @pytest.fixture
 def fake_request():
     return types.SimpleNamespace(url=types.SimpleNamespace(path="/"))

@@ -41,6 +41,8 @@ templates.env.globals.update(
     trigger_prefill_url=trigger_prefill_url,
 )
 version.register(templates)
+# Defined below; registered here so triggers.html can summarize conditions.
+templates.env.globals.update(trigger_condition_items=lambda t: trigger_condition_items(t))
 
 FLASH_COOKIE = "adsbuddy_flash"
 _DEFAULT_PER_PAGE = 100
@@ -104,6 +106,39 @@ def _normalize_firings_bucket(raw: str | None) -> str:
     """Clamp the firings time-bucket filter to a known value (default 'all')."""
     val = (raw or "all").strip().lower()
     return val if val in _FIRINGS_BUCKETS else "all"
+
+
+def _range_str(lo: int | None, hi: int | None, suffix: str = "") -> str:
+    """Render a min/max range like '≥ 1990 and ≤ 2000', '≥ 1990', or '≤ 2000'."""
+    if lo is not None and hi is not None:
+        return f"≥ {lo}{suffix} and ≤ {hi}{suffix}"
+    if lo is not None:
+        return f"≥ {lo}{suffix}"
+    return f"≤ {hi}{suffix}"
+
+
+def trigger_condition_items(t: Trigger) -> list[tuple[str, str]]:
+    """(label, value) pairs for a trigger's active conditions, in display order.
+
+    Registered as a Jinja global so the triggers table can show a subset and
+    summarize the rest as '+N more'.
+    """
+    items: list[tuple[str, str]] = []
+    if t.tail_patterns:
+        items.append(("tail", t.tail_patterns))
+    if t.flight_patterns:
+        items.append(("flight", t.flight_patterns))
+    if t.type_codes:
+        items.append(("type", t.type_codes))
+    if t.min_year is not None or t.max_year is not None:
+        items.append(("year", _range_str(t.min_year, t.max_year)))
+    if t.min_age_years is not None or t.max_age_years is not None:
+        items.append(("age", _range_str(t.min_age_years, t.max_age_years, suffix="y")))
+    if t.origin_icaos:
+        items.append(("origin", t.origin_icaos))
+    if t.destination_icaos:
+        items.append(("destination", t.destination_icaos))
+    return items
 
 
 def _firings_since_cutoff(bucket: str, now: datetime) -> datetime | None:
