@@ -699,3 +699,12 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 .theme-switch:hover { border-color: var(--accent); }
 .theme-switch-icon::before { content: "🌙"; }        /* night: tap to go day */
 [data-theme="day"] .theme-switch-icon::before { content: "☀️"; }  /* day: tap to go night */
+
+/* "N/A" delivery state — owner has no notification channels. */
+.badge-na {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  color: var(--muted);
+  border: 1px dashed color-mix(in srgb, var(--muted) 40%, transparent);
+}

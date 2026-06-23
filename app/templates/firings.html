@@ -61,9 +61,11 @@
       <td data-label="Route">{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
       <td data-label="Altitude">{{ f.altitude_baro or "" }}</td>
       <td data-label="Notified">
-        <span class="badge-{{ dlabel }}">
-          {{ dlabel | capitalize }}
-        </span>
+        {% if dlabel == "na" %}
+          <span class="badge-na" title="No notification channels configured">N/A</span>
+        {% else %}
+          <span class="badge-{{ dlabel }}">{{ dlabel | capitalize }}</span>
+        {% endif %}
       </td>
       <td data-label="" class="cell-actions">
         <a href="/aircraft/{{ f.icao_hex }}" class="btn-small">Detail</a>

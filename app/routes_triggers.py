@@ -23,7 +23,7 @@ import httpx
 from app import geocode, settings_store, timefmt, version
 from app.database import get_session
 from app.deps import require_user
-from app.models import NotificationDelivery, Trigger, TriggerFiring, User
+from app.models import NotificationChannel, NotificationDelivery, Trigger, TriggerFiring, User
 
 from app.aircraft_helpers import (
     opensky_url,
@@ -535,6 +535,23 @@ async def firings_list(
             delivery_status[ds.firing_id] = _delivery_label(
                 ds.has_sent, ds.has_failed, ds.has_skipped
             )
+
+    # Mark "n/a" when the firing's owner has no notification channels at all —
+    # there's nothing to deliver through, so it isn't "pending".
+    owner_ids = {t.owner_id for _f, t in rows}
+    if owner_ids:
+        owners_with_channels = set(
+            (
+                await db.execute(
+                    select(NotificationChannel.user_id)
+                    .where(NotificationChannel.user_id.in_(owner_ids))
+                    .distinct()
+                )
+            ).scalars()
+        )
+        for f, t in rows:
+            if f.id not in delivery_status and t.owner_id not in owners_with_channels:
+                delivery_status[f.id] = "na"
 
     flash = _pop_flash(request)
     response = templates.TemplateResponse(

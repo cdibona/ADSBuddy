@@ -151,3 +151,22 @@ class TestDeliveryDetailRender:
         assert "/aircraft/a50b7b" in out
         assert "SMTP not configured" in out
         assert "not an error" in out  # skipped explanation
+
+
+class TestFiringsNotifiedNA:
+    def test_na_when_owner_has_no_channels(self):
+        import types
+        from datetime import datetime, timezone
+        from app.routes_triggers import templates
+        from app.models import Trigger, TriggerFiring
+        f = TriggerFiring(id=7, trigger_id=1, icao_hex="a1b2c3", registration="N1",
+                          fired_at=datetime(2026, 6, 23, 16, tzinfo=timezone.utc))
+        t = Trigger(id=1, owner_id=1, name="T")
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/firings"))
+        out = templates.env.get_template("firings.html").render(
+            request=req, user=types.SimpleNamespace(username="a", is_admin=True),
+            rows=[(f, t)], delivery_status={7: "na"}, total=1, page=1, per_page=100,
+            total_pages=1, start=1, end=1, since="all",
+            loaded_at=datetime(2026, 6, 23, 16, tzinfo=timezone.utc), flash=None)
+        assert "badge-na" in out and "N/A" in out
+        assert "Pending" not in out
