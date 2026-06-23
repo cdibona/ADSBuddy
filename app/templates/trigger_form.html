@@ -2,10 +2,22 @@
 {% block title %}{{ title }} — ADSBuddy{% endblock %}
 {% block content %}
 <h1>{{ title }}</h1>
+
+{% if prefill_error %}
+<div class="flash flash-error" role="alert">
+  Could not prefill from aircraft — {{ prefill_error }}. Starting with a blank form.
+</div>
+{% elif prefill %}
+<div class="flash flash-info" role="alert">
+  Prefilled from aircraft <code>{{ prefill.hex }}</code>{% if prefill.get('tail') %} ({{ prefill.get('tail') }}){% endif %}.
+  Review and adjust the fields below, then save.
+</div>
+{% endif %}
+
 <form method="post" action="{{ action }}" class="card stack trigger-form">
   <label>Name
     <input name="name" required maxlength="128"
-           value="{{ trigger.name if trigger else '' }}">
+           value="{{ trigger.name if trigger else (prefill.get('name') or '') }}">
   </label>
 
   <label>Notes
@@ -22,7 +34,7 @@
     <legend>Aircraft identity (any match)</legend>
     <label>Tail numbers (registrations)
       <input name="tail_patterns" placeholder="e.g. N123AB, N9*FN"
-             value="{{ trigger.tail_patterns if trigger else '' }}">
+             value="{{ trigger.tail_patterns if trigger else (prefill.get('tail') or '') }}">
       <small class="muted">Comma-separated. <code>*</code> wildcard supported.</small>
     </label>
     <label>Flight callsigns
@@ -32,7 +44,7 @@
     </label>
     <label>ICAO type codes
       <input name="type_codes" placeholder="e.g. B738, B739, C172"
-             value="{{ trigger.type_codes if trigger else '' }}">
+             value="{{ trigger.type_codes if trigger else (prefill.get('type') or '') }}">
       <small class="muted">Exact match. The <code>t</code> field from the radio (e.g. B39M, E75L).</small>
     </label>
   </fieldset>
@@ -42,11 +54,11 @@
     <div class="grid-2">
       <label>Min year built
         <input type="number" name="min_year"
-               value="{{ trigger.min_year if (trigger and trigger.min_year is not none) else '' }}">
+               value="{{ trigger.min_year if (trigger and trigger.min_year is not none) else (prefill.get('year') or '') }}">
       </label>
       <label>Max year built
         <input type="number" name="max_year"
-               value="{{ trigger.max_year if (trigger and trigger.max_year is not none) else '' }}">
+               value="{{ trigger.max_year if (trigger and trigger.max_year is not none) else (prefill.get('year') or '') }}">
       </label>
       <label>Min age (years)
         <input type="number" name="min_age_years" placeholder="e.g. 50 for &gt;= 50yo"

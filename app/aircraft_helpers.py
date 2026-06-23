@@ -54,3 +54,39 @@ def opensky_url(icao_hex: str | None) -> str | None:
     if not icao_hex:
         return None
     return f"https://opensky-network.org/aircraft-profile?icao24={icao_hex}"
+
+
+def trigger_prefill_url(
+    icao_hex: str | None,
+    tail: str | None = None,
+    type_code: str | None = None,
+    year: int | str | None = None,
+    owner: str | None = None,
+) -> str | None:
+    """Return a /triggers/new URL with aircraft data pre-populated as query params.
+
+    Returns None for falsy icao_hex.
+    """
+    if not icao_hex:
+        return None
+    icao_hex = icao_hex.strip().lower()
+    if not icao_hex:
+        return None
+    params: dict[str, str] = {"hex": icao_hex}
+    if tail:
+        tail = tail.strip()
+        if tail:
+            params["tail"] = tail
+    if type_code:
+        type_code = type_code.strip()
+        if type_code:
+            params["type"] = type_code
+    if year is not None:
+        year_str = str(year).strip()
+        if year_str:
+            params["year"] = year_str
+    if owner:
+        owner = owner.strip()
+        if owner:
+            params["owner"] = owner
+    return "/triggers/new?" + urllib.parse.urlencode(params)

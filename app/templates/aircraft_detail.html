@@ -6,6 +6,8 @@
     <a href="/aircraft" class="back-link">&larr; Aircraft</a>
     <code>{{ aircraft.icao_hex }}</code>{% if aircraft.registration %} / {{ aircraft.registration }}{% endif %}
   </h1>
+  {% set tpurl = trigger_prefill_url(aircraft.icao_hex, aircraft.registration, aircraft.type_code, aircraft.year, aircraft.owner_op) %}
+  {% if tpurl %}<a class="btn-secondary" href="{{ tpurl }}">+ Create trigger</a>{% endif %}
 </div>
 
 <!-- Identity card -->

@@ -8,7 +8,7 @@
   <thead>
     <tr>
       <th>Hex</th><th>Reg</th><th>Type</th><th>Description</th>
-      <th>Owner / Operator</th><th>Year</th><th>Last seen (UTC)</th>
+      <th>Owner / Operator</th><th>Year</th><th>Last seen (UTC)</th><th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -37,9 +37,13 @@
       <td>{{ a.owner_op or "" }}</td>
       <td>{{ a.year or "" }}</td>
       <td>{{ a.last_seen.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+      <td>
+        {% set tpurl = trigger_prefill_url(a.icao_hex, a.registration, a.type_code, a.year, a.owner_op) %}
+        {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="7" class="muted">No aircraft seen yet — the ingester may still be warming up.</td></tr>
+    <tr><td colspan="8" class="muted">No aircraft seen yet — the ingester may still be warming up.</td></tr>
     {% endfor %}
   </tbody>
 </table>

@@ -8,7 +8,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.aircraft_helpers import opensky_url, registration_url, type_url
+from app.aircraft_helpers import opensky_url, registration_url, trigger_prefill_url, type_url
 from app.database import get_session
 from app.deps import current_user_optional, require_user
 from app.models import Aircraft, Sighting, Trigger, TriggerFiring, User
@@ -21,6 +21,7 @@ templates.env.globals.update(
     registration_url=registration_url,
     type_url=type_url,
     opensky_url=opensky_url,
+    trigger_prefill_url=trigger_prefill_url,
 )
 
 

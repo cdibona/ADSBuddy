@@ -7,6 +7,7 @@ An admin can see everyone's (the listings include an owner column).
 from __future__ import annotations
 
 import math
+import re
 import urllib.parse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -35,6 +36,9 @@ templates.env.globals.update(
 FLASH_COOKIE = "adsbuddy_flash"
 _DEFAULT_PER_PAGE = 100
 _MAX_PER_PAGE = 200
+
+# Validates ICAO hex codes: 1–8 hex digits (e.g. a1b2c3, aabbcc).
+_VALID_HEX_RE = re.compile(r"^[0-9a-f]{1,8}$")
 
 
 def _set_flash(response: RedirectResponse, level: str, message: str) -> None:
@@ -75,6 +79,48 @@ def _delivery_label(has_sent: bool | None, has_failed: bool | None) -> str:
     if has_sent:
         return "sent"
     return "pending"
+
+
+def _parse_prefill_params(
+    hex_raw: str | None,
+    tail: str | None,
+    type_code: str | None,
+    year_raw: str | None,
+    owner: str | None,
+) -> tuple[dict[str, object], str | None]:
+    """Parse and validate query-param prefill inputs.
+
+    Returns (prefill_dict, error_message).  prefill_dict is empty when
+    hex_raw is absent.  error_message is set only when hex_raw is present
+    but invalid.
+    """
+    if not hex_raw:
+        return {}, None
+    hex_lower = hex_raw.strip().lower()
+    if not _VALID_HEX_RE.match(hex_lower):
+        return {}, f"Invalid ICAO hex '{hex_raw}' — must be 1–8 hex digits."
+    prefill: dict[str, object] = {"hex": hex_lower}
+    if tail:
+        tail = tail.strip()
+        if tail:
+            prefill["tail"] = tail
+    if type_code:
+        type_code = type_code.strip()
+        if type_code:
+            prefill["type"] = type_code
+    if owner:
+        owner = owner.strip()
+        if owner:
+            prefill["owner"] = owner
+    if year_raw:
+        try:
+            yr = int(year_raw.strip())
+            if 1900 <= yr <= 2100:
+                prefill["year"] = str(yr)
+        except ValueError:
+            pass  # silently omit invalid years
+    prefill["name"] = prefill.get("tail") or hex_lower
+    return prefill, None
 
 
 async def _load_trigger(session: AsyncSession, trigger_id: int, actor: User) -> Trigger:
@@ -125,8 +171,14 @@ async def trigger_new_form(
     request: Request,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
+    hex_raw: str | None = Query(None, alias="hex"),
+    tail: str | None = Query(None),
+    type_code: str | None = Query(None, alias="type"),
+    year_raw: str | None = Query(None, alias="year"),
+    owner: str | None = Query(None),
 ):
     route_lookup_enabled = await _get_route_lookup_enabled(db)
+    prefill, prefill_error = _parse_prefill_params(hex_raw, tail, type_code, year_raw, owner)
     return templates.TemplateResponse(
         request,
         "trigger_form.html",
@@ -136,6 +188,8 @@ async def trigger_new_form(
             "action": "/triggers/new",
             "title": "New trigger",
             "route_lookup_enabled": route_lookup_enabled,
+            "prefill": prefill,
+            "prefill_error": prefill_error,
         },
     )
 
@@ -191,6 +245,8 @@ async def trigger_edit_form(
             "action": f"/triggers/{trigger.id}/edit",
             "title": f"Edit trigger: {trigger.name}",
             "route_lookup_enabled": route_lookup_enabled,
+            "prefill": {},
+            "prefill_error": None,
         },
     )
 
