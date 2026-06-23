@@ -475,7 +475,8 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   gap: 0.6rem 0.9rem;
 }
 .filter-grid label { display: block; font-size: 0.85em; color: var(--muted); }
-.filter-grid input {
+.filter-grid input,
+.filter-grid select {
   width: 100%;
   margin-top: 0.2rem;
   padding: 0.4rem 0.55rem;

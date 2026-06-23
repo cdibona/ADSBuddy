@@ -108,6 +108,65 @@ class TestRegLetterFilter:
 # Filter-bar template rendering
 # ---------------------------------------------------------------------------
 
+class TestHistoryTriggerChoice:
+    def test_parse_choice(self):
+        from app.routes_pages import _parse_trigger_choice
+
+        assert _parse_trigger_choice(None) is None
+        assert _parse_trigger_choice("") is None
+        assert _parse_trigger_choice("any") == "any"
+        assert _parse_trigger_choice("ANY") == "any"
+        assert _parse_trigger_choice("11") == 11
+        assert _parse_trigger_choice("notanumber") is None
+
+    def test_history_form_has_trigger_dropdown(self):
+        from app.routes_pages import templates
+
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/history"))
+        out = templates.env.get_template("history_search.html").render(
+            request=req, user=types.SimpleNamespace(username="admin", is_admin=True),
+            form={k: "" for k in ["tail", "hex", "callsign", "type", "owner",
+                                  "year", "route", "start_date", "end_date", "trigger"]},
+            errors=[], searched=False, trigger_options=[(11, "Lifeflight"), (2, "Vintage")],
+            aircraft=[], recent_sightings={}, total=0, page=1, per_page=50,
+            total_pages=1, start=0, end=0, filter_qs="",
+        )
+        assert 'name="trigger"' in out
+        assert "Lifeflight" in out
+        assert 'value="any"' in out
+
+    def test_history_trigger_preselected(self):
+        from app.routes_pages import templates
+
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/history"))
+        form = {k: "" for k in ["tail", "hex", "callsign", "type", "owner",
+                                "year", "route", "start_date", "end_date"]}
+        form["trigger"] = "11"
+        out = templates.env.get_template("history_search.html").render(
+            request=req, user=types.SimpleNamespace(username="admin", is_admin=True),
+            form=form, errors=[], searched=True,
+            trigger_options=[(11, "Lifeflight")], aircraft=[], recent_sightings={},
+            total=0, page=1, per_page=50, total_pages=1, start=0, end=0, filter_qs="trigger=11",
+        )
+        assert '<option value="11" selected>' in out
+
+    def test_trigger_list_has_history_link(self):
+        from app.routes_triggers import templates
+        from app.models import Trigger
+
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/triggers"))
+        t = Trigger(id=11, owner_id=1, name="Lifeflight", is_active=True, notes="",
+                    tail_patterns="N424LF", flight_patterns="", type_codes="",
+                    owner_patterns="", origin_icaos="", destination_icaos="",
+                    min_year=None, max_year=None, min_age_years=None, max_age_years=None,
+                    cooldown_seconds=3600)
+        out = templates.env.get_template("triggers.html").render(
+            request=req, user=types.SimpleNamespace(username="admin", is_admin=False, id=1),
+            triggers=[t], status="all", counts={"all": 1, "active": 1, "paused": 0}, flash=None,
+        )
+        assert 'href="/history?trigger=11"' in out
+
+
 class TestTriggerConditionItems:
     def _trigger(self, **kw):
         from app.models import Trigger

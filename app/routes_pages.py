@@ -48,6 +48,19 @@ def _to_float(raw: str | None) -> float | None:
         return None
 
 
+def _parse_trigger_choice(raw: str | None) -> str | int | None:
+    """Parse the history 'trigger' filter: None (off), 'any', or a trigger id."""
+    if not raw:
+        return None
+    v = raw.strip().lower()
+    if v == "any":
+        return "any"
+    try:
+        return int(v)
+    except ValueError:
+        return None
+
+
 def _normalize_reg_letter(raw: str | None) -> str | None:
     """Validate the recent-aircraft registration filter.
 
@@ -408,12 +421,14 @@ async def history_search(
     route: str | None = Query(None),
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
+    trigger: str | None = Query(None),
     page: int = Query(1, ge=1),
 ):
     filters, errors = _parse_history_filters(
         tail, hex_raw, callsign, type_code, owner, year_raw, route,
         start_date, end_date,
     )
+    trigger_choice = _parse_trigger_choice(trigger)
 
     # Repopulate the form with raw user inputs.
     form = {
@@ -426,10 +441,17 @@ async def history_search(
         "route": route or "",
         "start_date": start_date or "",
         "end_date": end_date or "",
+        "trigger": trigger or "",
     }
 
+    # Triggers available for the dropdown (own triggers; admins see all).
+    trig_stmt = select(Trigger.id, Trigger.name).order_by(Trigger.name)
+    if not user.is_admin:
+        trig_stmt = trig_stmt.where(Trigger.owner_id == user.id)
+    trigger_options = (await db.execute(trig_stmt)).all()
+
     # Only search if filters were supplied and are valid.
-    searched = bool(filters) and not errors
+    searched = (bool(filters) or trigger_choice is not None) and not errors
     aircraft_page: list[Aircraft] = []
     recent_sightings: dict[str, Sighting] = {}
     total = 0
@@ -437,6 +459,20 @@ async def history_search(
 
     if searched:
         conditions = _build_history_conditions(filters)
+
+        # Trigger filter: aircraft that have fired the chosen trigger (or any).
+        # Owner-scoped for non-admins so a crafted id can't probe others' triggers.
+        if trigger_choice is not None:
+            fsub = select(TriggerFiring.id).where(
+                TriggerFiring.icao_hex == Aircraft.icao_hex
+            )
+            if trigger_choice != "any":
+                fsub = fsub.where(TriggerFiring.trigger_id == trigger_choice)
+            if not user.is_admin:
+                fsub = fsub.join(
+                    Trigger, Trigger.id == TriggerFiring.trigger_id
+                ).where(Trigger.owner_id == user.id)
+            conditions.append(fsub.correlate(Aircraft).exists())
 
         # Count total matching aircraft (1 query).
         count_stmt = select(func.count()).select_from(Aircraft)
@@ -489,6 +525,7 @@ async def history_search(
         ("tail", tail), ("hex", hex_raw), ("callsign", callsign),
         ("type", type_code), ("owner", owner), ("year", year_raw),
         ("route", route), ("start_date", start_date), ("end_date", end_date),
+        ("trigger", trigger),
     ]:
         if raw and raw.strip():
             qs_parts.append(f"{key}={urllib.parse.quote_plus(raw.strip())}")
@@ -505,6 +542,7 @@ async def history_search(
             "form": form,
             "errors": errors,
             "searched": searched,
+            "trigger_options": trigger_options,
             "aircraft": aircraft_page,
             "recent_sightings": recent_sightings,
             "total": total,

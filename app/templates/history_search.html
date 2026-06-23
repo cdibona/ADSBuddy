@@ -34,6 +34,15 @@
     <label>To date (YYYY-MM-DD)
       <input name="end_date" placeholder="e.g. 2024-12-31" value="{{ form.end_date }}" type="date">
     </label>
+    <label>Trigger
+      <select name="trigger">
+        <option value="">(no trigger filter)</option>
+        <option value="any"{% if form.trigger == 'any' %} selected{% endif %}>Any trigger (matched)</option>
+        {% for tid, tname in trigger_options %}
+        <option value="{{ tid }}"{% if form.trigger == tid|string %} selected{% endif %}>{{ tname }}</option>
+        {% endfor %}
+      </select>
+    </label>
   </div>
   <div class="filter-actions">
     <button type="submit" class="btn-primary">Search</button>

@@ -65,6 +65,7 @@
           </button>
         </form>
         <a href="/triggers/{{ t.id }}/edit">Edit</a>
+        <a href="/history?trigger={{ t.id }}">History</a>
         <form method="post" action="/triggers/{{ t.id }}/delete" class="inline"
               data-name="{{ t.name }}"
               onsubmit="return confirm('Delete trigger ' + this.dataset.name + '?');">
