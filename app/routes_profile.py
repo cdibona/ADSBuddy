@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import notifications
+from app import notifications, version
 from app.database import get_session
 from app.deps import require_user
 from app.models import (
@@ -29,6 +29,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+version.register(templates)
 
 CHANNEL_KIND_LABELS = {
     "discord": "Discord",

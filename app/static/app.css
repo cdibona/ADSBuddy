@@ -476,3 +476,21 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 }
 .filter-actions { display: flex; gap: 0.6rem; margin-top: 0.9rem; align-items: center; }
 .results-header { margin: 0.85rem 0 0.25rem; }
+
+/* —— Site footer: deployed version + uptime ───────────────────────────────── */
+.site-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 0.78em;
+}
+.site-footer code { color: var(--text); }
+.site-footer a { color: var(--accent); }
+.footer-sep { opacity: 0.5; }

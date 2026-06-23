@@ -15,7 +15,11 @@ services:
       retries: 10
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Populated from the environment at build time; see deploy/README.md.
+        ADSBUDDY_GIT_SHA: ${ADSBUDDY_GIT_SHA:-dev}
     restart: unless-stopped
     depends_on:
       db:

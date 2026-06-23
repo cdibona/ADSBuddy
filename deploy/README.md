@@ -32,8 +32,12 @@ reliable). To ship code changes:
 ```bash
 cd /home/cdibona/ADSBuddy
 git pull
-docker compose up -d --build
+ADSBUDDY_GIT_SHA=$(git rev-parse --short HEAD) docker compose up -d --build
 ```
+
+The `ADSBUDDY_GIT_SHA` prefix bakes the current commit into the image so the
+site footer shows the deployed version (linked to GitHub) alongside uptime.
+Omit it and the footer just reads `dev`.
 
 ## Notes
 

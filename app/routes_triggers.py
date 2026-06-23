@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app import settings_store
+from app import settings_store, version
 from app.database import get_session
 from app.deps import require_user
 from app.models import NotificationDelivery, Trigger, TriggerFiring, User
@@ -40,6 +40,7 @@ templates.env.globals.update(
     opensky_url=opensky_url,
     trigger_prefill_url=trigger_prefill_url,
 )
+version.register(templates)
 
 FLASH_COOKIE = "adsbuddy_flash"
 _DEFAULT_PER_PAGE = 100

@@ -22,8 +22,11 @@ from app.security import (
 )
 
 log = logging.getLogger(__name__)
+from app import version
+
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+version.register(templates)
 
 
 async def _start_session(

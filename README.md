@@ -15,8 +15,12 @@ alerting parts underneath.
 ```bash
 cp .env.template .env
 $EDITOR .env                          # set secret, passwords, tailnet IP
-docker compose up --build
+ADSBUDDY_GIT_SHA=$(git rev-parse --short HEAD) docker compose up --build
 ```
+
+(The `ADSBUDDY_GIT_SHA` prefix bakes the commit into the image so the footer
+shows the deployed version; plain `docker compose up --build` works too and
+just shows `dev`.)
 
 Then visit:
 

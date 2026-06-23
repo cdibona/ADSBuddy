@@ -37,5 +37,17 @@
   <main class="{% block main_class %}content{% endblock %}">
     {% block content %}{% endblock %}
   </main>
+  <footer class="site-footer">
+    <span class="footer-item">
+      version
+      {% if app_commit_url %}
+        <a href="{{ app_commit_url }}" target="_blank" rel="noopener"><code>{{ app_git_sha }}</code></a>
+      {% else %}
+        <code>{{ app_git_sha }}</code>
+      {% endif %}
+    </span>
+    <span class="footer-sep">·</span>
+    <span class="footer-item" title="Since the app process last started">uptime {{ app_uptime() }}</span>
+  </footer>
 </body>
 </html>
