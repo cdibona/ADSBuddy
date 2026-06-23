@@ -43,6 +43,95 @@ class ChannelNotConfigured(Exception):
     """
 
 
+# ---------- Discord embed --------------------------------------------------
+
+_EMERGENCY_SQUAWKS = {"7500", "7600", "7700"}
+
+
+def _firing_color(trigger: Trigger, firing: TriggerFiring) -> int:
+    if (firing.squawk in _EMERGENCY_SQUAWKS) or firing.emergency:
+        return 0xED4245  # red
+    if trigger.center_lat is not None and trigger.radius_miles is not None:
+        return 0xFAA61A  # amber: geofence/watch
+    return 0x3BA55D      # green: normal
+
+
+def build_discord_embed(trigger: Trigger, firing: TriggerFiring, base_url: str) -> dict:
+    ident = firing.registration or firing.icao_hex
+    title = f"✈ {ident}" + (f" — {firing.type_code}" if firing.type_code else "")
+    fields: list[dict] = []
+    if firing.callsign:
+        fields.append({"name": "Callsign", "value": firing.callsign, "inline": True})
+    if firing.altitude_baro is not None:
+        fields.append({"name": "Altitude", "value": f"{firing.altitude_baro} ft", "inline": True})
+    if firing.lat is not None and firing.lon is not None:
+        fields.append({"name": "Position", "value": f"{firing.lat:.4f}, {firing.lon:.4f}", "inline": True})
+    if firing.origin_icao or firing.destination_icao:
+        fields.append({
+            "name": "Route",
+            "value": f"{firing.origin_icao or '?'} → {firing.destination_icao or '?'}",
+            "inline": True,
+        })
+    desc_bits = []
+    if firing.squawk in _EMERGENCY_SQUAWKS:
+        desc_bits.append(f"**EMERGENCY** squawk {firing.squawk}")
+    desc_bits.append(f"trigger: {trigger.name}")
+    embed: dict = {
+        "title": title,
+        "description": " · ".join(desc_bits),
+        "color": _firing_color(trigger, firing),
+        "fields": fields,
+        "footer": {"text": "ADSBuddy"},
+    }
+    if base_url:
+        base = base_url.rstrip("/")
+        embed["url"] = f"{base}/aircraft/{firing.icao_hex}"
+    if firing.fired_at:
+        embed["timestamp"] = firing.fired_at.isoformat()
+    return embed
+
+
+def build_email_html(trigger: Trigger, firing: TriggerFiring, base_url: str) -> str:
+    """Return a small HTML table summarising the firing, for use as email alternative."""
+    ident = firing.registration or firing.icao_hex
+    if firing.callsign:
+        ident = f"{firing.callsign} ({ident})"
+
+    rows: list[str] = []
+    rows.append(f"<tr><td><b>Trigger</b></td><td>{trigger.name}</td></tr>")
+    rows.append(f"<tr><td><b>Aircraft</b></td><td>{ident}</td></tr>")
+    if firing.type_code:
+        type_val = firing.type_code
+        if firing.year:
+            type_val += f" ({firing.year})"
+        rows.append(f"<tr><td><b>Type</b></td><td>{type_val}</td></tr>")
+    if firing.altitude_baro is not None:
+        rows.append(f"<tr><td><b>Altitude</b></td><td>{firing.altitude_baro} ft</td></tr>")
+    if firing.lat is not None and firing.lon is not None:
+        rows.append(f"<tr><td><b>Position</b></td><td>{firing.lat:.4f}, {firing.lon:.4f}</td></tr>")
+    if firing.origin_icao or firing.destination_icao:
+        route = f"{firing.origin_icao or '?'} → {firing.destination_icao or '?'}"
+        rows.append(f"<tr><td><b>Route</b></td><td>{route}</td></tr>")
+    if firing.fired_at:
+        rows.append(
+            f"<tr><td><b>At</b></td><td>{firing.fired_at.strftime('%Y-%m-%d %H:%M:%S UTC')}</td></tr>"
+        )
+    if base_url:
+        link = f"{base_url.rstrip('/')}/aircraft/{firing.icao_hex}"
+        rows.append(f"<tr><td><b>Details</b></td><td><a href=\"{link}\">{link}</a></td></tr>")
+
+    table = "<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\">{}</table>".format(
+        "".join(rows)
+    )
+    subject = f"ADSBuddy alert: {trigger.name}: {ident}"
+    return (
+        "<!DOCTYPE html><html><body>"
+        f"<h2>{subject}</h2>"
+        f"{table}"
+        "</body></html>"
+    )
+
+
 # ---------- message formatting ---------------------------------------------
 
 
@@ -113,15 +202,21 @@ def _webhook_payload(
 
 
 async def _send_discord(
-    client: httpx.AsyncClient, channel: NotificationChannel, message: dict[str, str]
+    session: AsyncSession,
+    client: httpx.AsyncClient,
+    channel: NotificationChannel,
+    trigger: Trigger,
+    firing: TriggerFiring | None,
 ) -> None:
     url = (channel.config or {}).get("webhook_url")
     if not url:
         raise ChannelNotConfigured("Discord channel is missing 'webhook_url' in config.")
-    body: dict[str, Any] = {"content": message["text"]}
-    username = (channel.config or {}).get("username")
-    if username:
-        body["username"] = username
+    body: dict[str, Any] = {"username": (channel.config or {}).get("username") or "ADSBuddy"}
+    if firing is not None:
+        base = await get_setting(session, "site_base_url") or ""
+        body["embeds"] = [build_discord_embed(trigger, firing, base)]
+    else:
+        body["content"] = "ADSBuddy test — channel wired up correctly."
     resp = await client.post(url, json=body, timeout=_HTTP_TIMEOUT)
     if resp.status_code >= 300:
         raise RuntimeError(f"Discord webhook returned {resp.status_code}: {resp.text[:200]}")
@@ -146,7 +241,11 @@ async def _send_generic_webhook(
 
 
 async def _send_email(
-    session: AsyncSession, channel: NotificationChannel, message: dict[str, str]
+    session: AsyncSession,
+    channel: NotificationChannel,
+    message: dict[str, str],
+    trigger: Trigger | None = None,
+    firing: TriggerFiring | None = None,
 ) -> None:
     host = await get_setting(session, "smtp_host")
     if not host:
@@ -170,6 +269,12 @@ async def _send_email(
     msg["To"] = to_addr
     msg["Subject"] = message["subject"]
     msg.set_content(message["text"])
+
+    # Attach HTML alternative when we have a real firing to render.
+    if trigger is not None and firing is not None:
+        base = await get_setting(session, "site_base_url") or ""
+        html = build_email_html(trigger, firing, base)
+        msg.add_alternative(html, subtype="html")
 
     await aiosmtplib.send(
         msg,
@@ -249,9 +354,10 @@ async def _dispatch_one(
         return False
     try:
         if channel.kind == "discord":
-            await _send_discord(client, channel, _format_message(trigger, firing, channel))
+            await _send_discord(session, client, channel, trigger, firing)
         elif channel.kind == "email":
-            await _send_email(session, channel, _format_message(trigger, firing, channel))
+            await _send_email(session, channel, _format_message(trigger, firing, channel),
+                              trigger=trigger, firing=firing)
         elif channel.kind == "webhook":
             await _send_generic_webhook(
                 client, channel, _webhook_payload(trigger, firing, channel)

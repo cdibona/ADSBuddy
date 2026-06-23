@@ -22,7 +22,8 @@ _TS = datetime(2026, 6, 23, 15, 0, 0, tzinfo=timezone.utc)
 
 
 def _trigger(id: int, name: str, owner_id: int = 1) -> SimpleNamespace:
-    return SimpleNamespace(id=id, name=name, owner_id=owner_id)
+    return SimpleNamespace(id=id, name=name, owner_id=owner_id,
+                           center_lat=None, center_lon=None, radius_miles=None)
 
 
 _FIRING_COUNTER = 0
@@ -44,6 +45,8 @@ def _firing(trigger_id: int, icao_hex: str = "a1b2c3", **kw) -> SimpleNamespace:
         altitude_baro=None,
         origin_icao=None,
         destination_icao=None,
+        squawk=None,
+        emergency=None,
         fired_at=_TS,
     )
     defaults.update(kw)
@@ -172,7 +175,9 @@ class TestDeliverForFirings:
             self._run(session, client, [firing_a])
 
         assert len(sent_bodies) == 1
-        assert sent_bodies[0]["content"].startswith("Trigger: Bezos")
+        # Firing messages now use Discord embeds; trigger name is in the description.
+        embed = sent_bodies[0]["embeds"][0]
+        assert "Bezos" in embed["description"]
 
     def test_two_triggers_each_firing_gets_its_own_name(self):
         """THE KEY TEST: two different triggers fire; each notification must name its own trigger."""
@@ -208,17 +213,18 @@ class TestDeliverForFirings:
 
         assert len(sent_bodies) == 2, f"Expected 2 messages, got {len(sent_bodies)}"
 
-        contents = [b["content"] for b in sent_bodies]
-        bezos_msgs = [c for c in contents if "Trigger: Bezos" in c]
-        helo_msgs = [c for c in contents if "Trigger: Police Helo" in c]
+        # Firing messages now use Discord embeds; trigger name is in the description.
+        descriptions = [b["embeds"][0]["description"] for b in sent_bodies]
+        bezos_msgs = [d for d in descriptions if "Bezos" in d]
+        helo_msgs = [d for d in descriptions if "Police Helo" in d]
 
         assert len(bezos_msgs) == 1, (
             f"Expected 1 Bezos notification, got {len(bezos_msgs)}. "
-            f"Contents: {contents}"
+            f"Descriptions: {descriptions}"
         )
         assert len(helo_msgs) == 1, (
             f"Expected 1 'Police Helo' notification, got {len(helo_msgs)}. "
-            f"Contents: {contents}"
+            f"Descriptions: {descriptions}"
         )
 
     def test_firing_for_unknown_trigger_id_is_skipped(self):
@@ -255,7 +261,9 @@ class TestDeliverForFirings:
 
         # Only 1 notification: the orphan firing is silently dropped
         assert len(sent_bodies) == 1
-        assert sent_bodies[0]["content"].startswith("Trigger: Bezos")
+        # Firing messages now use Discord embeds; trigger name is in the description.
+        embed = sent_bodies[0]["embeds"][0]
+        assert "Bezos" in embed["description"]
 
     def test_no_channels_means_no_discord_calls(self):
         """If the trigger owner has no channels, nothing is dispatched."""
