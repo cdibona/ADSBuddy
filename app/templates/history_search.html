@@ -73,6 +73,7 @@
       <th>Last seen (UTC)</th>
       <th>Recent callsign</th>
       <th>Recent route</th>
+      <th>Last position</th>
       <th>Actions</th>
     </tr>
   </thead>
@@ -110,6 +111,15 @@
       <td>
         {% if s and (s.origin_icao or s.destination_icao) %}
           {{ s.origin_icao or "?" }} &rarr; {{ s.destination_icao or "?" }}
+        {% endif %}
+      </td>
+      <td>
+        {% if s and s.lat is not none and s.lon is not none %}
+          <span title="At {{ s.seen_at.strftime('%Y-%m-%d %H:%M:%S UTC') }} via {{ s.source }}">
+            {{ "%.4f"|format(s.lat) }}, {{ "%.4f"|format(s.lon) }}
+          </span>
+        {% else %}
+          <span class="muted">—</span>
         {% endif %}
       </td>
       <td class="cell-actions">

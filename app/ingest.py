@@ -25,6 +25,7 @@ from app import flight_routes, notifications, triggers as trigger_engine
 from app.database import SessionLocal
 from app.models import Aircraft, Sighting, TriggerFiring
 from app.settings_store import get as get_setting
+from app.settings_store import set_value
 
 log = logging.getLogger(__name__)
 
@@ -209,11 +210,39 @@ def _build_sighting(
     )
 
 
+async def _store_receiver_location_if_missing(
+    client: httpx.AsyncClient, session: AsyncSession, radio: str
+) -> None:
+    """One-time bootstrap of the receiver's lat/lon from the radio.
+
+    Runs only while ``receiver_lat`` is blank; once stored (or admin-set) the
+    cheap settings check below short-circuits and we never refetch. Failure is
+    non-fatal — we just try again next tick.
+    """
+    existing = await get_setting(session, "receiver_lat")
+    if existing and existing.strip():
+        return
+    try:
+        resp = await client.get(radio.rstrip("/") + "/data/receiver.json", timeout=8.0)
+        resp.raise_for_status()
+        data = resp.json()
+        lat = data.get("lat")
+        lon = data.get("lon")
+        if lat is None or lon is None:
+            return
+        await set_value(session, "receiver_lat", str(lat))
+        await set_value(session, "receiver_lon", str(lon))
+        log.info("Learned receiver location from receiver.json: %s, %s", lat, lon)
+    except Exception:
+        log.debug("Could not fetch receiver.json for location; will retry.", exc_info=True)
+
+
 async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
     radio = await get_setting(session, "radio_base_url")
     if not radio:
         log.warning("radio_base_url is unset — skipping tick.")
         return 0
+    await _store_receiver_location_if_missing(client, session, radio)
     url = radio.rstrip("/") + "/data/aircraft.json"
     resp = await client.get(url, timeout=10.0)
     resp.raise_for_status()

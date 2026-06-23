@@ -18,6 +18,7 @@ from app.aircraft_helpers import opensky_url, registration_url, trigger_prefill_
 from app.database import get_session
 from app.deps import current_user_optional, require_user
 from app.models import Aircraft, Sighting, Trigger, TriggerFiring, User
+from app.settings_store import get as get_setting
 from app.settings_store import get_required
 
 # ---------------------------------------------------------------------------
@@ -30,6 +31,19 @@ _HISTORY_PER_PAGE = 50
 
 # A–Z quick-jump letters for the recent-aircraft registration filter.
 _REG_LETTERS = tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+
+# Marker colors assigned per sighting source on the detail map.
+_SOURCE_PALETTE = ("#4ea4ff", "#3fb950", "#ff6b6b", "#d2a8ff", "#f0883e")
+
+
+def _to_float(raw: str | None) -> float | None:
+    if raw is None or raw.strip() == "":
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
 
 
 def _normalize_reg_letter(raw: str | None) -> str | None:
@@ -138,6 +152,40 @@ async def aircraft_detail(
         firings_stmt = firings_stmt.where(Trigger.owner_id == user.id)
     firings_rows = (await db.execute(firings_stmt)).all()
 
+    # ---- Map data: positioned sightings in chronological order, colored by
+    # source, plus the receiving station's location (learned by the ingester).
+    color_by_source: dict[str, str] = {}
+    map_points: list[dict] = []
+    for s in reversed(sightings):  # sightings come newest-first; map oldest→newest
+        if s.lat is None or s.lon is None:
+            continue
+        if s.source not in color_by_source:
+            color_by_source[s.source] = _SOURCE_PALETTE[
+                len(color_by_source) % len(_SOURCE_PALETTE)
+            ]
+        map_points.append(
+            {
+                "lat": s.lat,
+                "lon": s.lon,
+                "t": s.seen_at.strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "source": s.source,
+                "color": color_by_source[s.source],
+                "alt": s.altitude_baro,
+                "flight": s.flight,
+            }
+        )
+    map_sources = [{"source": src, "color": clr} for src, clr in color_by_source.items()]
+
+    recv_lat = _to_float(await get_setting(db, "receiver_lat"))
+    recv_lon = _to_float(await get_setting(db, "receiver_lon"))
+    receiver = None
+    if recv_lat is not None and recv_lon is not None:
+        receiver = {
+            "lat": recv_lat,
+            "lon": recv_lon,
+            "label": (await get_setting(db, "receiver_label")) or "Receiver",
+        }
+
     return templates.TemplateResponse(
         request,
         "aircraft_detail.html",
@@ -146,6 +194,9 @@ async def aircraft_detail(
             "aircraft": aircraft,
             "sightings": sightings,
             "firings_rows": firings_rows,
+            "map_points": map_points,
+            "map_sources": map_sources,
+            "receiver": receiver,
         },
     )
 

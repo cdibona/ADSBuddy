@@ -494,3 +494,28 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 .site-footer code { color: var(--text); }
 .site-footer a { color: var(--accent); }
 .footer-sep { opacity: 0.5; }
+
+/* —— Aircraft-detail location map (Leaflet) ───────────────────────────────── */
+.sight-map {
+  height: 380px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  /* Leaflet tiles/controls assume a light surface; keep them above the dark bg. */
+  background: var(--panel-2);
+}
+.sight-map .leaflet-popup-content { margin: 0.5rem 0.7rem; line-height: 1.4; }
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.8em;
+  color: var(--muted);
+}
+.legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+.legend-dot {
+  width: 0.7rem; height: 0.7rem; border-radius: 99px;
+  display: inline-block; border: 1px solid rgba(255, 255, 255, 0.25);
+}
+.legend-dot.legend-receiver { background: #f5d90a; }

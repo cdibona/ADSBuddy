@@ -135,6 +135,26 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         default="",
         description="Twilio sender phone number in E.164 (e.g. +15551234567).",
     ),
+    # ---- Receiver / station location (for the aircraft-detail map) ---------
+    SettingSpec(
+        key="receiver_lat",
+        default="",
+        description=(
+            "Latitude of the receiving station, shown as the 'found here' marker "
+            "on the aircraft-detail map. Auto-filled by the ingester from the "
+            "radio's /data/receiver.json when blank; override here if needed."
+        ),
+    ),
+    SettingSpec(
+        key="receiver_lon",
+        default="",
+        description="Longitude of the receiving station (see receiver_lat).",
+    ),
+    SettingSpec(
+        key="receiver_label",
+        default="Local radio",
+        description="Name shown for the receiving station on the aircraft-detail map.",
+    ),
     SettingSpec(
         key="sightings_retention_days",
         default="30",
