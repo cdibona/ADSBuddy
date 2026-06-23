@@ -21,8 +21,16 @@ from app.database import get_session
 from app.deps import require_user
 from app.models import NotificationDelivery, Trigger, TriggerFiring, User
 
+from app.aircraft_helpers import opensky_url, registration_url, type_url
+
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+# Register URL helpers so firings.html can use registration_url / type_url.
+templates.env.globals.update(
+    registration_url=registration_url,
+    type_url=type_url,
+    opensky_url=opensky_url,
+)
 
 FLASH_COOKIE = "adsbuddy_flash"
 _DEFAULT_PER_PAGE = 100
@@ -278,8 +286,12 @@ async def firings_list(
             await db.execute(
                 select(
                     NotificationDelivery.firing_id,
-                    func.bool_or(NotificationDelivery.status == "sent").label("has_sent"),
-                    func.bool_or(NotificationDelivery.status == "failed").label("has_failed"),
+                    func.bool_or(NotificationDelivery.status == "sent").label(
+                        "has_sent"
+                    ),
+                    func.bool_or(NotificationDelivery.status == "failed").label(
+                        "has_failed"
+                    ),
                 )
                 .where(
                     NotificationDelivery.firing_id.in_(firing_ids),

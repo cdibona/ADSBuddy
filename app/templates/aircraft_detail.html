@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ aircraft.icao_hex }}{% if aircraft.registration %} / {{ aircraft.registration }}{% endif %} — ADSBuddy{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>
+    <a href="/aircraft" class="back-link">&larr; Aircraft</a>
+    <code>{{ aircraft.icao_hex }}</code>{% if aircraft.registration %} / {{ aircraft.registration }}{% endif %}
+  </h1>
+</div>
+
+<!-- Identity card -->
+<div class="detail-card">
+  <h2 class="detail-card-title">Aircraft identity</h2>
+  <dl class="detail-grid">
+    <dt>ICAO hex</dt>
+    <dd>
+      <code>{{ aircraft.icao_hex }}</code>
+      {% set ourl = opensky_url(aircraft.icao_hex) %}
+      {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="OpenSky Network">&#x2197;</a>{% endif %}
+    </dd>
+
+    <dt>Registration</dt>
+    <dd>
+      {% if aircraft.registration %}
+        {{ aircraft.registration }}
+        {% set rurl = registration_url(aircraft.registration) %}
+        {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+      {% else %}
+        <span class="muted">—</span>
+      {% endif %}
+    </dd>
+
+    <dt>Type</dt>
+    <dd>
+      {% if aircraft.type_code %}
+        <code>{{ aircraft.type_code }}</code>
+        {% set turl = type_url(aircraft.type_code) %}
+        {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+      {% else %}
+        <span class="muted">—</span>
+      {% endif %}
+    </dd>
+
+    {% if aircraft.description %}
+    <dt>Description</dt>
+    <dd>{{ aircraft.description }}</dd>
+    {% endif %}
+
+    <dt>Owner / Operator</dt>
+    <dd>{{ aircraft.owner_op or "—" }}</dd>
+
+    <dt>Year</dt>
+    <dd>{{ aircraft.year or "—" }}</dd>
+
+    <dt>First seen</dt>
+    <dd>{{ aircraft.first_seen.strftime("%Y-%m-%d %H:%M UTC") }}</dd>
+
+    <dt>Last seen</dt>
+    <dd>{{ aircraft.last_seen.strftime("%Y-%m-%d %H:%M UTC") }}</dd>
+  </dl>
+</div>
+
+<!-- Recent sightings -->
+<div class="detail-section">
+  <h2>Recent sightings <span class="detail-count">(last {{ sightings|length }})</span></h2>
+  {% if sightings %}
+  <div class="table-scroll">
+  <table class="grid">
+    <thead><tr>
+      <th>Time (UTC)</th>
+      <th>Callsign</th>
+      <th>Altitude</th>
+      <th>Route</th>
+    </tr></thead>
+    <tbody>
+      {% for s in sightings %}
+      <tr>
+        <td>{{ s.seen_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td>{{ s.flight or "—" }}</td>
+        <td>{{ (s.altitude_baro|string ~ " ft") if s.altitude_baro else "—" }}</td>
+        <td>{{ (s.origin_icao or "?") }} &rarr; {{ (s.destination_icao or "?") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No sightings recorded yet.</p>
+  {% endif %}
+</div>
+
+<!-- Recent trigger firings -->
+<div class="detail-section">
+  <h2>Recent trigger firings <span class="detail-count">(last {{ firings_rows|length }})</span></h2>
+  {% if firings_rows %}
+  <div class="table-scroll">
+  <table class="grid">
+    <thead><tr>
+      <th>Time (UTC)</th>
+      <th>Trigger</th>
+      <th>Callsign</th>
+      <th>Type</th>
+      <th>Year</th>
+      <th>Route</th>
+      <th>Altitude</th>
+    </tr></thead>
+    <tbody>
+      {% for f, t in firings_rows %}
+      <tr>
+        <td>{{ f.fired_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
+        <td>{{ f.callsign or "—" }}</td>
+        <td>
+          {% if f.type_code %}
+            {{ f.type_code }}
+            {% set turl = type_url(f.type_code) %}
+            {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ f.year or "—" }}</td>
+        <td>{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
+        <td>{{ (f.altitude_baro|string ~ " ft") if f.altitude_baro else "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">No trigger firings for this aircraft yet.</p>
+  {% endif %}
+</div>
+
+{% endblock %}

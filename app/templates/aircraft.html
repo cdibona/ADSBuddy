@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Recent aircraft</h1>
 <p class="muted">Most recently seen 200 aircraft, newest first.</p>
+<div class="table-scroll">
 <table class="grid">
   <thead>
     <tr>
@@ -13,9 +14,25 @@
   <tbody>
     {% for a in aircraft %}
     <tr>
-      <td><code>{{ a.icao_hex }}</code></td>
-      <td>{{ a.registration or "" }}</td>
-      <td>{{ a.type_code or "" }}</td>
+      <td>
+        <a href="/aircraft/{{ a.icao_hex }}"><code>{{ a.icao_hex }}</code></a>
+        {% set ourl = opensky_url(a.icao_hex) %}
+        {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="OpenSky Network">&#x2197;</a>{% endif %}
+      </td>
+      <td>
+        {% if a.registration %}
+          {{ a.registration }}
+          {% set rurl = registration_url(a.registration) %}
+          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+        {% endif %}
+      </td>
+      <td>
+        {% if a.type_code %}
+          {{ a.type_code }}
+          {% set turl = type_url(a.type_code) %}
+          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+        {% endif %}
+      </td>
       <td>{{ a.description or "" }}</td>
       <td>{{ a.owner_op or "" }}</td>
       <td>{{ a.year or "" }}</td>
@@ -26,4 +43,5 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

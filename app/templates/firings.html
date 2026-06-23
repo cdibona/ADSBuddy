@@ -30,9 +30,22 @@
     <tr>
       <td>{{ f.fired_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
       <td><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
-      <td><code>{{ f.icao_hex }}</code>{% if f.registration %} / {{ f.registration }}{% endif %}</td>
+      <td>
+        <a href="/aircraft/{{ f.icao_hex }}"><code>{{ f.icao_hex }}</code></a>
+        {% if f.registration %}
+          / {{ f.registration }}
+          {% set rurl = registration_url(f.registration) %}
+          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+        {% endif %}
+      </td>
       <td>{{ f.callsign or "" }}</td>
-      <td>{{ f.type_code or "" }}</td>
+      <td>
+        {% if f.type_code %}
+          {{ f.type_code }}
+          {% set turl = type_url(f.type_code) %}
+          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+        {% endif %}
+      </td>
       <td>{{ f.year or "" }}</td>
       <td>{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
       <td>{{ f.altitude_baro or "" }}</td>
