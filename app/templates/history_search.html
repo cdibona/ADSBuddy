@@ -112,7 +112,7 @@
           {{ s.origin_icao or "?" }} &rarr; {{ s.destination_icao or "?" }}
         {% endif %}
       </td>
-      <td>
+      <td class="cell-actions">
         <a href="/aircraft/{{ a.icao_hex }}" class="btn-small">Detail</a>
         {% set tpurl = trigger_prefill_url(a.icao_hex, a.registration, a.type_code, a.year, a.owner_op) %}
         {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}

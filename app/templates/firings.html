@@ -4,11 +4,20 @@
 <div class="page-head">
   <h1>Trigger firings</h1>
 </div>
+
+<div class="filter-bar">
+  <span class="filter-bar-label">Since</span>
+  <a href="/firings?since=all" class="chip{% if since == 'all' %} chip-on{% endif %}">All</a>
+  <a href="/firings?since=today" class="chip{% if since == 'today' %} chip-on{% endif %}">Today</a>
+  <a href="/firings?since=24h" class="chip{% if since == '24h' %} chip-on{% endif %}">Last 24h</a>
+  <a href="/firings?since=7d" class="chip{% if since == '7d' %} chip-on{% endif %}">Last 7 days</a>
+</div>
+
 <p class="muted">
   {% if total %}
     {{ start }}–{{ end }} of {{ total }} firing{{ "s" if total != 1 else "" }}, newest first.
   {% else %}
-    No firings yet.
+    No firings{% if since != 'all' %} in this window{% endif %} yet.
   {% endif %}
 </p>
 <div class="table-scroll">
@@ -23,6 +32,7 @@
     <th>Route</th>
     <th>Altitude</th>
     <th>Notified</th>
+    <th>Actions</th>
   </tr></thead>
   <tbody>
     {% for f, t in rows %}
@@ -54,9 +64,14 @@
           {{ dlabel | capitalize }}
         </span>
       </td>
+      <td class="cell-actions">
+        <a href="/aircraft/{{ f.icao_hex }}" class="btn-small">Detail</a>
+        {% set tpurl = trigger_prefill_url(f.icao_hex, f.registration, f.type_code, f.year) %}
+        {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}
+      </td>
     </tr>
     {% else %}
-    <tr><td colspan="9" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
+    <tr><td colspan="10" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
     {% endfor %}
   </tbody>
 </table>
@@ -65,12 +80,12 @@
 <div class="pagination">
   <span class="pg-info">Page {{ page }} / {{ total_pages }}</span>
   {% if page > 1 %}
-  <a href="?page={{ page - 1 }}&per_page={{ per_page }}">&larr; Prev</a>
+  <a href="?page={{ page - 1 }}&per_page={{ per_page }}&since={{ since }}">&larr; Prev</a>
   {% else %}
   <span class="disabled">&larr; Prev</span>
   {% endif %}
   {% if page < total_pages %}
-  <a href="?page={{ page + 1 }}&per_page={{ per_page }}">Next &rarr;</a>
+  <a href="?page={{ page + 1 }}&per_page={{ per_page }}&since={{ since }}">Next &rarr;</a>
   {% else %}
   <span class="disabled">Next &rarr;</span>
   {% endif %}

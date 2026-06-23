@@ -360,3 +360,119 @@ ul.cond li { margin: 0; }
   table.grid th, table.grid td { font-size: 0.8em; padding: 0.35rem 0.4rem; }
   .pagination { flex-wrap: wrap; }
 }
+
+/* ═══ Phase 5: table usability ════════════════════════════════════════════ */
+
+/* —— 5a. Sticky table headers ─────────────────────────────────────────────
+   The header row stays put while the body scrolls. Sticky positioning only
+   triggers inside a scroll container, so .table-scroll gets a bounded height
+   and scrolls in both axes. Short tables that fit simply don't scroll. The
+   bottom rule is drawn with an inset box-shadow because a real border-bottom
+   detaches from a sticky cell mid-scroll. */
+.table-scroll {
+  max-height: calc(100vh - 200px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+table.grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--panel-2);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+/* The shadow replaces the scrolling border on header cells. */
+table.grid thead th { border-bottom: 0; }
+
+@media (max-width: 640px) {
+  .table-scroll { max-height: calc(100vh - 160px); }
+}
+
+/* —— 5b. Filter / index bars ──────────────────────────────────────────────
+   A row of chip links above a table that narrow it in place via query params.
+   Server-rendered, no JS: each chip is just a link carrying the filter. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.25rem 0 0.75rem;
+}
+.filter-bar-label {
+  color: var(--muted);
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 0.15rem;
+}
+.chip {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  font-size: 0.82em;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.chip:hover { color: var(--text); border-color: var(--muted); text-decoration: none; }
+.chip-on {
+  background: rgba(78, 164, 255, 0.15);
+  border-color: rgba(78, 164, 255, 0.45);
+  color: var(--accent);
+  font-weight: 600;
+}
+/* The A–Z register jump packs many single-character chips tightly. */
+.reg-jump .chip { padding: 0.2rem 0.5rem; min-width: 1.6rem; text-align: center; }
+
+/* —— 5c. Standardized row actions + shared controls ───────────────────────
+   These classes were referenced by templates (history search, table actions)
+   but never had styles; define them here so actions look consistent app-wide. */
+.btn-small {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  white-space: nowrap;
+}
+.btn-small:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+.btn-primary {
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #0b1118;
+  border: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primary:hover { opacity: 0.9; text-decoration: none; }
+
+/* Grouped action links/buttons inside a table cell. */
+td.cell-actions { white-space: nowrap; }
+td.cell-actions > * + * { margin-left: 0.35rem; }
+
+/* History search filter form. */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem 0.9rem;
+}
+.filter-grid label { display: block; font-size: 0.85em; color: var(--muted); }
+.filter-grid input {
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.4rem 0.55rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font: inherit;
+}
+.filter-actions { display: flex; gap: 0.6rem; margin-top: 0.9rem; align-items: center; }
+.results-header { margin: 0.85rem 0 0.25rem; }

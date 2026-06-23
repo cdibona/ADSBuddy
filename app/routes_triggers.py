@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 import re
 import urllib.parse
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -22,15 +23,22 @@ from app.database import get_session
 from app.deps import require_user
 from app.models import NotificationDelivery, Trigger, TriggerFiring, User
 
-from app.aircraft_helpers import opensky_url, registration_url, type_url
+from app.aircraft_helpers import (
+    opensky_url,
+    registration_url,
+    trigger_prefill_url,
+    type_url,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
-# Register URL helpers so firings.html can use registration_url / type_url.
+# Register URL helpers so firings.html can use registration_url / type_url /
+# trigger_prefill_url (for the per-row "Create trigger" action).
 templates.env.globals.update(
     registration_url=registration_url,
     type_url=type_url,
     opensky_url=opensky_url,
+    trigger_prefill_url=trigger_prefill_url,
 )
 
 FLASH_COOKIE = "adsbuddy_flash"
@@ -79,6 +87,33 @@ def _delivery_label(has_sent: bool | None, has_failed: bool | None) -> str:
     if has_sent:
         return "sent"
     return "pending"
+
+
+_TRIGGER_STATUSES = ("all", "active", "paused")
+_FIRINGS_BUCKETS = ("all", "today", "24h", "7d")
+
+
+def _normalize_trigger_status(raw: str | None) -> str:
+    """Clamp the triggers list status filter to a known value (default 'all')."""
+    val = (raw or "all").strip().lower()
+    return val if val in _TRIGGER_STATUSES else "all"
+
+
+def _normalize_firings_bucket(raw: str | None) -> str:
+    """Clamp the firings time-bucket filter to a known value (default 'all')."""
+    val = (raw or "all").strip().lower()
+    return val if val in _FIRINGS_BUCKETS else "all"
+
+
+def _firings_since_cutoff(bucket: str, now: datetime) -> datetime | None:
+    """Translate a time bucket into a lower-bound cutoff. None means no bound."""
+    if bucket == "today":
+        return now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if bucket == "24h":
+        return now - timedelta(hours=24)
+    if bucket == "7d":
+        return now - timedelta(days=7)
+    return None
 
 
 def _parse_prefill_params(
@@ -146,9 +181,11 @@ async def _get_route_lookup_enabled(db: AsyncSession) -> bool:
 @router.get("/triggers", response_class=HTMLResponse)
 async def triggers_list(
     request: Request,
+    status_filter: str | None = Query(None, alias="status"),
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
+    status = _normalize_trigger_status(status_filter)
     stmt = (
         select(Trigger)
         .options(selectinload(Trigger.owner))
@@ -156,10 +193,33 @@ async def triggers_list(
     )
     if not user.is_admin:
         stmt = stmt.where(Trigger.owner_id == user.id)
-    triggers = (await db.execute(stmt)).scalars().all()
+    all_triggers = (await db.execute(stmt)).scalars().all()
+
+    # Counts for the filter bar are computed over the (owner-scoped) full set;
+    # trigger lists are small enough that an in-memory split beats extra queries.
+    counts = {
+        "all": len(all_triggers),
+        "active": sum(1 for t in all_triggers if t.is_active),
+        "paused": sum(1 for t in all_triggers if not t.is_active),
+    }
+    if status == "active":
+        triggers = [t for t in all_triggers if t.is_active]
+    elif status == "paused":
+        triggers = [t for t in all_triggers if not t.is_active]
+    else:
+        triggers = list(all_triggers)
+
     flash = _pop_flash(request)
     response = templates.TemplateResponse(
-        request, "triggers.html", {"user": user, "triggers": triggers, "flash": flash}
+        request,
+        "triggers.html",
+        {
+            "user": user,
+            "triggers": triggers,
+            "status": status,
+            "counts": counts,
+            "flash": flash,
+        },
     )
     if flash:
         response.delete_cookie(FLASH_COOKIE)
@@ -302,9 +362,13 @@ async def firings_list(
     request: Request,
     page: int = Query(1, ge=1),
     per_page: int = Query(_DEFAULT_PER_PAGE, ge=1, le=_MAX_PER_PAGE),
+    since: str | None = Query(None),
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
+    bucket = _normalize_firings_bucket(since)
+    cutoff = _firings_since_cutoff(bucket, datetime.now(timezone.utc))
+
     # --- count total (1 query) ---
     count_stmt = (
         select(func.count())
@@ -313,6 +377,8 @@ async def firings_list(
     )
     if not user.is_admin:
         count_stmt = count_stmt.where(Trigger.owner_id == user.id)
+    if cutoff is not None:
+        count_stmt = count_stmt.where(TriggerFiring.fired_at >= cutoff)
     total: int = (await db.execute(count_stmt)).scalar_one()
 
     # Clamp page to valid range.
@@ -332,6 +398,8 @@ async def firings_list(
     )
     if not user.is_admin:
         rows_stmt = rows_stmt.where(Trigger.owner_id == user.id)
+    if cutoff is not None:
+        rows_stmt = rows_stmt.where(TriggerFiring.fired_at >= cutoff)
     rows = (await db.execute(rows_stmt)).all()
 
     # --- batch-load delivery status (1 query for the whole page) ---
@@ -373,6 +441,7 @@ async def firings_list(
             "total_pages": total_pages,
             "start": start,
             "end": end,
+            "since": bucket,
             "flash": flash,
         },
     )

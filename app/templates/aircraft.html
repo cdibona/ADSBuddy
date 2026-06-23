@@ -2,7 +2,22 @@
 {% block title %}Recent aircraft — ADSBuddy{% endblock %}
 {% block content %}
 <h1>Recent aircraft</h1>
-<p class="muted">Most recently seen 200 aircraft, newest first.</p>
+<p class="muted">
+  {% if reg_active %}
+    Most recent 200 aircraft with a registration starting <strong>{{ reg_active }}</strong>, newest first.
+  {% else %}
+    Most recently seen 200 aircraft, newest first.
+  {% endif %}
+</p>
+
+<div class="filter-bar reg-jump">
+  <span class="filter-bar-label">Reg</span>
+  <a href="/aircraft" class="chip{% if not reg_active %} chip-on{% endif %}">All</a>
+  {% for L in reg_letters %}
+  <a href="/aircraft?reg={{ L }}" class="chip{% if reg_active == L %} chip-on{% endif %}">{{ L }}</a>
+  {% endfor %}
+</div>
+
 <div class="table-scroll">
 <table class="grid">
   <thead>
@@ -37,7 +52,8 @@
       <td>{{ a.owner_op or "" }}</td>
       <td>{{ a.year or "" }}</td>
       <td>{{ a.last_seen.strftime("%Y-%m-%d %H:%M:%S") }}</td>
-      <td>
+      <td class="cell-actions">
+        <a href="/aircraft/{{ a.icao_hex }}" class="btn-small">Detail</a>
         {% set tpurl = trigger_prefill_url(a.icao_hex, a.registration, a.type_code, a.year, a.owner_op) %}
         {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}
       </td>

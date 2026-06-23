@@ -13,6 +13,14 @@
   re-firing within the window.
 </p>
 
+<div class="filter-bar">
+  <span class="filter-bar-label">Show</span>
+  <a href="/triggers?status=all" class="chip{% if status == 'all' %} chip-on{% endif %}">All ({{ counts.all }})</a>
+  <a href="/triggers?status=active" class="chip{% if status == 'active' %} chip-on{% endif %}">Active ({{ counts.active }})</a>
+  <a href="/triggers?status=paused" class="chip{% if status == 'paused' %} chip-on{% endif %}">Paused ({{ counts.paused }})</a>
+</div>
+
+<div class="table-scroll">
 <table class="grid">
   <thead><tr>
     <th>Name</th>
@@ -77,4 +85,5 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

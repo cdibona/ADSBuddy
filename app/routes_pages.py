@@ -27,6 +27,22 @@ _VALID_HEX_RE = re.compile(r"^[0-9a-f]{1,8}$")
 _VALID_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _HISTORY_PER_PAGE = 50
 
+# A–Z quick-jump letters for the recent-aircraft registration filter.
+_REG_LETTERS = tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+
+def _normalize_reg_letter(raw: str | None) -> str | None:
+    """Validate the recent-aircraft registration filter.
+
+    Returns a single uppercase A–Z letter, or None for 'all'/invalid input.
+    """
+    if not raw:
+        return None
+    val = raw.strip().upper()
+    if len(val) == 1 and val in _REG_LETTERS:
+        return val
+    return None
+
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 # Register URL helpers as Jinja2 globals so all templates can call them directly.
@@ -62,17 +78,25 @@ async def home(
 @router.get("/aircraft", response_class=HTMLResponse)
 async def recent_aircraft(
     request: Request,
+    reg: str | None = Query(None),
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
-    rows = await db.execute(
-        select(Aircraft).order_by(Aircraft.last_seen.desc()).limit(200)
-    )
+    letter = _normalize_reg_letter(reg)
+    stmt = select(Aircraft).order_by(Aircraft.last_seen.desc())
+    if letter is not None:
+        stmt = stmt.where(Aircraft.registration.ilike(f"{letter}%"))
+    rows = await db.execute(stmt.limit(200))
     aircraft = rows.scalars().all()
     return templates.TemplateResponse(
         request,
         "aircraft.html",
-        {"user": user, "aircraft": aircraft},
+        {
+            "user": user,
+            "aircraft": aircraft,
+            "reg_letters": _REG_LETTERS,
+            "reg_active": letter,
+        },
     )
 
 
