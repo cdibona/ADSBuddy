@@ -640,3 +640,29 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   border-bottom-color: var(--accent);
   font-weight: var(--fw-bold);
 }
+
+/* ── Theme toggle (Auto / Day / Night segmented buttons) ───────────────────── */
+.theme-toggle {
+  display: flex;
+  padding: 0.25rem 0.5rem;
+  gap: 0.2rem;
+}
+.theme-opt {
+  flex: 1;
+  padding: 0.25rem 0.4rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.theme-opt:hover { color: var(--ink); border-color: var(--muted); }
+.theme-opt[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--btn-ink);
+  border-color: var(--accent);
+  font-weight: var(--fw-bold);
+}

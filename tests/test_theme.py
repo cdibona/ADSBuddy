@@ -2,6 +2,24 @@ from pathlib import Path
 
 CSS = Path("app/static/app.css").read_text()
 
+
+class TestThemeBootstrap:
+    def _base(self):
+        return Path("app/templates/base.html").read_text()
+
+    def test_inline_bootstrap_before_css(self):
+        b = self._base()
+        assert "adsbuddy-theme" in b
+        assert "prefers-color-scheme" in b
+        # script appears inside <head>, before </head>
+        assert b.index("adsbuddy-theme") < b.index("</head>")
+
+    def test_theme_toggle_controls(self):
+        b = self._base()
+        for v in ("auto", "day", "night"):
+            assert f'data-set-theme="{v}"' in b
+
+
 class TestThemeTokens:
     def test_night_root_tokens_present(self):
         assert ":root" in CSS

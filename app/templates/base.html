@@ -1,6 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="night">
 <head>
+  <script>
+  (function () {
+    try {
+      var pref = localStorage.getItem('adsbuddy-theme') || 'auto';
+      var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var theme = pref === 'auto' ? (dark ? 'night' : 'day') : pref;
+      document.documentElement.setAttribute('data-theme', theme);
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+        if ((localStorage.getItem('adsbuddy-theme') || 'auto') === 'auto')
+          document.documentElement.setAttribute('data-theme', e.matches ? 'night' : 'day');
+      });
+      window.__setTheme = function (v) {
+        localStorage.setItem('adsbuddy-theme', v);
+        var d = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', v === 'auto' ? (d ? 'night' : 'day') : v);
+        document.querySelectorAll('[data-set-theme]').forEach(function (el) {
+          el.setAttribute('aria-pressed', el.getAttribute('data-set-theme') === v);
+        });
+      };
+    } catch (e) {}
+  })();
+  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}ADSBuddy{% endblock %}</title>
@@ -28,6 +50,17 @@
             <div class="menu-sep"></div>
             <a href="/admin">Admin</a>
             {% endif %}
+            <div class="menu-sep"></div>
+            <div class="theme-toggle" role="group" aria-label="Theme">
+              <button type="button" class="theme-opt" data-set-theme="auto" onclick="__setTheme('auto')">Auto</button>
+              <button type="button" class="theme-opt" data-set-theme="day" onclick="__setTheme('day')">Day</button>
+              <button type="button" class="theme-opt" data-set-theme="night" onclick="__setTheme('night')">Night</button>
+            </div>
+            <script>
+              (function(){var v=localStorage.getItem('adsbuddy-theme')||'auto';
+               document.querySelectorAll('[data-set-theme]').forEach(function(el){
+                 el.setAttribute('aria-pressed', el.getAttribute('data-set-theme')===v);});})();
+            </script>
             <div class="menu-sep"></div>
             <form method="post" action="/logout">
               <button type="submit" class="menu-logout">Logout</button>
