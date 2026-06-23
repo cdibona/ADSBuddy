@@ -150,6 +150,7 @@ async def admin_diagnostics(
     ).all()
     sent_24h = sum(c for s, c in deliv_counts if s == "sent")
     failed_24h = sum(c for s, c in deliv_counts if s == "failed")
+    skipped_24h = sum(c for s, c in deliv_counts if s == "skipped")
     tests_24h = (
         await db.execute(
             select(func.count()).select_from(NotificationDelivery).where(
@@ -169,6 +170,20 @@ async def admin_diagnostics(
             .outerjoin(TriggerFiring, TriggerFiring.id == NotificationDelivery.firing_id)
             .outerjoin(Trigger, Trigger.id == TriggerFiring.trigger_id)
             .where(NotificationDelivery.status == "failed")
+            .order_by(NotificationDelivery.created_at.desc())
+            .limit(50)
+        )
+    ).all()
+
+    # Recent "skipped" — channels that weren't configured (not real errors).
+    skipped_rows = (
+        await db.execute(
+            select(NotificationDelivery, NotificationChannel, User, TriggerFiring, Trigger)
+            .join(NotificationChannel, NotificationChannel.id == NotificationDelivery.channel_id)
+            .join(User, User.id == NotificationChannel.user_id)
+            .outerjoin(TriggerFiring, TriggerFiring.id == NotificationDelivery.firing_id)
+            .outerjoin(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .where(NotificationDelivery.status == "skipped")
             .order_by(NotificationDelivery.created_at.desc())
             .limit(50)
         )
@@ -196,9 +211,46 @@ async def admin_diagnostics(
             "firings_24h": firings_24h,
             "sent_24h": sent_24h,
             "failed_24h": failed_24h,
+            "skipped_24h": skipped_24h,
             "tests_24h": tests_24h,
             "fail_rows": fail_rows,
+            "skipped_rows": skipped_rows,
             "recent_rows": recent_rows,
+        },
+    )
+
+
+@router.get("/diagnostics/delivery/{delivery_id}", response_class=HTMLResponse)
+async def admin_delivery_detail(
+    delivery_id: int,
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Full trace for one delivery attempt: which trigger/channel/firing + error."""
+    row = (
+        await db.execute(
+            select(NotificationDelivery, NotificationChannel, User, TriggerFiring, Trigger)
+            .join(NotificationChannel, NotificationChannel.id == NotificationDelivery.channel_id)
+            .join(User, User.id == NotificationChannel.user_id)
+            .outerjoin(TriggerFiring, TriggerFiring.id == NotificationDelivery.firing_id)
+            .outerjoin(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .where(NotificationDelivery.id == delivery_id)
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404)
+    delivery, channel, owner, firing, trigger = row
+    return templates.TemplateResponse(
+        request,
+        "admin_delivery.html",
+        {
+            "user": user,
+            "delivery": delivery,
+            "channel": channel,
+            "owner": owner,
+            "firing": firing,
+            "trigger": trigger,
         },
     )
 

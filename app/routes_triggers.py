@@ -124,12 +124,22 @@ async def _apply_geofence(trigger: Trigger, form: dict[str, str]) -> str | None:
     return None
 
 
-def _delivery_label(has_sent: bool | None, has_failed: bool | None) -> str:
-    """Map delivery aggregate flags to a display label. Failed takes priority."""
+def _delivery_label(
+    has_sent: bool | None,
+    has_failed: bool | None,
+    has_skipped: bool | None = None,
+) -> str:
+    """Map delivery aggregate flags to a display label.
+
+    Priority: a real failure wins, then a success, then 'skipped' (a channel
+    that wasn't configured — not an error), then nothing delivered yet.
+    """
     if has_failed:
         return "failed"
     if has_sent:
         return "sent"
+    if has_skipped:
+        return "skipped"
     return "pending"
 
 
@@ -510,6 +520,9 @@ async def firings_list(
                     func.bool_or(NotificationDelivery.status == "failed").label(
                         "has_failed"
                     ),
+                    func.bool_or(NotificationDelivery.status == "skipped").label(
+                        "has_skipped"
+                    ),
                 )
                 .where(
                     NotificationDelivery.firing_id.in_(firing_ids),
@@ -519,7 +532,9 @@ async def firings_list(
             )
         ).all()
         for ds in ds_rows:
-            delivery_status[ds.firing_id] = _delivery_label(ds.has_sent, ds.has_failed)
+            delivery_status[ds.firing_id] = _delivery_label(
+                ds.has_sent, ds.has_failed, ds.has_skipped
+            )
 
     flash = _pop_flash(request)
     response = templates.TemplateResponse(

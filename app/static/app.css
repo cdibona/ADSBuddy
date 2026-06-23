@@ -532,6 +532,14 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   display: inline-block; border: 1px solid rgba(255, 255, 255, 0.25);
 }
 .legend-dot.legend-receiver { background: #f5d90a; }
+/* "skipped" = a channel that isn't configured; informational, not an error. */
+.badge-skipped {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  background: rgba(210, 168, 255, 0.14); color: #d2a8ff;
+  border: 1px solid rgba(210, 168, 255, 0.35);
+}
+
 /* Leaflet divIcon for direction arrows: strip the default white box. */
 .track-arrow { background: none; border: none; }
 .track-arrow > div { line-height: 1; text-align: center; }

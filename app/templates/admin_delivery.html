@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Delivery #{{ delivery.id }} — ADSBuddy admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>
+    <a href="/admin/diagnostics" class="back-link">&larr; Diagnostics</a>
+    Delivery #{{ delivery.id }}
+  </h1>
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Outcome</h2>
+  <dl class="detail-grid">
+    <dt>Status</dt>
+    <dd>
+      <span class="badge-{{ delivery.status }}">{{ delivery.status | capitalize }}</span>
+      {% if delivery.is_test %}<span class="badge">test</span>{% endif %}
+      {% if delivery.status == "skipped" %}<span class="muted"> — channel not configured; this is not an error</span>{% endif %}
+    </dd>
+    <dt>When</dt>
+    <dd>{{ delivery.created_at | localdt("%Y-%m-%d %H:%M:%S %Z") }}</dd>
+    {% if delivery.error %}
+    <dt>Message</dt>
+    <dd class="diag-error">{{ delivery.error }}</dd>
+    {% endif %}
+  </dl>
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Channel</h2>
+  <dl class="detail-grid">
+    <dt>Name</dt><dd>{{ channel.name }}</dd>
+    <dt>Kind</dt><dd>{{ channel.kind }}</dd>
+    <dt>Owner</dt><dd>{{ owner.username }}</dd>
+    <dt>Active</dt><dd>{{ "yes" if channel.is_active else "no" }}</dd>
+  </dl>
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Trigger &amp; firing</h2>
+  <dl class="detail-grid">
+    <dt>Trigger</dt>
+    <dd>{% if trigger %}<a href="/triggers/{{ trigger.id }}/edit">{{ trigger.name }}</a>{% else %}<span class="muted">— (channel test, no firing)</span>{% endif %}</dd>
+    {% if firing %}
+    <dt>Aircraft</dt>
+    <dd>
+      <a href="/aircraft/{{ firing.icao_hex }}"><code>{{ firing.icao_hex }}</code></a>
+      {% if firing.registration %} / {{ firing.registration }}{% endif %}
+    </dd>
+    <dt>Callsign</dt><dd>{{ firing.callsign or "—" }}</dd>
+    <dt>Fired at</dt><dd>{{ firing.fired_at | localdt("%Y-%m-%d %H:%M:%S %Z") }}</dd>
+    {% endif %}
+  </dl>
+</div>
+{% endblock %}

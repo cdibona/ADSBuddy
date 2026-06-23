@@ -9,16 +9,18 @@
   <div class="diag-card"><span class="diag-num">{{ firings_24h }}</span><span class="diag-label">firings (24h)</span></div>
   <div class="diag-card"><span class="diag-num">{{ sent_24h }}</span><span class="diag-label">delivered (24h)</span></div>
   <div class="diag-card {{ 'diag-bad' if failed_24h else '' }}"><span class="diag-num">{{ failed_24h }}</span><span class="diag-label">failed (24h)</span></div>
+  <div class="diag-card"><span class="diag-num">{{ skipped_24h }}</span><span class="diag-label">skipped — not configured (24h)</span></div>
   <div class="diag-card"><span class="diag-num">{{ tests_24h }}</span><span class="diag-label">test sends (24h)</span></div>
 </div>
 
 <div class="detail-section">
   <h2>Recent delivery failures <span class="detail-count">(last {{ fail_rows|length }})</span></h2>
+  <p class="muted">Real errors only. Channels that simply aren't set up are listed under “skipped” below, not here.</p>
   {% if fail_rows %}
   <div class="table-scroll">
   <table class="grid">
     <thead><tr>
-      <th>When</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th><th>Error</th>
+      <th>When</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th><th>Error</th><th></th>
     </tr></thead>
     <tbody>
       {% for d, ch, owner, firing, trig in fail_rows %}
@@ -26,7 +28,7 @@
         <td>{{ d.created_at | localdt }}</td>
         <td>{{ ch.name }} <span class="muted">({{ ch.kind }})</span></td>
         <td>{{ owner.username }}</td>
-        <td>{{ trig.name if trig else "—" }}{% if d.is_test %} <span class="badge">test</span>{% endif %}</td>
+        <td>{% if trig %}<a href="/triggers/{{ trig.id }}/edit">{{ trig.name }}</a>{% else %}—{% endif %}{% if d.is_test %} <span class="badge">test</span>{% endif %}</td>
         <td>
           {% if firing %}
             <a href="/aircraft/{{ firing.icao_hex }}"><code>{{ firing.icao_hex }}</code></a>
@@ -34,6 +36,7 @@
           {% else %}—{% endif %}
         </td>
         <td class="diag-error">{{ d.error or "—" }}</td>
+        <td><a href="/admin/diagnostics/delivery/{{ d.id }}" class="btn-small">Details</a></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -45,12 +48,40 @@
 </div>
 
 <div class="detail-section">
+  <h2>Skipped — not configured <span class="detail-count">(last {{ skipped_rows|length }})</span></h2>
+  <p class="muted">A channel didn’t deliver because it isn’t set up (e.g. SMTP not configured). Not counted as an error.</p>
+  {% if skipped_rows %}
+  <div class="table-scroll">
+  <table class="grid">
+    <thead><tr>
+      <th>When</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Reason</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for d, ch, owner, firing, trig in skipped_rows %}
+      <tr>
+        <td>{{ d.created_at | localdt }}</td>
+        <td>{{ ch.name }} <span class="muted">({{ ch.kind }})</span></td>
+        <td>{{ owner.username }}</td>
+        <td>{% if trig %}<a href="/triggers/{{ trig.id }}/edit">{{ trig.name }}</a>{% else %}—{% endif %}</td>
+        <td class="muted">{{ d.error or "—" }}</td>
+        <td><a href="/admin/diagnostics/delivery/{{ d.id }}" class="btn-small">Details</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="muted">Nothing skipped.</p>
+  {% endif %}
+</div>
+
+<div class="detail-section">
   <h2>Recent delivery attempts <span class="detail-count">(last {{ recent_rows|length }})</span></h2>
   {% if recent_rows %}
   <div class="table-scroll">
   <table class="grid">
     <thead><tr>
-      <th>When</th><th>Status</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th>
+      <th>When</th><th>Status</th><th>Channel</th><th>Owner</th><th>Trigger</th><th>Aircraft</th><th></th>
     </tr></thead>
     <tbody>
       {% for d, ch, owner, firing, trig in recent_rows %}
@@ -59,13 +90,14 @@
         <td><span class="badge-{{ d.status }}">{{ d.status | capitalize }}</span>{% if d.is_test %} <span class="badge">test</span>{% endif %}</td>
         <td>{{ ch.name }} <span class="muted">({{ ch.kind }})</span></td>
         <td>{{ owner.username }}</td>
-        <td>{{ trig.name if trig else "—" }}</td>
+        <td>{% if trig %}<a href="/triggers/{{ trig.id }}/edit">{{ trig.name }}</a>{% else %}—{% endif %}</td>
         <td>
           {% if firing %}
             <a href="/aircraft/{{ firing.icao_hex }}"><code>{{ firing.icao_hex }}</code></a>
             {% if firing.registration %} / {{ firing.registration }}{% endif %}
           {% else %}—{% endif %}
         </td>
+        <td><a href="/admin/diagnostics/delivery/{{ d.id }}" class="btn-small">Details</a></td>
       </tr>
       {% endfor %}
     </tbody>

@@ -34,6 +34,15 @@ _HTTP_TIMEOUT = 8.0
 _SMTP_TIMEOUT = 10.0
 
 
+class ChannelNotConfigured(Exception):
+    """Raised when a channel can't deliver because required config is missing.
+
+    Distinct from a real delivery failure: an unconfigured transport (e.g. SMTP
+    not set up, a channel missing its destination) is recorded as 'skipped', not
+    'failed', so it isn't counted as an error.
+    """
+
+
 # ---------- message formatting ---------------------------------------------
 
 
@@ -108,7 +117,7 @@ async def _send_discord(
 ) -> None:
     url = (channel.config or {}).get("webhook_url")
     if not url:
-        raise ValueError("Discord channel is missing 'webhook_url' in config.")
+        raise ChannelNotConfigured("Discord channel is missing 'webhook_url' in config.")
     body: dict[str, Any] = {"content": message["text"]}
     username = (channel.config or {}).get("username")
     if username:
@@ -126,7 +135,7 @@ async def _send_generic_webhook(
     cfg = channel.config or {}
     url = cfg.get("url")
     if not url:
-        raise ValueError("Webhook channel is missing 'url' in config.")
+        raise ChannelNotConfigured("Webhook channel is missing 'url' in config.")
     headers = {"Content-Type": "application/json"}
     auth = cfg.get("auth_header")
     if auth:
@@ -141,7 +150,7 @@ async def _send_email(
 ) -> None:
     host = await get_setting(session, "smtp_host")
     if not host:
-        raise ValueError("SMTP not configured (smtp_host is empty).")
+        raise ChannelNotConfigured("SMTP not configured (smtp_host is empty).")
     port_raw = await get_setting(session, "smtp_port") or "587"
     try:
         port = int(port_raw)
@@ -154,7 +163,7 @@ async def _send_email(
 
     to_addr = (channel.config or {}).get("to_address")
     if not to_addr:
-        raise ValueError("Email channel is missing 'to_address' in config.")
+        raise ChannelNotConfigured("Email channel is missing 'to_address' in config.")
 
     msg = EmailMessage()
     msg["From"] = sender
@@ -183,11 +192,13 @@ async def _send_sms_twilio(
     token = await get_setting(session, "twilio_auth_token")
     from_num = await get_setting(session, "twilio_from_number")
     if not (sid and token and from_num):
-        raise ValueError("Twilio not configured (account SID / auth token / from number).")
+        raise ChannelNotConfigured(
+            "Twilio not configured (account SID / auth token / from number)."
+        )
 
     to_num = (channel.config or {}).get("to_phone")
     if not to_num:
-        raise ValueError("SMS channel is missing 'to_phone' in config.")
+        raise ChannelNotConfigured("SMS channel is missing 'to_phone' in config.")
 
     # Twilio caps a single segment at 160 chars; we let it segment up to ~10.
     body = message["text"][:1500]
@@ -251,6 +262,14 @@ async def _dispatch_one(
             )
         await _record(session, channel, firing, "sent", None, is_test)
         return True
+    except ChannelNotConfigured as e:
+        # Not a real failure — the transport/channel just isn't set up.
+        log.info(
+            "Channel %s (%s) skipped for trigger %s: %s",
+            channel.id, channel.kind, trigger.id, e,
+        )
+        await _record(session, channel, firing, "skipped", str(e), is_test)
+        return False
     except Exception as e:  # noqa: BLE001  -- one bad channel mustn't kill the others
         log.warning(
             "Channel %s (%s) failed for trigger %s: %s",
