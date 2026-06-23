@@ -21,6 +21,21 @@ class SettingSpec:
     secret: bool = False
 
 
+# Settings that configure notification transports — shown on the admin
+# "Notifications" tab. Everything else shows on "System".
+_NOTIFICATION_KEYS = frozenset({
+    "notifications_enabled",
+    "smtp_host", "smtp_port", "smtp_username", "smtp_password",
+    "smtp_from", "smtp_use_tls",
+    "twilio_account_sid", "twilio_auth_token", "twilio_from_number",
+})
+
+
+def setting_category(key: str) -> str:
+    """Return the admin tab a setting belongs to: 'notifications' or 'system'."""
+    return "notifications" if key in _NOTIFICATION_KEYS else "system"
+
+
 DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
     SettingSpec(
         key="radio_base_url",

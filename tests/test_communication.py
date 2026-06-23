@@ -107,14 +107,14 @@ def test_profile_has_page_head_and_description():
 
 
 # ---------------------------------------------------------------------------
-# admin_settings.html — has page-head and muted description
+# admin_notifications.html — has page-head and muted description
 # ---------------------------------------------------------------------------
 
-def test_admin_settings_has_page_head_and_description():
+def test_admin_notifications_has_page_head_and_description():
     from app.routes_admin import templates
 
-    out = templates.env.get_template("admin_settings.html").render(
-        request=_req("/admin/settings"),
+    out = templates.env.get_template("admin_notifications.html").render(
+        request=_req("/admin/notifications"),
         user=types.SimpleNamespace(username="admin", is_admin=True, id=1),
         settings=[],
     )

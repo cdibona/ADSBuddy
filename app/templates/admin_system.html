@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}System — ADSBuddy admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Admin — System</h1>
+</div>
+<p class="muted">Read-only system information. Loaded {{ now | localdt("%Y-%m-%d %H:%M:%S %Z") }}.</p>
+{% include "_admin_nav.html" %}
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Build &amp; runtime</h2>
+  <dl class="detail-grid">
+    <dt>Version</dt>
+    <dd>
+      {% if commit_url %}<a href="{{ commit_url }}" target="_blank" rel="noopener"><code>{{ git_sha }}</code></a>
+      {% else %}<code>{{ git_sha }}</code>{% endif %}
+    </dd>
+    <dt>Uptime</dt>
+    <dd>{{ uptime }}</dd>
+    <dt>Started</dt>
+    <dd>{{ started_at | localdt("%Y-%m-%d %H:%M:%S %Z") }}</dd>
+    <dt>DB migration</dt>
+    <dd><code>{{ db_revision or "—" }}</code></dd>
+    <dt>Last sighting</dt>
+    <dd>{{ (last_sighting | localdt("%Y-%m-%d %H:%M:%S %Z")) if last_sighting else "—" }}</dd>
+    <dt>Last firing</dt>
+    <dd>{{ (last_firing | localdt("%Y-%m-%d %H:%M:%S %Z")) if last_firing else "—" }}</dd>
+  </dl>
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Database</h2>
+  <div class="diag-cards">
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.aircraft) }}</span><span class="diag-label">aircraft</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.sightings) }}</span><span class="diag-label">sightings</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.firings) }}</span><span class="diag-label">firings</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.triggers) }}</span><span class="diag-label">triggers</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.users) }}</span><span class="diag-label">users</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.channels) }}</span><span class="diag-label">channels</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.deliveries) }}</span><span class="diag-label">deliveries</span></div>
+    <div class="diag-card"><span class="diag-num">{{ "{:,}".format(counts.routes) }}</span><span class="diag-label">route cache</span></div>
+  </div>
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">System settings</h2>
+  <p class="muted">Runtime config (radio, ingest, storage, retention, site). Saved to Postgres; takes effect on next read.</p>
+  {% include "_settings_list.html" %}
+</div>
+{% endblock %}

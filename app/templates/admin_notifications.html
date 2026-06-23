@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Notifications — ADSBuddy admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Admin — Notifications</h1>
+</div>
+<p class="muted">Transport config for outgoing alerts. Saved to Postgres; takes effect on next read.</p>
+{% include "_admin_nav.html" %}
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Transports</h2>
+  <p class="muted">
+    <code>notifications_enabled</code> is the master switch. SMTP powers the
+    <strong>email</strong> channel kind; Twilio powers <strong>SMS</strong>.
+    <strong>Discord</strong> and generic <strong>webhook</strong> channels need no
+    server config — each user adds their own destination URL.
+  </p>
+  {% include "_settings_list.html" %}
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Per-user channels</h2>
+  <p class="muted">
+    Individual destinations (a Discord webhook, an email address, a phone number,
+    a generic webhook) are added by each user under their
+    <a href="/profile">Profile → notification channels</a>. A channel only
+    delivers when it's marked Active and its transport above is configured.
+  </p>
+</div>
+{% endblock %}

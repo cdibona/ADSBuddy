@@ -6,22 +6,26 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import timefmt, version
 from app.database import get_session
 from app.deps import require_admin
 from app.models import (
+    Aircraft,
+    FlightRoute,
     NotificationChannel,
     NotificationDelivery,
     Setting,
+    Sighting,
     Trigger,
     TriggerFiring,
     User,
 )
 from app.security import hash_password
-from app.settings_store import set_value
+from app.settings_store import get as get_setting
+from app.settings_store import set_value, setting_category
 
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory="app/templates")
@@ -101,18 +105,10 @@ async def admin_reset_password(
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.get("/settings", response_class=HTMLResponse)
-async def admin_settings_get(
-    request: Request,
-    user: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_session),
-):
-    settings = (
-        (await db.execute(select(Setting).order_by(Setting.key))).scalars().all()
-    )
-    return templates.TemplateResponse(
-        request, "admin_settings.html", {"user": user, "settings": settings}
-    )
+@router.get("/settings")
+async def admin_settings_redirect(user: User = Depends(require_admin)):
+    """The old flat Settings page is now split across System + Notifications."""
+    return RedirectResponse(url="/admin/system", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 
 @router.get("/diagnostics", response_class=HTMLResponse)
@@ -255,6 +251,74 @@ async def admin_delivery_detail(
     )
 
 
+@router.get("/system", response_class=HTMLResponse)
+async def admin_system(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Read-only system information: version, uptime, DB stats, key settings."""
+    async def _count(model) -> int:
+        return (await db.execute(select(func.count()).select_from(model))).scalar_one()
+
+    counts = {
+        "aircraft": await _count(Aircraft),
+        "sightings": await _count(Sighting),
+        "firings": await _count(TriggerFiring),
+        "triggers": await _count(Trigger),
+        "users": await _count(User),
+        "channels": await _count(NotificationChannel),
+        "deliveries": await _count(NotificationDelivery),
+        "routes": await _count(FlightRoute),
+    }
+    last_sighting = (await db.execute(select(func.max(Sighting.seen_at)))).scalar_one()
+    last_firing = (await db.execute(select(func.max(TriggerFiring.fired_at)))).scalar_one()
+    db_revision = (
+        await db.execute(text("SELECT version_num FROM alembic_version"))
+    ).scalar_one_or_none()
+
+    all_settings = (
+        (await db.execute(select(Setting).order_by(Setting.key))).scalars().all()
+    )
+    system_settings = [s for s in all_settings if setting_category(s.key) == "system"]
+
+    return templates.TemplateResponse(
+        request,
+        "admin_system.html",
+        {
+            "user": user,
+            "now": datetime.now(timezone.utc),
+            "git_sha": version.GIT_SHA,
+            "commit_url": version.github_commit_url(),
+            "started_at": version.STARTED_AT,
+            "uptime": version.uptime_str(),
+            "db_revision": db_revision,
+            "counts": counts,
+            "last_sighting": last_sighting,
+            "last_firing": last_firing,
+            "settings": system_settings,
+        },
+    )
+
+
+@router.get("/notifications", response_class=HTMLResponse)
+async def admin_notifications(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Notification transport config (SMTP / Twilio / master switch)."""
+    all_settings = (
+        (await db.execute(select(Setting).order_by(Setting.key))).scalars().all()
+    )
+    notif_settings = [s for s in all_settings if setting_category(s.key) == "notifications"]
+    return templates.TemplateResponse(
+        request,
+        "admin_notifications.html",
+        {"user": user, "settings": notif_settings},
+    )
+
+
 @router.post("/settings/{key}")
 async def admin_settings_set(
     key: str,
@@ -263,4 +327,6 @@ async def admin_settings_set(
     db: AsyncSession = Depends(get_session),
 ):
     await set_value(db, key, value)
-    return RedirectResponse(url="/admin/settings", status_code=status.HTTP_303_SEE_OTHER)
+    # Return to the tab the setting lives on.
+    dest = "/admin/notifications" if setting_category(key) == "notifications" else "/admin/system"
+    return RedirectResponse(url=dest, status_code=status.HTTP_303_SEE_OTHER)
