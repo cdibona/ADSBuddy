@@ -1,28 +1,40 @@
 :root {
-  --bg: #0f1216;
-  --panel: #161b22;
-  --panel-2: #1d242d;
-  --border: #2a323d;
-  --text: #e6edf3;
-  --muted: #9ca8b3;
-  --accent: #4ea4ff;
-  --danger: #ff6b6b;
-  --ok: #3fb950;
+  /* —— Cockpit · NIGHT (default) —— */
+  --bg:#080b0d; --panel:#0d1417; --panel-2:#111c1f; --border:#20403a;
+  --ink:#cfe3d8; --muted:#5f8c7e;
+  --accent:#ffb000;        /* amber */
+  --ok:#4ade80;            /* instrument green */
+  --danger:#ff6b6b;
+  --watch:#c084fc;         /* purple: skipped/watch */
+  --info:#4ea4ff;
+  --font-data:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --fw-base:400; --fw-bold:700;
+  --s1:.25rem; --s2:.4rem; --s3:.6rem; --s4:.9rem; --s5:1.25rem; --s6:1.75rem;
+  --radius:3px;
+}
+[data-theme="day"] {
+  /* —— Cockpit · DAY (heavier, darker ink) —— */
+  --bg:#edefe9; --panel:#ffffff; --panel-2:#f3f5f0; --border:#cdd5cd;
+  --ink:#0f1714; --muted:#3f4d46;
+  --accent:#9a4d06; --ok:#15703c; --danger:#b3261e; --watch:#7a3fb0; --info:#0b6bcb;
+  --fw-base:500; --fw-bold:800;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }
 body {
   background: var(--bg);
-  color: var(--text);
-  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  font: 14px/1.45 var(--font-ui);
+  font-weight: var(--fw-base);
   display: flex;
   flex-direction: column;
 }
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
+code { font-family: var(--font-data); font-size: 0.9em; }
 
 .topbar {
   display: flex;
@@ -33,7 +45,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
 }
-.brand a { color: var(--text); font-weight: 600; letter-spacing: 0.02em; }
+.brand a { color: var(--ink); font-weight: var(--fw-bold); letter-spacing: 0.02em; }
 .nav { display: flex; align-items: center; gap: 1rem; margin-left: auto; }
 .nav .user { color: var(--muted); margin-left: 0.5rem; }
 .nav .inline { margin: 0; }
@@ -59,13 +71,13 @@ body.auth { justify-content: flex-start; }
 .card input[type=text], .card input[type=password],
 .card input[type=email], .card select {
   width: 100%; padding: 0.5rem 0.6rem;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--text); font: inherit;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--ink); font: inherit;
 }
 .card button {
   margin-top: 0.9rem; padding: 0.5rem 0.9rem;
-  background: var(--accent); color: #0b1118; border: 0; border-radius: 4px;
-  font-weight: 600; cursor: pointer;
+  background: var(--accent); color: #0b1118; border: 0; border-radius: var(--radius);
+  font-weight: var(--fw-bold); cursor: pointer;
 }
 .error { color: var(--danger); margin: 0 0 0.5rem; }
 .muted { color: var(--muted); }
@@ -75,13 +87,14 @@ table.grid th, table.grid td {
   text-align: left; padding: 0.45rem 0.6rem;
   border-bottom: 1px solid var(--border); vertical-align: top;
 }
-table.grid th { color: var(--muted); font-weight: 600; }
+table.grid th { color: var(--muted); font-weight: var(--fw-bold); }
+table.grid td { font-family: var(--font-data); font-size: 0.9em; }
 .row-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .row-actions .inline { display: inline-flex; gap: 0.4rem; align-items: center; }
-.row-actions input { padding: 0.3rem 0.5rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px; color: var(--text); }
+.row-actions input { padding: 0.3rem 0.5rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--ink); }
 .row-actions button {
-  padding: 0.3rem 0.6rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--text); cursor: pointer;
+  padding: 0.3rem 0.6rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--ink); cursor: pointer;
 }
 .row-actions button.danger { color: var(--danger); border-color: var(--danger); }
 
@@ -89,12 +102,12 @@ table.grid th { color: var(--muted); font-weight: 600; }
 
 .setting { margin-bottom: 0.9rem; }
 .setting .setting-head { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.3rem; }
-.setting .badge { background: var(--panel-2); color: var(--muted); padding: 0 0.4rem; border-radius: 3px; font-size: 0.75em; border: 1px solid var(--border); }
+.setting .badge { background: var(--panel-2); color: var(--muted); padding: 0 0.4rem; border-radius: var(--radius); font-size: 0.75em; border: 1px solid var(--border); }
 .setting-row { display: flex; gap: 0.5rem; }
-.setting-row input { flex: 1; padding: 0.4rem 0.55rem; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 4px; }
+.setting-row input { flex: 1; padding: 0.4rem 0.55rem; background: var(--panel-2); border: 1px solid var(--border); color: var(--ink); border-radius: var(--radius); }
 .setting-row button {
-  padding: 0.4rem 0.8rem; background: var(--accent); color: #0b1118; border: 0; border-radius: 4px;
-  font-weight: 600; cursor: pointer;
+  padding: 0.4rem 0.8rem; background: var(--accent); color: #0b1118; border: 0; border-radius: var(--radius);
+  font-weight: var(--fw-bold); cursor: pointer;
 }
 
 form.inline { display: inline-block; margin: 0; }
@@ -102,10 +115,10 @@ form.inline { display: inline-block; margin: 0; }
 .page-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
 .btn, .btn-secondary {
   display: inline-block; padding: 0.45rem 0.9rem; border-radius: 4px;
-  text-decoration: none; font-weight: 600;
+  text-decoration: none; font-weight: var(--fw-bold);
 }
 .btn { background: var(--accent); color: #0b1118; border: 0; }
-.btn-secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary { background: var(--panel-2); color: var(--ink); border: 1px solid var(--border); }
 a.btn:hover, a.btn-secondary:hover { text-decoration: none; opacity: 0.9; }
 
 .trigger-form fieldset {
@@ -116,8 +129,8 @@ a.btn:hover, a.btn-secondary:hover { text-decoration: none; opacity: 0.9; }
 .trigger-form fieldset > label + label { margin-top: 0.55rem; }
 .trigger-form textarea {
   width: 100%; padding: 0.4rem 0.55rem;
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--text); font: inherit;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--ink); font: inherit;
 }
 .trigger-form small { display: block; margin-top: 0.15rem; }
 .trigger-form .grid-2 {
@@ -141,28 +154,28 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
 .cond-more:hover { color: var(--accent); }
 
 .add-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0 1rem; }
-.status { font-weight: 600; padding: 0 0.35rem; border-radius: 3px; }
+.status { font-weight: var(--fw-bold); padding: 0 0.35rem; border-radius: var(--radius); }
 .status-sent { color: var(--ok); }
 .status-failed { color: var(--danger); }
 
 /* ── Trigger active/paused badges ───────────────────────────────────────── */
 .badge-active {
   display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(63, 185, 80, 0.15); color: var(--ok);
-  border: 1px solid rgba(63, 185, 80, 0.35);
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
+  background: rgba(74, 222, 128, 0.15); color: var(--ok);
+  border: 1px solid rgba(74, 222, 128, 0.35);
 }
 .badge-paused {
   display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(139, 148, 158, 0.15); color: var(--muted);
-  border: 1px solid rgba(139, 148, 158, 0.35);
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
+  background: rgba(95, 140, 126, 0.15); color: var(--muted);
+  border: 1px solid rgba(95, 140, 126, 0.35);
 }
 
 /* ── Active nav link ────────────────────────────────────────────────────── */
 .nav a[aria-current="page"] {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: var(--fw-bold);
 }
 
 /* ── Flash messages ─────────────────────────────────────────────────────── */
@@ -172,9 +185,9 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
   font-weight: 500;
   flex-shrink: 0;
 }
-.flash-success { background: rgba(63, 185, 80, 0.12); color: var(--ok); border-bottom: 1px solid rgba(63, 185, 80, 0.25); }
+.flash-success { background: rgba(74, 222, 128, 0.12); color: var(--ok); border-bottom: 1px solid rgba(74, 222, 128, 0.25); }
 .flash-error   { background: rgba(255, 107, 107, 0.12); color: var(--danger); border-bottom: 1px solid rgba(255, 107, 107, 0.25); }
-.flash-info    { background: rgba(78, 164, 255, 0.12); color: var(--accent); border-bottom: 1px solid rgba(78, 164, 255, 0.25); }
+.flash-info    { background: rgba(78, 164, 255, 0.12); color: var(--info); border-bottom: 1px solid rgba(78, 164, 255, 0.25); }
 
 /* ── Toggle button (pause / activate) ──────────────────────────────────── */
 .btn-toggle {
@@ -182,7 +195,7 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
   font: inherit; font-size: 0.8em; border: 1px solid var(--border);
   background: var(--panel-2); color: var(--muted);
 }
-.btn-toggle:hover { color: var(--text); border-color: var(--muted); }
+.btn-toggle:hover { color: var(--ink); border-color: var(--muted); }
 
 /* ── Route fieldset disabled state ─────────────────────────────────────── */
 .fieldset-disabled {
@@ -194,37 +207,44 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
   padding: 0.4rem 0.6rem; margin-bottom: 0.4rem;
   background: rgba(255, 107, 107, 0.08);
   border: 1px solid rgba(255, 107, 107, 0.2);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 
 /* ── Route fieldset legend badge ────────────────────────────────────────── */
 .legend-badge {
   display: inline-block; padding: 0.1rem 0.45rem; border-radius: 99px;
-  font-size: 0.7em; font-weight: 600; vertical-align: middle; margin-left: 0.4rem;
-  background: rgba(63, 185, 80, 0.12); color: var(--ok); border: 1px solid rgba(63, 185, 80, 0.3);
+  font-size: 0.7em; font-weight: var(--fw-bold); vertical-align: middle; margin-left: 0.4rem;
+  background: rgba(74, 222, 128, 0.12); color: var(--ok); border: 1px solid rgba(74, 222, 128, 0.3);
 }
 .legend-badge.off {
-  background: rgba(139, 148, 158, 0.12); color: var(--muted); border-color: rgba(139, 148, 158, 0.3);
+  background: rgba(95, 140, 126, 0.12); color: var(--muted); border-color: rgba(95, 140, 126, 0.3);
 }
 
 /* ── Delivery status badges (firings table) ────────────────────────────── */
 .badge-sent {
   display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(63, 185, 80, 0.15); color: var(--ok);
-  border: 1px solid rgba(63, 185, 80, 0.35);
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
+  background: rgba(74, 222, 128, 0.15); color: var(--ok);
+  border: 1px solid rgba(74, 222, 128, 0.35);
 }
 .badge-failed {
   display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
   background: rgba(255, 107, 107, 0.15); color: var(--danger);
   border: 1px solid rgba(255, 107, 107, 0.35);
 }
 .badge-pending {
   display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(156, 168, 179, 0.12); color: var(--muted);
-  border: 1px solid rgba(156, 168, 179, 0.3);
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
+  background: rgba(95, 140, 126, 0.12); color: var(--muted);
+  border: 1px solid rgba(95, 140, 126, 0.3);
+}
+/* "skipped" = a channel that isn't configured; informational, not an error. */
+.badge-skipped {
+  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap;
+  background: rgba(192, 132, 252, 0.14); color: var(--watch);
+  border: 1px solid rgba(192, 132, 252, 0.35);
 }
 
 /* ── Pagination ────────────────────────────────────────────────────────── */
@@ -251,65 +271,45 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+  border-radius: 2px;
 }
 /* Suppress focus ring for mouse clicks; only show for keyboard navigation */
 :focus:not(:focus-visible) { outline: none; }
 
 /* ── Responsive table wrapper ──────────────────────────────────────────── */
+/* Sticky table headers — header row stays put while body scrolls.
+   max-height bounds the scroll container; short tables simply don't scroll.
+   The bottom rule uses inset box-shadow because a real border-bottom detaches
+   from a sticky cell mid-scroll. */
 .table-scroll {
-  overflow-x: auto;
+  max-height: calc(100vh - 200px);
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+table.grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--panel-2);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+table.grid thead th { border-bottom: 0; }
+
+@media (max-width: 640px) {
+  .table-scroll { max-height: calc(100vh - 160px); }
 }
 
 /* ── Mobile adjustments ────────────────────────────────────────────────── */
 @media (max-width: 640px) {
-  .content { padding: 0.75rem; }
-  .topbar { gap: 0.75rem; flex-wrap: wrap; }
+  .content { padding: 0.9rem; }
+  .topbar { gap: 0.75rem; padding: 0.5rem 0.75rem; flex-wrap: wrap; }
   .page-head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
   .trigger-form .grid-2 { grid-template-columns: 1fr; }
+  table.grid th, table.grid td { font-size: 0.8em; padding: 0.35rem 0.4rem; }
   .pagination { flex-wrap: wrap; gap: 0.5rem; }
 }
 
-/* —— Delivery status badges ————————————————————————————————————————————— */
-.badge-sent {
-  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(63, 185, 80, 0.15); color: var(--ok);
-  border: 1px solid rgba(63, 185, 80, 0.35);
-}
-.badge-failed {
-  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(255, 107, 107, 0.15); color: var(--danger);
-  border: 1px solid rgba(255, 107, 107, 0.35);
-}
-.badge-pending {
-  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(156, 168, 179, 0.15); color: var(--muted);
-  border: 1px solid rgba(156, 168, 179, 0.35);
-}
-
-/* —— Responsive table ——————————————————————————————————————————————————— */
-.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-
-/* —— Pagination ————————————————————————————————————————————————————————— */
-.pagination {
-  display: flex; align-items: center; gap: 0.75rem;
-  margin-top: 1rem; font-size: 0.875em;
-}
-.pagination a { color: var(--accent); }
-.pagination .disabled { color: var(--muted); cursor: default; }
-.pg-info { color: var(--muted); }
-
-/* —— Focus-visible ——————————————————————————————————————————————————————— */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-/* —— External link icon ──────────────────────────────────────────────────── */
+/* ── External link icon ──────────────────────────────────────────────────── */
 .ext-link {
   font-size: 0.72em;
   color: var(--muted);
@@ -321,7 +321,7 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
 }
 .ext-link:hover { color: var(--accent); opacity: 1; text-decoration: none; }
 
-/* —— Aircraft detail page ────────────────────────────────────────────────── */
+/* ── Aircraft detail page ────────────────────────────────────────────────── */
 .back-link {
   font-size: 0.8em;
   color: var(--muted);
@@ -339,7 +339,7 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
 }
 .detail-card-title {
   font-size: 0.78em;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -360,47 +360,10 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
 .detail-grid dd { margin: 0; }
 
 .detail-section { margin-bottom: 1.75rem; }
-.detail-section h2 { font-size: 1em; font-weight: 600; margin: 0 0 0.5rem; }
+.detail-section h2 { font-size: 1em; font-weight: var(--fw-bold); margin: 0 0 0.5rem; }
 .detail-count { font-size: 0.8em; color: var(--muted); font-weight: 400; }
 
-/* —— Mobile / responsive ————————————————————————————————————————————————— */
-@media (max-width: 640px) {
-  .content { padding: 0.9rem; }
-  .topbar { gap: 0.75rem; padding: 0.5rem 0.75rem; flex-wrap: wrap; }
-  .page-head { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-  .trigger-form .grid-2 { grid-template-columns: 1fr; }
-  table.grid th, table.grid td { font-size: 0.8em; padding: 0.35rem 0.4rem; }
-  .pagination { flex-wrap: wrap; }
-}
-
-/* ═══ Phase 5: table usability ════════════════════════════════════════════ */
-
-/* —— 5a. Sticky table headers ─────────────────────────────────────────────
-   The header row stays put while the body scrolls. Sticky positioning only
-   triggers inside a scroll container, so .table-scroll gets a bounded height
-   and scrolls in both axes. Short tables that fit simply don't scroll. The
-   bottom rule is drawn with an inset box-shadow because a real border-bottom
-   detaches from a sticky cell mid-scroll. */
-.table-scroll {
-  max-height: calc(100vh - 200px);
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
-table.grid thead th {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: var(--panel-2);
-  box-shadow: inset 0 -1px 0 var(--border);
-}
-/* The shadow replaces the scrolling border on header cells. */
-table.grid thead th { border-bottom: 0; }
-
-@media (max-width: 640px) {
-  .table-scroll { max-height: calc(100vh - 160px); }
-}
-
-/* —— 5b. Filter / index bars ──────────────────────────────────────────────
+/* ── Filter / index bars ──────────────────────────────────────────────────
    A row of chip links above a table that narrow it in place via query params.
    Server-rendered, no JS: each chip is just a link carrying the filter. */
 .filter-bar {
@@ -427,17 +390,17 @@ table.grid thead th { border-bottom: 0; }
   color: var(--muted);
   white-space: nowrap;
 }
-.chip:hover { color: var(--text); border-color: var(--muted); text-decoration: none; }
+.chip:hover { color: var(--ink); border-color: var(--muted); text-decoration: none; }
 .chip-on {
-  background: rgba(78, 164, 255, 0.15);
-  border-color: rgba(78, 164, 255, 0.45);
+  background: rgba(255, 176, 0, 0.15);
+  border-color: rgba(255, 176, 0, 0.45);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-bold);
 }
 /* The A–Z register jump packs many single-character chips tightly. */
 .reg-jump .chip { padding: 0.2rem 0.5rem; min-width: 1.6rem; text-align: center; }
 
-/* —— 5c. Standardized row actions + shared controls ───────────────────────
+/* ── Standardized row actions + shared controls ───────────────────────────
    These classes were referenced by templates (history search, table actions)
    but never had styles; define them here so actions look consistent app-wide. */
 .btn-small {
@@ -445,10 +408,10 @@ table.grid thead th { border-bottom: 0; }
   padding: 0.2rem 0.55rem;
   border-radius: 4px;
   font-size: 0.8em;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   background: var(--panel-2);
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--ink);
   white-space: nowrap;
 }
 .btn-small:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
@@ -460,7 +423,7 @@ table.grid thead th { border-bottom: 0; }
   background: var(--accent);
   color: #0b1118;
   border: 0;
-  font-weight: 600;
+  font-weight: var(--fw-bold);
   cursor: pointer;
 }
 .btn-primary:hover { opacity: 0.9; text-decoration: none; }
@@ -483,14 +446,14 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   padding: 0.4rem 0.55rem;
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
+  border-radius: var(--radius);
+  color: var(--ink);
   font: inherit;
 }
 .filter-actions { display: flex; gap: 0.6rem; margin-top: 0.9rem; align-items: center; }
 .results-header { margin: 0.85rem 0 0.25rem; }
 
-/* —— Site footer: deployed version + uptime ───────────────────────────────── */
+/* ── Site footer: deployed version + uptime ───────────────────────────────── */
 .site-footer {
   flex: 0 0 auto;
   display: flex;
@@ -504,17 +467,16 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   color: var(--muted);
   font-size: 0.78em;
 }
-.site-footer code { color: var(--text); }
+.site-footer code { color: var(--ink); }
 .site-footer a { color: var(--accent); }
 .footer-sep { opacity: 0.5; }
 
-/* —— Aircraft-detail location map (Leaflet) ───────────────────────────────── */
+/* ── Aircraft-detail location map (Leaflet) ───────────────────────────────── */
 .sight-map {
   height: 380px;
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 6px;
-  /* Leaflet tiles/controls assume a light surface; keep them above the dark bg. */
   background: var(--panel-2);
 }
 .sight-map .leaflet-popup-content { margin: 0.5rem 0.7rem; line-height: 1.4; }
@@ -532,19 +494,12 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   display: inline-block; border: 1px solid rgba(255, 255, 255, 0.25);
 }
 .legend-dot.legend-receiver { background: #f5d90a; }
-/* "skipped" = a channel that isn't configured; informational, not an error. */
-.badge-skipped {
-  display: inline-block; padding: 0.15rem 0.55rem; border-radius: 99px;
-  font-size: 0.75em; font-weight: 600; white-space: nowrap;
-  background: rgba(210, 168, 255, 0.14); color: #d2a8ff;
-  border: 1px solid rgba(210, 168, 255, 0.35);
-}
 
 /* Leaflet divIcon for direction arrows: strip the default white box. */
 .track-arrow { background: none; border: none; }
 .track-arrow > div { line-height: 1; text-align: center; }
 
-/* —— Compact admin settings list ──────────────────────────────────────────
+/* ── Compact admin settings list ──────────────────────────────────────────
    One aligned row per setting (key · value · save) with the description as a
    small secondary line, instead of a full card each. */
 .settings-list { margin-top: 0.75rem; border-top: 1px solid var(--border); }
@@ -563,8 +518,8 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   padding: 0.35rem 0.5rem;
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
+  border-radius: var(--radius);
+  color: var(--ink);
   font: inherit;
 }
 .setting-compact button {
@@ -572,8 +527,8 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   background: var(--accent);
   color: #0b1118;
   border: 0;
-  border-radius: 4px;
-  font-weight: 600;
+  border-radius: var(--radius);
+  font-weight: var(--fw-bold);
   cursor: pointer;
 }
 .setting-compact .setting-desc {
@@ -587,7 +542,7 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   .setting-compact .setting-key { grid-column: 1 / -1; }
 }
 
-/* —— Admin diagnostics ─────────────────────────────────────────────────── */
+/* ── Admin diagnostics ─────────────────────────────────────────────────── */
 .diag-cards { display: flex; flex-wrap: wrap; gap: 0.75rem; margin: 1rem 0 1.5rem; }
 .diag-card {
   flex: 1 1 120px;
@@ -600,26 +555,26 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   gap: 0.2rem;
 }
 .diag-card.diag-bad { border-color: rgba(255, 107, 107, 0.5); }
-.diag-num { font-size: 1.5rem; font-weight: 600; }
+.diag-num { font-size: 1.5rem; font-weight: var(--fw-bold); }
 .diag-card.diag-bad .diag-num { color: var(--danger); }
 .diag-label { font-size: 0.78em; color: var(--muted); }
 .diag-error {
   color: var(--danger);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-data);
   font-size: 0.82em;
   overflow-wrap: anywhere;
   max-width: 40ch;
 }
 
-/* —— Auto-refresh status line ──────────────────────────────────────────── */
+/* ── Auto-refresh status line ──────────────────────────────────────────── */
 .refresh-note { font-size: 0.8em; color: var(--muted); }
 
-/* —— User dropdown menu (nav) ─────────────────────────────────────────────── */
+/* ── User dropdown menu (nav) ─────────────────────────────────────────────── */
 .user-menu { position: relative; }
 .user-menu > summary {
   list-style: none;
   cursor: pointer;
-  color: var(--text);
+  color: var(--ink);
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -651,7 +606,7 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   width: 100%;
   padding: 0.4rem 0.6rem;
   border-radius: 4px;
-  color: var(--text);
+  color: var(--ink);
   background: none;
   border: 0;
   text-align: left;
@@ -663,7 +618,7 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 .user-menu-items form { margin: 0; }
 .menu-sep { height: 1px; background: var(--border); margin: 0.3rem 0.2rem; }
 
-/* —— Admin sub-navigation tabs ────────────────────────────────────────────── */
+/* ── Admin sub-navigation tabs ────────────────────────────────────────────── */
 .subnav {
   display: flex;
   flex-wrap: wrap;
@@ -677,9 +632,9 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
 }
-.subnav a:hover { color: var(--text); text-decoration: none; }
+.subnav a:hover { color: var(--ink); text-decoration: none; }
 .subnav a[aria-current="page"] {
-  color: var(--text);
+  color: var(--ink);
   border-bottom-color: var(--accent);
-  font-weight: 600;
+  font-weight: var(--fw-bold);
 }
