@@ -170,3 +170,33 @@ class TestFiringsNotifiedNA:
             loaded_at=datetime(2026, 6, 23, 16, tzinfo=timezone.utc), flash=None)
         assert "badge-na" in out and "N/A" in out
         assert "Pending" not in out
+
+
+class TestDeliveryPurgeUI:
+    def _render(self, query):
+        import types
+        from datetime import datetime, timezone
+        from app.routes_admin import templates
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/admin/diagnostics"),
+                                    query_params=query)
+        return templates.env.get_template("admin_diagnostics.html").render(
+            request=req, user=types.SimpleNamespace(username="admin", is_admin=True),
+            now=datetime(2026, 6, 24, 18, tzinfo=timezone.utc),
+            firings_24h=0, sent_24h=0, failed_24h=0, skipped_24h=0, tests_24h=0,
+            fail_rows=[], skipped_rows=[], recent_rows=[])
+
+    def test_purge_button_present(self):
+        out = self._render({})
+        assert 'action="/admin/diagnostics/purge"' in out
+        assert "Purge old log now" in out
+
+    def test_purged_confirmation_shown(self):
+        out = self._render({"purged": "7"})
+        assert "Purged 7 delivery-log rows" in out
+
+
+def test_delivery_retention_setting_is_system_category():
+    from app.settings_store import setting_category, DEFAULT_SETTINGS
+    keys = {s.key for s in DEFAULT_SETTINGS}
+    assert "delivery_retention_days" in keys
+    assert setting_category("delivery_retention_days") == "system"

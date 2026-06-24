@@ -740,3 +740,7 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   border-radius: var(--radius);
   background: var(--panel-2);
 }
+
+/* —— Diagnostics purge bar ─────────────────────────────────────────────────── */
+.purge-bar { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0.25rem; }
+.purge-bar .muted { font-size: 0.82em; }

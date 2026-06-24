@@ -251,6 +251,24 @@ async def admin_delivery_detail(
     )
 
 
+@router.post("/diagnostics/purge")
+async def admin_diagnostics_purge(
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """On-demand prune of the notification-delivery log by the retention window."""
+    from app.ingest import _parse_retention_days, delete_deliveries_before
+
+    days = _parse_retention_days(await get_setting(db, "delivery_retention_days"))
+    if days is None:
+        days = 30  # auto-prune disabled — on-demand still uses a sane floor
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    deleted = await delete_deliveries_before(db, cutoff)
+    return RedirectResponse(
+        url=f"/admin/diagnostics?purged={deleted}", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
 @router.get("/system", response_class=HTMLResponse)
 async def admin_system(
     request: Request,

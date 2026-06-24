@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import flight_routes, notifications, triggers as trigger_engine
 from app.database import SessionLocal
-from app.models import Aircraft, Sighting, TriggerFiring
+from app.models import Aircraft, NotificationDelivery, Sighting, TriggerFiring
 from app.settings_store import get as get_setting
 from app.settings_store import set_value
 
@@ -32,6 +32,53 @@ log = logging.getLogger(__name__)
 DEFAULT_INTERVAL = 5.0
 _CLEANUP_INTERVAL = 3600.0  # run at most once per hour
 _last_cleanup: float = 0.0
+_last_delivery_cleanup: float = 0.0
+
+
+async def delete_deliveries_before(session: AsyncSession, cutoff: datetime) -> int:
+    """Batch-delete notification_deliveries older than ``cutoff``. Caller commits per batch.
+
+    Shared by the hourly auto-prune and the admin on-demand purge.
+    """
+    total = 0
+    batch_size = 5_000
+    while True:
+        id_rows = (
+            await session.execute(
+                select(NotificationDelivery.id)
+                .where(NotificationDelivery.created_at < cutoff)
+                .limit(batch_size)
+            )
+        ).scalars().all()
+        if not id_rows:
+            break
+        result = await session.execute(
+            delete(NotificationDelivery).where(NotificationDelivery.id.in_(id_rows))
+        )
+        total += result.rowcount
+        await session.commit()
+    return total
+
+
+async def _maybe_cleanup_deliveries() -> None:
+    """Prune the notification-delivery log on the same hourly cadence as sightings."""
+    global _last_delivery_cleanup
+    now = time.monotonic()
+    if now - _last_delivery_cleanup < _CLEANUP_INTERVAL:
+        return
+    _last_delivery_cleanup = now
+    try:
+        async with SessionLocal() as session:
+            days = _parse_retention_days(await get_setting(session, "delivery_retention_days"))
+            if days is None:
+                return  # disabled
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            deleted = await delete_deliveries_before(session, cutoff)
+            if deleted:
+                log.info("Delivery-log cleanup: deleted %d rows older than %d days.", deleted, days)
+    except Exception:
+        log.warning("Delivery-log cleanup failed; will retry next cycle.", exc_info=True)
+        _last_delivery_cleanup = 0.0
 
 
 def _coerce_int(value: Any) -> int | None:
@@ -341,6 +388,7 @@ async def run_forever(stop_event: asyncio.Event) -> None:
             except Exception:
                 log.exception("Ingest tick failed; will retry.")
             await _maybe_cleanup_sightings()
+            await _maybe_cleanup_deliveries()
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=interval)
             except asyncio.TimeoutError:

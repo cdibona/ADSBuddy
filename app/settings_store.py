@@ -171,6 +171,16 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         description="Name shown for the receiving station on the aircraft-detail map.",
     ),
     SettingSpec(
+        key="delivery_retention_days",
+        default="30",
+        description=(
+            "How many days of notification-delivery log rows (sent/failed/skipped) "
+            "to retain. The background ingester prunes older rows hourly, and admins "
+            "can purge on demand from Diagnostics. 0 or blank disables auto-prune. "
+            "Default: 30."
+        ),
+    ),
+    SettingSpec(
         key="sightings_retention_days",
         default="30",
         description=(

@@ -7,6 +7,17 @@
 <p class="muted">Firing &amp; notification-delivery audit trail. Loaded {{ now | localdt("%Y-%m-%d %H:%M:%S %Z") }}.</p>
 {% include "_admin_nav.html" %}
 
+{% set purged = request.query_params.get("purged") if request.query_params else None %}
+{% if purged is not none %}
+<div class="flash flash-success" role="alert">Purged {{ purged }} delivery-log row{{ "s" if purged != "1" else "" }}.</div>
+{% endif %}
+
+<form method="post" action="/admin/diagnostics/purge" class="purge-bar"
+      onsubmit="return confirm('Purge delivery-log rows older than the retention window?');">
+  <button type="submit" class="btn-small">Purge old log now</button>
+  <span class="muted">Removes rows past <code>delivery_retention_days</code>; auto-prune also runs hourly.</span>
+</form>
+
 <div class="diag-cards">
   <div class="diag-card"><span class="diag-num">{{ firings_24h }}</span><span class="diag-label">firings (24h)</span></div>
   <div class="diag-card"><span class="diag-num">{{ sent_24h }}</span><span class="diag-label">delivered (24h)</span></div>
