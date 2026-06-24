@@ -112,9 +112,9 @@
     <legend>Geofence</legend>
     <div class="grid-2">
       <label>Center
-        <input name="geofence_center" placeholder="e.g. KSEA, 98101, or 47.63,-122.53"
+        <input name="geofence_center" placeholder="e.g. SEA, KSEA, 98101, or 47.63,-122.53"
                value="{{ trigger.geofence_center if trigger else '' }}">
-        <small class="muted">ICAO airport, US ZIP, or <code>lat,lon</code>. Resolved when you save.</small>
+        <small class="muted">Airport code (3-letter SEA or 4-letter KSEA), US ZIP, or <code>lat,lon</code>. Resolved when you save.</small>
       </label>
       <label>Radius (miles)
         <input type="number" name="geofence_radius_miles" min="0" step="any" placeholder="e.g. 40"

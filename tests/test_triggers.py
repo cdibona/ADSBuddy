@@ -479,3 +479,14 @@ class TestSquawkMatch:
     def test_empty_pattern_is_wildcard(self):
         t = _make_trigger(squawk_patterns="")
         assert matches(t, _make_facts(squawk=None), NOW_YEAR)
+
+
+class TestIcaoCandidates:
+    def test_three_letter_assumes_k_prefix_first(self):
+        from app.geocode import icao_candidates
+        assert icao_candidates("SEA") == ["KSEA", "SEA", "PSEA"]
+        assert icao_candidates("sea") == ["KSEA", "SEA", "PSEA"]
+
+    def test_four_letter_used_as_is(self):
+        from app.geocode import icao_candidates
+        assert icao_candidates("KBFI") == ["KBFI"]

@@ -1,9 +1,10 @@
 """Resolve a geofence center from user input to (lat, lon).
 
-Accepts three forms, resolved at trigger-save time (never on the hot path):
+Accepts these forms, resolved at trigger-save time (never on the hot path):
   - "lat,lon"        e.g. "47.63, -122.53"   (parsed locally)
   - US ZIP (5 digit) e.g. "98101"            (zippopotam.us)
-  - ICAO airport     e.g. "KSEA"             (aviationweather.gov)
+  - airport code     e.g. "KSEA" or "SEA"    (aviationweather.gov; a 3-letter
+                     IATA code is assumed to be US and mapped to ICAO "K"+code)
 
 All network calls are best-effort: any failure returns None and the caller
 treats the geofence as unresolved.
@@ -59,11 +60,26 @@ async def _resolve_zip(zip_code: str, client: httpx.AsyncClient) -> Center | Non
         return None
 
 
-async def _resolve_icao(icao: str, client: httpx.AsyncClient) -> Center | None:
+def icao_candidates(code: str) -> list[str]:
+    """ICAO codes to try for an airport input, in priority order.
+
+    A 4-letter code is taken as ICAO as-is. A 3-letter code is assumed to be a
+    US IATA code and mapped to ICAO by prefixing 'K' (SEA -> KSEA) — the common
+    case — with the bare code and a 'P' prefix (Alaska/Hawaii/Pacific) as
+    fallbacks, so the user needn't know the ICAO form.
+    """
+    code = code.upper()
+    if len(code) == 4:
+        return [code]
+    return ["K" + code, code, "P" + code]
+
+
+async def _resolve_icao(code: str, client: httpx.AsyncClient) -> Center | None:
+    candidates = icao_candidates(code)
     try:
         resp = await client.get(
             _AVWX_AIRPORT,
-            params={"ids": icao.upper(), "format": "json"},
+            params={"ids": ",".join(candidates), "format": "json"},
             timeout=8.0,
             headers={"User-Agent": "ADSBuddy/0.1"},
         )
@@ -72,9 +88,15 @@ async def _resolve_icao(icao: str, client: httpx.AsyncClient) -> Center | None:
         data = resp.json()
         if not data:
             return None
-        row = data[0]
-        lat, lon = float(row["lat"]), float(row["lon"])
-        return Center(lat, lon) if _valid(lat, lon) else None
+        by_icao = {row.get("icaoId"): row for row in data if row.get("icaoId")}
+        # Honor candidate priority (K-prefix first), not API ordering.
+        for cand in candidates:
+            row = by_icao.get(cand)
+            if not row:
+                continue
+            lat, lon = float(row["lat"]), float(row["lon"])
+            return Center(lat, lon) if _valid(lat, lon) else None
+        return None
     except (httpx.RequestError, KeyError, ValueError, TypeError, IndexError):
         return None
 
