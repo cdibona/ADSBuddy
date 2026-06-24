@@ -183,6 +183,8 @@ def trigger_condition_items(t: Trigger) -> list[tuple[str, str]]:
         items.append(("type", t.type_codes))
     if t.owner_patterns:
         items.append(("owner", t.owner_patterns))
+    if t.squawk_patterns:
+        items.append(("squawk", t.squawk_patterns))
     if t.min_year is not None or t.max_year is not None:
         items.append(("year", _range_str(t.min_year, t.max_year)))
     if t.min_age_years is not None or t.max_age_years is not None:
@@ -356,6 +358,7 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.flight_patterns = _strip_or_empty(form.get("flight_patterns"))
     trigger.type_codes = _strip_or_empty(form.get("type_codes"))
     trigger.owner_patterns = _strip_or_empty(form.get("owner_patterns"))
+    trigger.squawk_patterns = _strip_or_empty(form.get("squawk_patterns"))
     trigger.origin_icaos = _strip_or_empty(form.get("origin_icaos"))
     trigger.destination_icaos = _strip_or_empty(form.get("destination_icaos"))
     trigger.min_year = _int_or_none(form.get("min_year"))

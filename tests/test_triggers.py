@@ -39,6 +39,7 @@ def _make_trigger(**kw) -> SimpleNamespace:
         flight_patterns="",
         type_codes="",
         owner_patterns="",
+        squawk_patterns="",
         origin_icaos="",
         destination_icaos="",
         min_year=None,
@@ -454,3 +455,27 @@ class TestGeocodeParse:
 
         assert parse_latlon("KSEA") is None
         assert parse_latlon("98101") is None
+
+
+class TestSquawkMatch:
+    def test_exact_squawk(self):
+        t = _make_trigger(squawk_patterns="7700")
+        assert matches(t, _make_facts(squawk="7700"), NOW_YEAR)
+        assert not matches(t, _make_facts(squawk="1200"), NOW_YEAR)
+
+    def test_emergency_set(self):
+        t = _make_trigger(squawk_patterns="7500, 7600, 7700")
+        assert matches(t, _make_facts(squawk="7600"), NOW_YEAR)
+
+    def test_wildcard(self):
+        t = _make_trigger(squawk_patterns="12*")
+        assert matches(t, _make_facts(squawk="1200"), NOW_YEAR)
+        assert not matches(t, _make_facts(squawk="7700"), NOW_YEAR)
+
+    def test_none_squawk_no_match_when_required(self):
+        t = _make_trigger(squawk_patterns="7700")
+        assert not matches(t, _make_facts(squawk=None), NOW_YEAR)
+
+    def test_empty_pattern_is_wildcard(self):
+        t = _make_trigger(squawk_patterns="")
+        assert matches(t, _make_facts(squawk=None), NOW_YEAR)

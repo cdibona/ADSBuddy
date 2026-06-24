@@ -129,6 +129,8 @@ def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
         return False
     if not _any_contains(_csv(trigger.owner_patterns), facts.owner_op):
         return False
+    if not _any_pattern(_csv(trigger.squawk_patterns), facts.squawk):
+        return False
     if not _any_exact(_csv(trigger.origin_icaos), facts.origin_icao):
         return False
     if not _any_exact(_csv(trigger.destination_icaos), facts.destination_icao):

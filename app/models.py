@@ -190,6 +190,7 @@ class Trigger(Base):
     flight_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     type_codes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     owner_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    squawk_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     origin_icaos: Mapped[str] = mapped_column(Text, nullable=False, default="")
     destination_icaos: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
