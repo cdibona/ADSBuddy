@@ -7,8 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.models import User
+from app.models import RadioSource, User
 from app.security import hash_password
+from app.settings_store import get as get_setting
 from app.settings_store import seed_defaults
 
 log = logging.getLogger(__name__)
@@ -42,6 +43,40 @@ async def ensure_admin(session: AsyncSession) -> None:
     await session.commit()
 
 
+async def _coerce_float(raw: str | None) -> float | None:
+    if raw is None or not raw.strip():
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+async def seed_default_source(session: AsyncSession) -> None:
+    """Migrate the legacy single radio (radio_base_url) into a RadioSource.
+
+    Runs only when no sources exist yet, so it's a one-time migration. The old
+    settings keys (radio_base_url, receiver_lat/lon) are left in place as a
+    deprecated alias; the ingester reads from radio_sources going forward.
+    """
+    existing = (await session.execute(select(RadioSource.id).limit(1))).first()
+    if existing:
+        return
+    url = (await get_setting(session, "radio_base_url")) or ""
+    source = RadioSource(
+        name="Local radio",
+        kind="poll",
+        url=url or None,
+        is_active=bool(url),
+        receiver_lat=await _coerce_float(await get_setting(session, "receiver_lat")),
+        receiver_lon=await _coerce_float(await get_setting(session, "receiver_lon")),
+    )
+    session.add(source)
+    await session.commit()
+    log.info("Seeded default radio source 'Local radio' from radio_base_url=%r.", url)
+
+
 async def run(session: AsyncSession) -> None:
     await seed_defaults(session)
+    await seed_default_source(session)
     await ensure_admin(session)

@@ -79,6 +79,31 @@ class Setting(Base):
     )
 
 
+class RadioSource(Base):
+    """A feed ADSBuddy ingests from.
+
+    kind='poll' → we GET <url>/data/aircraft.json on each tick.
+    kind='push' → a feeder POSTs aircraft.json-shaped data to /ingest/<token>.
+    Sightings are tagged with the source's name. receiver_lat/lon is the
+    station location (learned from the radio's receiver.json for poll sources).
+    """
+
+    __tablename__ = "radio_sources"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="poll")
+    url: Mapped[str | None] = mapped_column(Text)
+    token: Mapped[str | None] = mapped_column(String(64), index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    receiver_lat: Mapped[float | None] = mapped_column(Float)
+    receiver_lon: Mapped[float | None] = mapped_column(Float)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+
 class Aircraft(Base):
     """One row per ICAO hex ever seen. Slowly-changing facts only."""
 

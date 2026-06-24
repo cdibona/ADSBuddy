@@ -1,6 +1,7 @@
 """Admin pages: user management and the settings editor."""
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -17,6 +18,7 @@ from app.models import (
     FlightRoute,
     NotificationChannel,
     NotificationDelivery,
+    RadioSource,
     Setting,
     Sighting,
     Trigger,
@@ -335,6 +337,100 @@ async def admin_notifications(
         "admin_notifications.html",
         {"user": user, "settings": notif_settings},
     )
+
+
+@router.get("/sources", response_class=HTMLResponse)
+async def admin_sources(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    sources = (
+        await db.execute(select(RadioSource).order_by(RadioSource.created_at))
+    ).scalars().all()
+    return templates.TemplateResponse(
+        request,
+        "admin_sources.html",
+        {
+            "user": user,
+            "sources": sources,
+            "base_url": (await get_setting(db, "site_base_url")) or "",
+        },
+    )
+
+
+@router.post("/sources")
+async def admin_sources_create(
+    name: str = Form(...),
+    kind: str = Form("poll"),
+    url: str = Form(""),
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    name = name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Name required")
+    if kind not in ("poll", "push"):
+        raise HTTPException(status_code=400, detail="kind must be poll or push")
+    src = RadioSource(
+        name=name,
+        kind=kind,
+        url=url.strip() or None if kind == "poll" else None,
+        token=secrets.token_urlsafe(24) if kind == "push" else None,
+        is_active=True,
+    )
+    db.add(src)
+    await db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
+
+
+async def _load_source(db: AsyncSession, source_id: int) -> RadioSource:
+    src = (
+        await db.execute(select(RadioSource).where(RadioSource.id == source_id))
+    ).scalar_one_or_none()
+    if src is None:
+        raise HTTPException(status_code=404)
+    return src
+
+
+@router.post("/sources/{source_id}/edit")
+async def admin_sources_edit(
+    source_id: int,
+    name: str = Form(...),
+    url: str = Form(""),
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    src = await _load_source(db, source_id)
+    src.name = name.strip() or src.name
+    if src.kind == "poll":
+        src.url = url.strip() or None
+    await db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/sources/{source_id}/toggle")
+async def admin_sources_toggle(
+    source_id: int,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    src = await _load_source(db, source_id)
+    src.is_active = not src.is_active
+    await db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/sources/{source_id}/delete")
+async def admin_sources_delete(
+    source_id: int,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    src = await _load_source(db, source_id)
+    await db.delete(src)
+    await db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/settings/{key}")

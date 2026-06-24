@@ -14,6 +14,7 @@ from app import (
     ingest,
     routes_admin,
     routes_auth,
+    routes_ingest,
     routes_pages,
     routes_profile,
     routes_triggers,
@@ -47,6 +48,7 @@ app.include_router(routes_pages.router)
 app.include_router(routes_triggers.router)
 app.include_router(routes_profile.router)
 app.include_router(routes_admin.router)
+app.include_router(routes_ingest.router)
 
 
 @app.get("/healthz")

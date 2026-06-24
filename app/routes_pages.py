@@ -23,8 +23,7 @@ from app.aircraft_helpers import (
 )
 from app.database import get_session
 from app.deps import current_user_optional, require_user
-from app.models import Aircraft, Sighting, Trigger, TriggerFiring, User
-from app.settings_store import get as get_setting
+from app.models import Aircraft, RadioSource, Sighting, Trigger, TriggerFiring, User
 from app.settings_store import get_required
 
 # ---------------------------------------------------------------------------
@@ -212,15 +211,18 @@ async def aircraft_detail(
         )
     map_sources = [{"source": src, "color": clr} for src, clr in color_by_source.items()]
 
-    recv_lat = _to_float(await get_setting(db, "receiver_lat"))
-    recv_lon = _to_float(await get_setting(db, "receiver_lon"))
-    receiver = None
-    if recv_lat is not None and recv_lon is not None:
-        receiver = {
-            "lat": recv_lat,
-            "lon": recv_lon,
-            "label": (await get_setting(db, "receiver_label")) or "Receiver",
-        }
+    # Station markers: every source that knows its receiver location.
+    recv_rows = (
+        await db.execute(
+            select(RadioSource).where(
+                RadioSource.receiver_lat.is_not(None),
+                RadioSource.receiver_lon.is_not(None),
+            )
+        )
+    ).scalars().all()
+    receivers = [
+        {"lat": r.receiver_lat, "lon": r.receiver_lon, "label": r.name} for r in recv_rows
+    ]
 
     return templates.TemplateResponse(
         request,
@@ -232,7 +234,7 @@ async def aircraft_detail(
             "firings_rows": firings_rows,
             "map_points": map_points,
             "map_sources": map_sources,
-            "receiver": receiver,
+            "receivers": receivers,
         },
     )
 

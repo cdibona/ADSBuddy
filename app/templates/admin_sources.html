@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Sources — ADSBuddy admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Admin — Sources</h1>
+</div>
+<p class="muted">Feeds ADSBuddy ingests from. <strong>Poll</strong> sources are fetched each tick; <strong>push</strong> sources POST data to a tokened URL. Sightings are tagged with the source name.</p>
+{% include "_admin_nav.html" %}
+
+<div class="add-row">
+  <form method="post" action="/admin/sources" class="inline" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">
+    <input name="name" placeholder="Source name" required>
+    <select name="kind">
+      <option value="poll">poll (we fetch)</option>
+      <option value="push">push (sends to us)</option>
+    </select>
+    <input name="url" placeholder="http://radio:8080 (poll only)">
+    <button type="submit">Add source</button>
+  </form>
+</div>
+
+<div class="table-scroll">
+<table class="grid">
+  <thead><tr>
+    <th>Name</th><th>Kind</th><th>Endpoint</th><th>Active</th><th>Last data</th><th>Receiver</th><th>Actions</th>
+  </tr></thead>
+  <tbody>
+    {% for s in sources %}
+    <tr>
+      <td data-label="Name"><strong>{{ s.name }}</strong></td>
+      <td data-label="Kind">{{ s.kind }}</td>
+      <td data-label="Endpoint">
+        {% if s.kind == "poll" %}
+          <code>{{ s.url or "—" }}</code>
+        {% else %}
+          {% if base_url %}<code>{{ base_url.rstrip("/") }}/ingest/{{ s.token }}</code>
+          {% else %}<code>/ingest/{{ s.token }}</code> <span class="muted">(set site_base_url for a full URL)</span>{% endif %}
+        {% endif %}
+      </td>
+      <td data-label="Active">
+        {% if s.is_active %}<span class="badge-active">Active</span>{% else %}<span class="badge-paused">Off</span>{% endif %}
+      </td>
+      <td data-label="Last data">{{ (s.last_seen_at | localdt("%Y-%m-%d %H:%M")) if s.last_seen_at else "—" }}</td>
+      <td data-label="Receiver">{% if s.receiver_lat is not none %}{{ "%.3f"|format(s.receiver_lat) }}, {{ "%.3f"|format(s.receiver_lon) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td data-label="" class="row-actions">
+        {% if s.kind == "poll" %}
+        <form method="post" action="/admin/sources/{{ s.id }}/edit" class="inline" style="display:inline-flex;gap:0.3rem">
+          <input name="name" value="{{ s.name }}" style="width:8rem">
+          <input name="url" value="{{ s.url or '' }}" style="width:11rem">
+          <button type="submit">Save</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/admin/sources/{{ s.id }}/toggle" class="inline">
+          <button type="submit">{{ "Disable" if s.is_active else "Enable" }}</button>
+        </form>
+        <form method="post" action="/admin/sources/{{ s.id }}/delete" class="inline"
+              onsubmit="return confirm('Delete source {{ s.name }}?');">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">No sources yet. Add one above.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

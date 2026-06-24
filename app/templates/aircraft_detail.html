@@ -79,9 +79,9 @@
     {% for src in map_sources %}
     <span class="legend-item"><span class="legend-dot" style="background: {{ src.color }}"></span>{{ src.source }}</span>
     {% endfor %}
-    {% if receiver %}
-    <span class="legend-item"><span class="legend-dot legend-receiver"></span>{{ receiver.label }} (station)</span>
-    {% endif %}
+    {% for r in receivers %}
+    <span class="legend-item"><span class="legend-dot legend-receiver"></span>{{ r.label }} (station)</span>
+    {% endfor %}
   </div>
   <p class="muted map-hint">Arrows show direction of travel; the bold arrow marks the latest report. Click any point for time, altitude and heading.</p>
   {% else %}
@@ -168,7 +168,7 @@
 <script>
   (function () {
     const points = {{ map_points | tojson }};
-    const receiver = {{ receiver | tojson }};
+    const receivers = {{ receivers | tojson }};
     if (!window.L || !points.length) return;
 
     const map = L.map('sight-map', { scrollWheelZoom: false });
@@ -242,15 +242,15 @@
       .addTo(map);
 
     const bounds = L.latLngBounds(latlngs);
-    if (receiver) {
-      const rm = L.circleMarker([receiver.lat, receiver.lon], {
+    (receivers || []).forEach(function (r) {
+      const rm = L.circleMarker([r.lat, r.lon], {
         radius: 8, color: '#f5d90a', weight: 3, fillColor: '#f5d90a', fillOpacity: 0.85
       });
-      rm.bindPopup('<b>' + receiver.label + '</b><br>receiving station<br>' +
-        receiver.lat.toFixed(4) + ', ' + receiver.lon.toFixed(4));
+      rm.bindPopup('<b>' + r.label + '</b><br>receiving station<br>' +
+        r.lat.toFixed(4) + ', ' + r.lon.toFixed(4));
       rm.addTo(map);
-      bounds.extend([receiver.lat, receiver.lon]);
-    }
+      bounds.extend([r.lat, r.lon]);
+    });
     map.fitBounds(bounds.pad(0.25));
   })();
 </script>

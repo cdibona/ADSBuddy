@@ -58,7 +58,7 @@ class TestDetailMapRendering:
                  "source": "local_radio", "color": "#4ea4ff", "alt": 10000, "flight": "UAL1", "track": 280.0},
             ],
             map_sources=[{"source": "local_radio", "color": "#4ea4ff"}],
-            receiver={"lat": 47.6323, "lon": -122.5269, "label": "Local radio"},
+            receivers=[{"lat": 47.6323, "lon": -122.5269, "label": "Local radio"}],
         )
         assert 'id="sight-map"' in out
         assert "leaflet@1.9.4/dist/leaflet.js" in out
@@ -79,7 +79,7 @@ class TestDetailMapRendering:
         tpl = templates.env.get_template("aircraft_detail.html")
         out = tpl.render(
             request=req, user=admin, aircraft=_aircraft(), sightings=[], firings_rows=[],
-            map_points=[], map_sources=[], receiver=None,
+            map_points=[], map_sources=[], receivers=[],
         )
         assert "No positioned sightings to map yet." in out
         # Don't pull in Leaflet when there's nothing to plot.

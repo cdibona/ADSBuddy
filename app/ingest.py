@@ -23,9 +23,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import flight_routes, notifications, triggers as trigger_engine
 from app.database import SessionLocal
-from app.models import Aircraft, NotificationDelivery, Sighting, TriggerFiring
+from app.models import Aircraft, NotificationDelivery, RadioSource, Sighting, TriggerFiring
 from app.settings_store import get as get_setting
-from app.settings_store import set_value
 
 log = logging.getLogger(__name__)
 
@@ -257,52 +256,55 @@ def _build_sighting(
     )
 
 
-async def _store_receiver_location_if_missing(
-    client: httpx.AsyncClient, session: AsyncSession, radio: str
+async def _learn_receiver_location(
+    client: httpx.AsyncClient, source: RadioSource
 ) -> None:
-    """One-time bootstrap of the receiver's lat/lon from the radio.
+    """Fill a poll source's receiver lat/lon from its radio's receiver.json (once).
 
-    Runs only while ``receiver_lat`` is blank; once stored (or admin-set) the
-    cheap settings check below short-circuits and we never refetch. Failure is
-    non-fatal — we just try again next tick.
+    Mutates ``source`` in place (caller commits). Non-fatal on failure.
     """
-    existing = await get_setting(session, "receiver_lat")
-    if existing and existing.strip():
+    if source.receiver_lat is not None and source.receiver_lon is not None:
+        return
+    if not source.url:
         return
     try:
-        resp = await client.get(radio.rstrip("/") + "/data/receiver.json", timeout=8.0)
+        resp = await client.get(source.url.rstrip("/") + "/data/receiver.json", timeout=8.0)
         resp.raise_for_status()
         data = resp.json()
-        lat = data.get("lat")
-        lon = data.get("lon")
+        lat, lon = data.get("lat"), data.get("lon")
         if lat is None or lon is None:
             return
-        await set_value(session, "receiver_lat", str(lat))
-        await set_value(session, "receiver_lon", str(lon))
-        log.info("Learned receiver location from receiver.json: %s, %s", lat, lon)
+        source.receiver_lat = float(lat)
+        source.receiver_lon = float(lon)
+        log.info("Learned receiver location for source %r: %s, %s", source.name, lat, lon)
     except Exception:
-        log.debug("Could not fetch receiver.json for location; will retry.", exc_info=True)
+        log.debug("Could not fetch receiver.json for source %r; will retry.", source.name, exc_info=True)
 
 
-async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
-    radio = await get_setting(session, "radio_base_url")
-    if not radio:
-        log.warning("radio_base_url is unset — skipping tick.")
-        return 0
-    await _store_receiver_location_if_missing(client, session, radio)
-    url = radio.rstrip("/") + "/data/aircraft.json"
-    resp = await client.get(url, timeout=10.0)
-    resp.raise_for_status()
-    payload = resp.json()
-    entries = payload.get("aircraft") or []
-
-    store_raw = (await get_setting(session, "store_raw_sightings") or "false").lower() == "true"
-
+async def _trigger_context(session: AsyncSession):
+    """Shared per-batch context: (active_triggers, need_routes, store_raw)."""
     active_triggers = await trigger_engine.load_active_triggers(session)
     need_routes = any(
         t.origin_icaos.strip() or t.destination_icaos.strip() for t in active_triggers
     )
+    store_raw = (await get_setting(session, "store_raw_sightings") or "false").lower() == "true"
+    return active_triggers, need_routes, store_raw
 
+
+async def process_entries(
+    session: AsyncSession,
+    client: httpx.AsyncClient,
+    source_name: str,
+    entries: list[dict[str, Any]],
+    active_triggers: list,
+    need_routes: bool,
+    store_raw: bool,
+) -> tuple[list[TriggerFiring], int]:
+    """Upsert aircraft, store sightings (tagged ``source_name``), enrich routes,
+    and evaluate triggers for one batch of aircraft.json entries. Caller commits.
+
+    Shared by the poll tick and the push endpoint. Returns (new_firings, blocked).
+    """
     new_firings: list[TriggerFiring] = []
     blocked_total = 0
     for entry in entries:
@@ -326,6 +328,7 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
 
         sighting = _build_sighting(hex_id, entry, origin, destination, store_raw)
         if sighting is not None:
+            sighting.source = source_name
             session.add(sighting)
 
         if active_triggers:
@@ -349,26 +352,57 @@ async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
             )
             new_firings.extend(firings)
             blocked_total += blocked
+    return new_firings, blocked_total
 
-    # Commit sightings/aircraft first so they survive even if delivery crashes.
-    await session.commit()
 
-    log.info(
-        "Tick: %d aircraft, %d active trigger(s), %d firing(s), %d cooldown-blocked.",
-        len(entries),
-        len(active_triggers),
-        len(new_firings),
-        blocked_total,
-    )
+async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
+    sources = (
+        await session.execute(
+            select(RadioSource).where(
+                RadioSource.kind == "poll", RadioSource.is_active.is_(True)
+            )
+        )
+    ).scalars().all()
+    if not sources:
+        log.warning("No active poll sources — skipping tick.")
+        return 0
 
-    if new_firings:
+    active_triggers, need_routes, store_raw = await _trigger_context(session)
+    total_entries = 0
+
+    # Each source is processed + committed independently: one bad feed can't
+    # block the others, and committing per source lets the cooldown de-dupe an
+    # aircraft seen by multiple sources in the same tick.
+    for source in sources:
+        if not source.url:
+            continue
+        await _learn_receiver_location(client, source)
         try:
-            await notifications.deliver_for_firings(session, client, new_firings)
-            await session.commit()
+            resp = await client.get(source.url.rstrip("/") + "/data/aircraft.json", timeout=10.0)
+            resp.raise_for_status()
+            entries = resp.json().get("aircraft") or []
         except Exception:
-            log.exception("Notification dispatch failed; firings are still recorded.")
-            await session.rollback()
-    return len(entries)
+            log.warning("Source %r fetch failed; skipping this tick.", source.name, exc_info=True)
+            continue
+
+        new_firings, blocked = await process_entries(
+            session, client, source.name, entries, active_triggers, need_routes, store_raw
+        )
+        source.last_seen_at = datetime.now(timezone.utc)
+        await session.commit()
+        total_entries += len(entries)
+        log.info(
+            "Tick[%s]: %d aircraft, %d firing(s), %d cooldown-blocked.",
+            source.name, len(entries), len(new_firings), blocked,
+        )
+        if new_firings:
+            try:
+                await notifications.deliver_for_firings(session, client, new_firings)
+                await session.commit()
+            except Exception:
+                log.exception("Notification dispatch failed; firings are still recorded.")
+                await session.rollback()
+    return total_entries
 
 
 async def run_forever(stop_event: asyncio.Event) -> None:
