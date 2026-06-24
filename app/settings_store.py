@@ -187,7 +187,7 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
             "Per aircraft per source, store at most one sighting every this many "
             "seconds (plus the first one after a gap). Dramatically reduces storage "
             "vs. saving every poll. Trigger evaluation still runs every tick. "
-            "0 or blank stores every position. Default: 180 (3 min)."
+            "Whole seconds; 0 or blank stores every position. Default: 180 (3 min)."
         ),
     ),
     SettingSpec(

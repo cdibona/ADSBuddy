@@ -186,13 +186,18 @@ async def _maybe_cleanup_sightings() -> None:
 
 async def downsample_estimate(session: AsyncSession, interval: int) -> tuple[int, int]:
     """(total_sightings, rows_that_would_be_deleted) keeping ~1 per (hex, source,
-    ``interval``-second bucket). Read-only — a dry run for the admin action."""
+    ``interval``-second bucket). Only rows older than one interval are eligible
+    (so the estimate matches what ``downsample_run`` actually removes — the live
+    bucket is protected). Read-only dry run."""
+    if interval <= 0:
+        raise ValueError("interval must be > 0")
     row = (
         await session.execute(
             text(
                 "SELECT count(*) AS total, "
-                "count(*) - count(DISTINCT (icao_hex, source, "
-                "floor(extract(epoch from seen_at) / :iv))) AS would_del "
+                "count(*) FILTER (WHERE seen_at < now() - make_interval(secs => :iv)) "
+                "- count(DISTINCT (icao_hex, source, floor(extract(epoch from seen_at) / :iv))) "
+                "  FILTER (WHERE seen_at < now() - make_interval(secs => :iv)) AS would_del "
                 "FROM sightings"
             ),
             {"iv": interval},
@@ -204,7 +209,11 @@ async def downsample_estimate(session: AsyncSession, interval: int) -> tuple[int
 async def downsample_run(session: AsyncSession, interval: int) -> int:
     """Delete redundant sightings, keeping the earliest row in each
     (hex, source, ``interval``-second bucket). Batched per hex (uses the
-    icao_hex index); commits per hex. Irreversible. Returns rows deleted."""
+    icao_hex index); commits per hex. Rows newer than one interval are left
+    untouched so a concurrent ingest tick can't have its fresh position deleted.
+    Irreversible. Returns rows deleted."""
+    if interval <= 0:
+        raise ValueError("interval must be > 0")
     hexes = (
         await session.execute(text("SELECT DISTINCT icao_hex FROM sightings"))
     ).scalars().all()
@@ -218,6 +227,7 @@ async def downsample_run(session: AsyncSession, interval: int) -> int:
                 "   ORDER BY seen_at) AS rn"
                 " FROM sightings WHERE icao_hex = :hex) r"
                 " WHERE s.id = r.id AND r.rn > 1"
+                " AND s.seen_at < now() - make_interval(secs => :iv)"
             ),
             {"iv": interval, "hex": hx},
         )
@@ -410,8 +420,12 @@ async def process_entries(
         store_it = True
         if min_interval > 0:
             prev = last_seen.get(hex_id)
-            if prev is not None and (now - prev).total_seconds() < min_interval:
-                store_it = False
+            if prev is not None:
+                elapsed = (now - prev).total_seconds()
+                # Suppress only within the window; a negative elapsed (clock skew)
+                # falls through to storing rather than wedging the aircraft.
+                if 0 <= elapsed < min_interval:
+                    store_it = False
         if store_it:
             sighting = _build_sighting(hex_id, entry, origin, destination, store_raw)
             if sighting is not None:
