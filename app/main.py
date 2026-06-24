@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
 from app import (
     bootstrap,
@@ -15,10 +16,12 @@ from app import (
     routes_admin,
     routes_auth,
     routes_ingest,
+    routes_oauth,
     routes_pages,
     routes_profile,
     routes_triggers,
 )
+from app.config import get_settings
 from app.database import SessionLocal
 
 logging.basicConfig(
@@ -41,6 +44,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="ADSBuddy", lifespan=lifespan)
+# Signed-cookie session used only for the transient OAuth handshake state
+# (Authlib stores state/nonce/PKCE here). App login uses its own DB-backed
+# cookie, not this.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=get_settings().secret_key,
+    same_site="lax",
+    https_only=False,  # behind Tailscale Serve TLS; cookie is transient state only
+)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(routes_auth.router)
@@ -49,6 +61,7 @@ app.include_router(routes_triggers.router)
 app.include_router(routes_profile.router)
 app.include_router(routes_admin.router)
 app.include_router(routes_ingest.router)
+app.include_router(routes_oauth.router)
 
 
 @app.get("/healthz")

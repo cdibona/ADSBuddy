@@ -22,18 +22,28 @@ class SettingSpec:
 
 
 # Settings that configure notification transports — shown on the admin
-# "Notifications" tab. Everything else shows on "System".
+# "Notifications" tab. Auth/OAuth settings show on the "Users" tab. Everything
+# else shows on "System".
 _NOTIFICATION_KEYS = frozenset({
     "notifications_enabled",
     "smtp_host", "smtp_port", "smtp_username", "smtp_password",
     "smtp_from", "smtp_use_tls",
     "twilio_account_sid", "twilio_auth_token", "twilio_from_number",
 })
+_AUTH_KEYS = frozenset({
+    "oauth_google_client_id", "oauth_google_client_secret",
+    "oauth_github_client_id", "oauth_github_client_secret",
+    "oauth_auto_provision",
+})
 
 
 def setting_category(key: str) -> str:
-    """Return the admin tab a setting belongs to: 'notifications' or 'system'."""
-    return "notifications" if key in _NOTIFICATION_KEYS else "system"
+    """Return the admin tab a setting belongs to: 'notifications', 'auth', or 'system'."""
+    if key in _NOTIFICATION_KEYS:
+        return "notifications"
+    if key in _AUTH_KEYS:
+        return "auth"
+    return "system"
 
 
 DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
@@ -204,7 +214,39 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         default="",
         description=(
             "Absolute base URL (e.g. https://webstag.tail41807.ts.net:8443) used to "
-            "build links in notifications. Blank = links omitted."
+            "build links in notifications and OAuth redirect URIs. Blank = links omitted."
+        ),
+    ),
+    # ---- OAuth / SSO (optional; blank = disabled) --------------------------
+    SettingSpec(
+        key="oauth_google_client_id",
+        default="",
+        description="Google OAuth client ID. Blank disables Google sign-in. Redirect URI: <site_base_url>/auth/oauth/google/callback",
+    ),
+    SettingSpec(
+        key="oauth_google_client_secret",
+        default="",
+        description="Google OAuth client secret.",
+        secret=True,
+    ),
+    SettingSpec(
+        key="oauth_github_client_id",
+        default="",
+        description="GitHub OAuth client ID. Blank disables GitHub sign-in. Callback URL: <site_base_url>/auth/oauth/github/callback",
+    ),
+    SettingSpec(
+        key="oauth_github_client_secret",
+        default="",
+        description="GitHub OAuth client secret.",
+        secret=True,
+    ),
+    SettingSpec(
+        key="oauth_auto_provision",
+        default="false",
+        description=(
+            "When true, a successful OAuth login with an unknown email auto-creates "
+            "a non-admin user. When false (default), OAuth only logs in users whose "
+            "email already matches an existing account. 'true'/'false'."
         ),
     ),
 )

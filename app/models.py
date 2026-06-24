@@ -50,6 +50,27 @@ class User(Base):
     )
 
 
+class UserIdentity(Base):
+    """An external (OAuth/OIDC) identity linked to a local user."""
+
+    __tablename__ = "user_identities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    __table_args__ = (
+        Index("ix_user_identities_provider_subject", "provider", "subject", unique=True),
+    )
+
+
 class UserSession(Base):
     __tablename__ = "user_sessions"
 

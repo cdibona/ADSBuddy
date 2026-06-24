@@ -748,3 +748,10 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 /* Small destructive button (e.g. Run downsample). */
 .btn-small.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
 .btn-small.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+/* —— OAuth sign-in buttons (login page) ─────────────────────────────────────── */
+.oauth-row { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.oauth-sep { text-align: center; color: var(--muted); font-size: 0.8em; position: relative; margin: 0.25rem 0; }
+.oauth-sep span { background: var(--panel); padding: 0 0.5rem; position: relative; z-index: 1; }
+.oauth-sep::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
+.oauth-btn { text-align: center; }

@@ -10,5 +10,13 @@
     <label>Password <input type="password" name="password" autocomplete="current-password" required></label>
     <button type="submit">Sign in</button>
   </form>
+  {% if oauth_providers %}
+  <div class="oauth-row">
+    <div class="oauth-sep"><span>or</span></div>
+    {% for p in oauth_providers %}
+    <a class="btn-secondary oauth-btn" href="/auth/oauth/{{ p }}/login">Sign in with {{ p|capitalize }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -46,9 +46,24 @@ async def _start_session(
     )
 
 
+_OAUTH_ERRORS = {
+    "oauth": "Sign-in failed. Please try again.",
+    "noaccount": "No ADSBuddy account is linked to that login. Ask an admin to add you.",
+}
+
+
 @router.get("/login", response_class=HTMLResponse)
-async def login_form(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request, "login.html", {"error": None})
+async def login_form(
+    request: Request, db: AsyncSession = Depends(get_session)
+) -> HTMLResponse:
+    from app.oauth import configured_providers
+
+    error = _OAUTH_ERRORS.get(request.query_params.get("error"))
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {"error": error, "oauth_providers": await configured_providers(db)},
+    )
 
 
 @router.post("/login")

@@ -39,4 +39,14 @@
   <label class="checkbox"><input type="checkbox" name="is_admin" value="true"> Admin</label>
   <button type="submit">Create</button>
 </form>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Authentication (OAuth / SSO)</h2>
+  <p class="muted">Optional sign-in via Google/GitHub alongside local login. Set a provider's
+  client id + secret to enable it; redirect/callback URL is
+  <code>&lt;site_base_url&gt;/auth/oauth/&lt;provider&gt;/callback</code>. With
+  <code>oauth_auto_provision</code> off, OAuth only logs in users whose email matches an
+  existing account.</p>
+  {% with settings = auth_settings %}{% include "_settings_list.html" %}{% endwith %}
+</div>
 {% endblock %}

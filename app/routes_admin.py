@@ -43,8 +43,13 @@ async def admin_home(
     db: AsyncSession = Depends(get_session),
 ):
     users = (await db.execute(select(User).order_by(User.username))).scalars().all()
+    all_settings = (
+        (await db.execute(select(Setting).order_by(Setting.key))).scalars().all()
+    )
+    auth_settings = [s for s in all_settings if setting_category(s.key) == "auth"]
     return templates.TemplateResponse(
-        request, "admin_users.html", {"user": user, "users": users}
+        request, "admin_users.html",
+        {"user": user, "users": users, "auth_settings": auth_settings},
     )
 
 
@@ -474,5 +479,9 @@ async def admin_settings_set(
 ):
     await set_value(db, key, value)
     # Return to the tab the setting lives on.
-    dest = "/admin/notifications" if setting_category(key) == "notifications" else "/admin/system"
+    dest = {
+        "notifications": "/admin/notifications",
+        "auth": "/admin",
+        "system": "/admin/system",
+    }[setting_category(key)]
     return RedirectResponse(url=dest, status_code=status.HTTP_303_SEE_OTHER)
