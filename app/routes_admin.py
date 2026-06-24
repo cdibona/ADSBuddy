@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import timefmt, version
@@ -373,14 +374,18 @@ async def admin_sources_create(
     if kind not in ("poll", "push"):
         raise HTTPException(status_code=400, detail="kind must be poll or push")
     src = RadioSource(
-        name=name,
+        name=name[:64],
         kind=kind,
-        url=url.strip() or None if kind == "poll" else None,
+        url=(url.strip() or None) if kind == "poll" else None,
         token=secrets.token_urlsafe(24) if kind == "push" else None,
         is_active=True,
     )
     db.add(src)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"A source named {name!r} already exists.")
     return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -402,10 +407,14 @@ async def admin_sources_edit(
     db: AsyncSession = Depends(get_session),
 ):
     src = await _load_source(db, source_id)
-    src.name = name.strip() or src.name
+    src.name = (name.strip() or src.name)[:64]
     if src.kind == "poll":
         src.url = url.strip() or None
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=f"A source named {name!r} already exists.")
     return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
 
 

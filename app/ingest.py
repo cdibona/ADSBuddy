@@ -98,10 +98,12 @@ def _coerce_float(value: Any) -> float | None:
         return None
 
 
-def _strip(value: Any) -> str | None:
+def _strip(value: Any, maxlen: int | None = None) -> str | None:
     if value is None:
         return None
     s = str(value).strip()
+    if maxlen is not None:
+        s = s[:maxlen]
     return s or None
 
 
@@ -183,13 +185,13 @@ async def _maybe_cleanup_sightings() -> None:
 
 
 async def _upsert_aircraft(session: AsyncSession, entry: dict[str, Any]) -> Aircraft | None:
-    hex_id = _strip(entry.get("hex"))
+    hex_id = _strip(entry.get("hex"), 8)
     if not hex_id:
         return None
     hex_id = hex_id.lower()
 
-    reg = _strip(entry.get("r"))
-    type_code = _strip(entry.get("t"))
+    reg = _strip(entry.get("r"), 16)
+    type_code = _strip(entry.get("t"), 8)
     description = _strip(entry.get("desc"))
     owner = _strip(entry.get("ownOp"))
     year = _coerce_int(entry.get("year"))
@@ -235,7 +237,7 @@ def _build_sighting(
         return None
     return Sighting(
         icao_hex=hex_id,
-        flight=_strip(entry.get("flight")),
+        flight=_strip(entry.get("flight"), 16),
         lat=lat,
         lon=lon,
         altitude_baro=_coerce_int(entry.get("alt_baro")),
@@ -244,9 +246,9 @@ def _build_sighting(
         track=_coerce_float(entry.get("track")),
         baro_rate=_coerce_int(entry.get("baro_rate")),
         geom_rate=_coerce_int(entry.get("geom_rate")),
-        squawk=_strip(entry.get("squawk")),
-        category=_strip(entry.get("category")),
-        emergency=_strip(entry.get("emergency")),
+        squawk=_strip(entry.get("squawk"), 8),
+        category=_strip(entry.get("category"), 4),
+        emergency=_strip(entry.get("emergency"), 16),
         nav_heading=_coerce_float(entry.get("nav_heading")),
         origin_icao=origin,
         destination_icao=destination,
@@ -281,7 +283,7 @@ async def _learn_receiver_location(
         log.debug("Could not fetch receiver.json for source %r; will retry.", source.name, exc_info=True)
 
 
-async def _trigger_context(session: AsyncSession):
+async def _trigger_context(session: AsyncSession) -> tuple[list, bool, bool]:
     """Shared per-batch context: (active_triggers, need_routes, store_raw)."""
     active_triggers = await trigger_engine.load_active_triggers(session)
     need_routes = any(
@@ -308,7 +310,7 @@ async def process_entries(
     new_firings: list[TriggerFiring] = []
     blocked_total = 0
     for entry in entries:
-        hex_id = _strip(entry.get("hex"))
+        hex_id = _strip(entry.get("hex"), 8)
         if not hex_id:
             continue
         hex_id = hex_id.lower()
@@ -338,8 +340,8 @@ async def process_entries(
                 registration=aircraft.registration,
                 type_code=aircraft.type_code,
                 owner_op=aircraft.owner_op,
-                squawk=_strip(entry.get("squawk")),
-                emergency=_strip(entry.get("emergency")),
+                squawk=_strip(entry.get("squawk"), 8),
+                emergency=_strip(entry.get("emergency"), 16),
                 year=aircraft.year,
                 lat=_coerce_float(entry.get("lat")),
                 lon=_coerce_float(entry.get("lon")),
@@ -355,53 +357,61 @@ async def process_entries(
     return new_firings, blocked_total
 
 
-async def _tick(client: httpx.AsyncClient, session: AsyncSession) -> int:
-    sources = (
-        await session.execute(
-            select(RadioSource).where(
-                RadioSource.kind == "poll", RadioSource.is_active.is_(True)
+async def _tick(client: httpx.AsyncClient) -> int:
+    """Poll every active source. Each source runs in its OWN session so a
+    failure (fetch or notify) can't corrupt the others; committing each
+    source's firings before the next runs lets the cooldown de-dupe an aircraft
+    seen by multiple sources in the same tick.
+    """
+    async with SessionLocal() as session:
+        source_ids = (
+            await session.execute(
+                select(RadioSource.id).where(
+                    RadioSource.kind == "poll", RadioSource.is_active.is_(True)
+                )
             )
-        )
-    ).scalars().all()
-    if not sources:
+        ).scalars().all()
+    if not source_ids:
         log.warning("No active poll sources — skipping tick.")
         return 0
 
-    active_triggers, need_routes, store_raw = await _trigger_context(session)
     total_entries = 0
+    for source_id in source_ids:
+        async with SessionLocal() as session:
+            source = await session.get(RadioSource, source_id)
+            if source is None or not source.is_active or not source.url:
+                continue
 
-    # Each source is processed + committed independently: one bad feed can't
-    # block the others, and committing per source lets the cooldown de-dupe an
-    # aircraft seen by multiple sources in the same tick.
-    for source in sources:
-        if not source.url:
-            continue
-        await _learn_receiver_location(client, source)
-        try:
-            resp = await client.get(source.url.rstrip("/") + "/data/aircraft.json", timeout=10.0)
-            resp.raise_for_status()
-            entries = resp.json().get("aircraft") or []
-        except Exception:
-            log.warning("Source %r fetch failed; skipping this tick.", source.name, exc_info=True)
-            continue
+            # Learn + persist the receiver location regardless of the fetch below.
+            await _learn_receiver_location(client, source)
+            await session.commit()
 
-        new_firings, blocked = await process_entries(
-            session, client, source.name, entries, active_triggers, need_routes, store_raw
-        )
-        source.last_seen_at = datetime.now(timezone.utc)
-        await session.commit()
-        total_entries += len(entries)
-        log.info(
-            "Tick[%s]: %d aircraft, %d firing(s), %d cooldown-blocked.",
-            source.name, len(entries), len(new_firings), blocked,
-        )
-        if new_firings:
             try:
-                await notifications.deliver_for_firings(session, client, new_firings)
-                await session.commit()
+                resp = await client.get(source.url.rstrip("/") + "/data/aircraft.json", timeout=10.0)
+                resp.raise_for_status()
+                entries = resp.json().get("aircraft") or []
             except Exception:
-                log.exception("Notification dispatch failed; firings are still recorded.")
-                await session.rollback()
+                log.warning("Source %r fetch failed; skipping this tick.", source.name, exc_info=True)
+                continue
+
+            active_triggers, need_routes, store_raw = await _trigger_context(session)
+            new_firings, blocked = await process_entries(
+                session, client, source.name, entries, active_triggers, need_routes, store_raw
+            )
+            source.last_seen_at = datetime.now(timezone.utc)
+            await session.commit()
+            total_entries += len(entries)
+            log.info(
+                "Tick[%s]: %d aircraft, %d firing(s), %d cooldown-blocked.",
+                source.name, len(entries), len(new_firings), blocked,
+            )
+            if new_firings:
+                try:
+                    await notifications.deliver_for_firings(session, client, new_firings)
+                    await session.commit()
+                except Exception:
+                    log.exception("Notification dispatch failed; firings are still recorded.")
+                    await session.rollback()
     return total_entries
 
 
@@ -418,7 +428,7 @@ async def run_forever(stop_event: asyncio.Event) -> None:
                             interval = max(1.0, float(raw))
                         except ValueError:
                             pass
-                    await _tick(client, session)
+                await _tick(client)
             except Exception:
                 log.exception("Ingest tick failed; will retry.")
             await _maybe_cleanup_sightings()

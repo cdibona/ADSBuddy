@@ -160,7 +160,7 @@ class Sighting(Base):
     # Signal / metadata
     rssi: Mapped[float | None] = mapped_column(Float)
     seen_age: Mapped[float | None] = mapped_column(Float)  # `seen` field — staleness in s
-    source: Mapped[str] = mapped_column(String(32), nullable=False, default="local_radio")
+    source: Mapped[str] = mapped_column(String(64), nullable=False, default="local_radio")
 
     # Full raw entry — only populated when settings.store_raw_sightings is on.
     # Lets us replay or extract fields we forgot to call out as columns.

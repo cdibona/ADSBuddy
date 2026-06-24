@@ -33,3 +33,22 @@ def test_admin_subnav_has_sources_tab():
     req = types.SimpleNamespace(url=types.SimpleNamespace(path="/admin/sources"))
     out = templates.env.get_template("_admin_nav.html").render(request=req)
     assert 'href="/admin/sources"' in out
+
+
+def test_strip_truncates_to_maxlen():
+    from app.ingest import _strip
+    assert _strip("ABCDEFGHIJ", 8) == "ABCDEFGH"
+    assert _strip("  spaced  ", 4) == "spac"
+    assert _strip(None, 8) is None
+    assert _strip("", 8) is None
+    assert _strip("ok") == "ok"  # no cap
+
+
+def test_bearer_token_parsing():
+    import types
+    from app.routes_ingest import _bearer_token
+    def req(h): return types.SimpleNamespace(headers={"authorization": h})
+    assert _bearer_token(req("Bearer abc123")) == "abc123"
+    assert _bearer_token(req("bearer xyz")) == "xyz"
+    assert _bearer_token(req("Basic abc")) is None
+    assert _bearer_token(types.SimpleNamespace(headers={})) is None

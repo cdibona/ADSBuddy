@@ -43,7 +43,7 @@ async def ensure_admin(session: AsyncSession) -> None:
     await session.commit()
 
 
-async def _coerce_float(raw: str | None) -> float | None:
+def _coerce_float(raw: str | None) -> float | None:
     if raw is None or not raw.strip():
         return None
     try:
@@ -63,13 +63,17 @@ async def seed_default_source(session: AsyncSession) -> None:
     if existing:
         return
     url = (await get_setting(session, "radio_base_url")) or ""
+    if not url.strip():
+        # Fresh install with no configured radio — nothing to migrate. Leave the
+        # sources table empty so admins add their own; don't seed a dead stub.
+        return
     source = RadioSource(
         name="Local radio",
         kind="poll",
-        url=url or None,
-        is_active=bool(url),
-        receiver_lat=await _coerce_float(await get_setting(session, "receiver_lat")),
-        receiver_lon=await _coerce_float(await get_setting(session, "receiver_lon")),
+        url=url.strip(),
+        is_active=True,
+        receiver_lat=_coerce_float(await get_setting(session, "receiver_lat")),
+        receiver_lon=_coerce_float(await get_setting(session, "receiver_lon")),
     )
     session.add(source)
     await session.commit()

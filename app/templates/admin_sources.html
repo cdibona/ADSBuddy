@@ -54,7 +54,7 @@
           <button type="submit">{{ "Disable" if s.is_active else "Enable" }}</button>
         </form>
         <form method="post" action="/admin/sources/{{ s.id }}/delete" class="inline"
-              onsubmit="return confirm('Delete source {{ s.name }}?');">
+              onsubmit="return confirm('Delete source ' + {{ s.name | tojson }} + '?');">
           <button type="submit" class="danger">Delete</button>
         </form>
       </td>
