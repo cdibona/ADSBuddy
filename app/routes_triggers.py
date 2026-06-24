@@ -27,6 +27,7 @@ from app.models import NotificationChannel, NotificationDelivery, Trigger, Trigg
 
 from app.aircraft_helpers import (
     opensky_url,
+    registration_provider,
     registration_url,
     trigger_prefill_url,
     type_url,
@@ -38,6 +39,7 @@ templates = Jinja2Templates(directory="app/templates")
 # trigger_prefill_url (for the per-row "Create trigger" action).
 templates.env.globals.update(
     registration_url=registration_url,
+    registration_provider=registration_provider,
     type_url=type_url,
     opensky_url=opensky_url,
     trigger_prefill_url=trigger_prefill_url,

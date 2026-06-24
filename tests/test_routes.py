@@ -253,3 +253,36 @@ class TestParsePrefillParams:
 
         prefill, _ = _parse_prefill_params("a1b2c3", None, None, None, None)
         assert prefill.get("name") == "a1b2c3"
+
+
+class TestRegistrationProviderAndDeepLink:
+    def test_us_nnumber_deep_links_to_result_page(self):
+        from app.aircraft_helpers import registration_url
+        url = registration_url("N424LF")
+        assert "registry.faa.gov" in url and "NNumberResult" in url and "N424LF" in url
+
+    def test_provider_label(self):
+        from app.aircraft_helpers import registration_provider
+        assert registration_provider("N424LF") == "FAA"
+        assert registration_provider("G-ABCD") == "airframes"
+        assert registration_provider(None) is None
+        assert registration_provider("") is None
+
+
+class TestExternalLinkLabels:
+    def test_aircraft_list_uses_labels_not_arrow(self):
+        import types
+        from datetime import datetime, timezone
+        from app.routes_pages import templates
+        from app.models import Aircraft
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/aircraft"))
+        ac = Aircraft(icao_hex="a50b7b", registration="N424LF", type_code="B407",
+                      description="BELL 407", owner_op="x", year=2018,
+                      last_seen=datetime(2026, 6, 24, 16, tzinfo=timezone.utc))
+        out = templates.env.get_template("aircraft.html").render(
+            request=req, user=types.SimpleNamespace(username="a", is_admin=True),
+            aircraft=[ac], reg_letters=tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), reg_active=None)
+        assert "↗" not in out          # the weird arrow is gone
+        assert ">FAA</a>" in out             # provider-labeled registry link
+        assert ">Wikipedia</a>" in out
+        assert ">OpenSky</a>" in out

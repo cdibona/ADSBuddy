@@ -22,11 +22,20 @@ def registration_url(reg: str | None) -> str | None:
     if not reg:
         return None
     if reg.upper().startswith("N") and len(reg) > 1:
+        # Deep-link straight to the FAA registry *result* page for this N-number
+        # (lands on the aircraft record, not the search form).
         return (
-            "https://registry.faa.gov/aircraftinquiry/Search/NNumberInquiry"
+            "https://registry.faa.gov/AircraftInquiry/Search/NNumberResult"
             f"?nNumberTxt={urllib.parse.quote(reg)}"
         )
     return f"https://www.airframes.org/reg/{urllib.parse.quote(reg)}"
+
+
+def registration_provider(reg: str | None) -> str | None:
+    """Short label for where registration_url points: 'FAA' (US) or 'airframes'."""
+    if not reg or not reg.strip():
+        return None
+    return "FAA" if reg.strip().upper().startswith("N") and len(reg.strip()) > 1 else "airframes"
 
 
 # ICAO type designator -> exact Wikipedia article title. Covers the types we

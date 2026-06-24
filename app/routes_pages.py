@@ -14,7 +14,13 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import timefmt, version
-from app.aircraft_helpers import opensky_url, registration_url, trigger_prefill_url, type_url
+from app.aircraft_helpers import (
+    opensky_url,
+    registration_provider,
+    registration_url,
+    trigger_prefill_url,
+    type_url,
+)
 from app.database import get_session
 from app.deps import current_user_optional, require_user
 from app.models import Aircraft, Sighting, Trigger, TriggerFiring, User
@@ -78,6 +84,7 @@ templates = Jinja2Templates(directory="app/templates")
 # Register URL helpers as Jinja2 globals so all templates can call them directly.
 templates.env.globals.update(
     registration_url=registration_url,
+    registration_provider=registration_provider,
     type_url=type_url,
     opensky_url=opensky_url,
     trigger_prefill_url=trigger_prefill_url,

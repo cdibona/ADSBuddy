@@ -46,7 +46,7 @@
         {% if f.registration %}
           / {{ f.registration }}
           {% set rurl = registration_url(f.registration) %}
-          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on registry">{{ registration_provider(f.registration) }}</a>{% endif %}
         {% endif %}
       </td>
       <td data-label="Callsign">{{ f.callsign or "" }}</td>
@@ -54,7 +54,7 @@
         {% if f.type_code %}
           {{ f.type_code }}
           {% set turl = type_url(f.type_code) %}
-          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on Wikipedia">Wikipedia</a>{% endif %}
         {% endif %}
       </td>
       <td data-label="Year">{{ f.year or "" }}</td>

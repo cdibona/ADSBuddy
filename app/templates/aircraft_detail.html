@@ -24,7 +24,7 @@
     <dd>
       <code>{{ aircraft.icao_hex }}</code>
       {% set ourl = opensky_url(aircraft.icao_hex) %}
-      {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="OpenSky Network">&#x2197;</a>{% endif %}
+      {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="Open in OpenSky Network">OpenSky</a>{% endif %}
     </dd>
 
     <dt>Registration</dt>
@@ -32,7 +32,7 @@
       {% if aircraft.registration %}
         {{ aircraft.registration }}
         {% set rurl = registration_url(aircraft.registration) %}
-        {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+        {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on registry">{{ registration_provider(aircraft.registration) }}</a>{% endif %}
       {% else %}
         <span class="muted">—</span>
       {% endif %}
@@ -43,7 +43,7 @@
       {% if aircraft.type_code %}
         <code>{{ aircraft.type_code }}</code>
         {% set turl = type_url(aircraft.type_code, aircraft.description) %}
-        {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia">&#x2197;</a>{% endif %}
+        {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on Wikipedia">Wikipedia</a>{% endif %}
       {% else %}
         <span class="muted">—</span>
       {% endif %}
@@ -143,7 +143,7 @@
           {% if f.type_code %}
             {{ f.type_code }}
             {% set turl = type_url(f.type_code) %}
-            {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+            {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on Wikipedia">Wikipedia</a>{% endif %}
           {% else %}—{% endif %}
         </td>
         <td data-label="Year">{{ f.year or "—" }}</td>

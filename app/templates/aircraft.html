@@ -34,20 +34,20 @@
       <td data-label="Hex">
         <a href="/aircraft/{{ a.icao_hex }}"><code>{{ a.icao_hex }}</code></a>
         {% set ourl = opensky_url(a.icao_hex) %}
-        {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="OpenSky Network">&#x2197;</a>{% endif %}
+        {% if ourl %}<a href="{{ ourl }}" target="_blank" rel="noopener" class="ext-link" title="Open in OpenSky Network">OpenSky</a>{% endif %}
       </td>
       <td data-label="Reg">
         {% if a.registration %}
           {{ a.registration }}
           {% set rurl = registration_url(a.registration) %}
-          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Registry lookup">&#x2197;</a>{% endif %}
+          {% if rurl %}<a href="{{ rurl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on registry">{{ registration_provider(a.registration) }}</a>{% endif %}
         {% endif %}
       </td>
       <td data-label="Type">
         {% if a.type_code %}
           {{ a.type_code }}
           {% set turl = type_url(a.type_code, a.description) %}
-          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Wikipedia search">&#x2197;</a>{% endif %}
+          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on Wikipedia">Wikipedia</a>{% endif %}
         {% endif %}
       </td>
       <td data-label="Description">{{ a.description or "" }}</td>
