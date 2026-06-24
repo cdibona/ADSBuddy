@@ -9,6 +9,7 @@ Architecture:
 """
 from __future__ import annotations
 
+import html
 import logging
 from email.message import EmailMessage
 from typing import Any
@@ -92,16 +93,22 @@ def build_discord_embed(trigger: Trigger, firing: TriggerFiring, base_url: str) 
 
 
 def build_email_html(trigger: Trigger, firing: TriggerFiring, base_url: str) -> str:
-    """Return a small HTML table summarising the firing, for use as email alternative."""
-    ident = firing.registration or firing.icao_hex
+    """Return a small HTML table summarising the firing, for use as email alternative.
+
+    All dynamic values are HTML-escaped — trigger names (and ADS-B fields) are
+    user/remote-controlled and must not be able to inject markup into the
+    text/html MIME part.
+    """
+    esc = html.escape
+    ident = esc(firing.registration or firing.icao_hex)
     if firing.callsign:
-        ident = f"{firing.callsign} ({ident})"
+        ident = f"{esc(firing.callsign)} ({ident})"
 
     rows: list[str] = []
-    rows.append(f"<tr><td><b>Trigger</b></td><td>{trigger.name}</td></tr>")
+    rows.append(f"<tr><td><b>Trigger</b></td><td>{esc(trigger.name)}</td></tr>")
     rows.append(f"<tr><td><b>Aircraft</b></td><td>{ident}</td></tr>")
     if firing.type_code:
-        type_val = firing.type_code
+        type_val = esc(firing.type_code)
         if firing.year:
             type_val += f" ({firing.year})"
         rows.append(f"<tr><td><b>Type</b></td><td>{type_val}</td></tr>")
@@ -110,20 +117,20 @@ def build_email_html(trigger: Trigger, firing: TriggerFiring, base_url: str) -> 
     if firing.lat is not None and firing.lon is not None:
         rows.append(f"<tr><td><b>Position</b></td><td>{firing.lat:.4f}, {firing.lon:.4f}</td></tr>")
     if firing.origin_icao or firing.destination_icao:
-        route = f"{firing.origin_icao or '?'} → {firing.destination_icao or '?'}"
+        route = f"{esc(firing.origin_icao or '?')} → {esc(firing.destination_icao or '?')}"
         rows.append(f"<tr><td><b>Route</b></td><td>{route}</td></tr>")
     if firing.fired_at:
         rows.append(
             f"<tr><td><b>At</b></td><td>{firing.fired_at.strftime('%Y-%m-%d %H:%M:%S UTC')}</td></tr>"
         )
     if base_url:
-        link = f"{base_url.rstrip('/')}/aircraft/{firing.icao_hex}"
+        link = esc(f"{base_url.rstrip('/')}/aircraft/{firing.icao_hex}", quote=True)
         rows.append(f"<tr><td><b>Details</b></td><td><a href=\"{link}\">{link}</a></td></tr>")
 
     table = "<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\">{}</table>".format(
         "".join(rows)
     )
-    subject = f"ADSBuddy alert: {trigger.name}: {ident}"
+    subject = f"ADSBuddy alert: {esc(trigger.name)}: {ident}"
     return (
         "<!DOCTYPE html><html><body>"
         f"<h2>{subject}</h2>"

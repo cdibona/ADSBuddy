@@ -35,3 +35,17 @@ def test_title_links_when_base_url_set():
 def test_no_url_when_base_blank():
     e = build_discord_embed(Trigger(id=1, owner_id=1, name="X"), _firing(), "")
     assert "url" not in e
+
+
+def test_email_html_escapes_user_controlled_values():
+    from app.notifications import build_email_html
+    from app.models import Trigger, TriggerFiring
+    t = Trigger(id=1, owner_id=1, name="<script>evil()</script>")
+    f = TriggerFiring(id=1, trigger_id=1, icao_hex="a50b7b",
+                      registration="N1<b>", callsign="X&Y", type_code="B407")
+    out = build_email_html(t, f, "https://h:8443")
+    # No raw markup from user/remote-controlled fields leaks into the HTML part.
+    assert "<script>evil" not in out
+    assert "&lt;script&gt;evil" in out
+    assert "N1<b>" not in out and "N1&lt;b&gt;" in out
+    assert "X&Y" not in out and "X&amp;Y" in out

@@ -80,7 +80,7 @@
   {% if not route_lookup_enabled %}
   <p class="muted route-disabled-note">
     Route lookup is off — origin/destination conditions won't match until
-    {% if user.is_admin %}<a href="/admin/settings">enabled in Settings</a>{% else %}an admin enables it in Settings{% endif %}.
+    {% if user.is_admin %}<a href="/admin/system">enabled in System settings</a>{% else %}an admin enables it in System settings{% endif %}.
     Values entered here are saved.
   </p>
   {% endif %}
