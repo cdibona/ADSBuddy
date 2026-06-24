@@ -40,7 +40,10 @@
     {% set dlabel = delivery_status.get(f.id, "pending") %}
     <tr>
       <td data-label="When">{{ f.fired_at | localdt }}</td>
-      <td data-label="Trigger"><a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a></td>
+      <td data-label="Trigger">
+        <a href="/triggers/{{ t.id }}/edit">{{ t.name }}</a>
+        {% if not t.is_active %}<span class="badge-paused" title="This trigger is paused; this is a past firing, not new activity.">paused</span>{% endif %}
+      </td>
       <td data-label="Aircraft">
         <a href="/aircraft/{{ f.icao_hex }}"><code>{{ f.icao_hex }}</code></a>
         {% if f.registration %}
