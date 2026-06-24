@@ -333,7 +333,7 @@ class TestGeofencePicker:
         out = self._render(None, {"lat": 47.6, "lon": -122.5})
         assert 'id="geofence-map"' in out
         assert "leaflet@1.9.4/dist/leaflet.js" in out
-        assert 'data-center-lat="47.6"' in out
+        assert 'data-center-lat="47.6' in out  # formatted float, prefix-robust
         assert "geofence_radius_miles" in out  # picker syncs to this input
 
     def test_map_without_center_still_renders(self):

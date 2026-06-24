@@ -132,8 +132,8 @@
     <small class="muted">Resolved to {{ "%.4f"|format(trigger.center_lat) }}, {{ "%.4f"|format(trigger.center_lon) }}.</small>
     {% endif %}
     <div id="geofence-map" class="geofence-map"
-         data-center-lat="{{ trigger.center_lat if (trigger and trigger.center_lat is not none) else (map_center.lat if map_center else '') }}"
-         data-center-lon="{{ trigger.center_lon if (trigger and trigger.center_lon is not none) else (map_center.lon if map_center else '') }}"></div>
+         data-center-lat="{% if trigger and trigger.center_lat is not none %}{{ "%.6f"|format(trigger.center_lat) }}{% elif map_center %}{{ "%.6f"|format(map_center.lat) }}{% endif %}"
+         data-center-lon="{% if trigger and trigger.center_lon is not none %}{{ "%.6f"|format(trigger.center_lon) }}{% elif map_center %}{{ "%.6f"|format(map_center.lon) }}{% endif %}"></div>
     <small class="muted">Or click the map to drop the center (sets <code>lat,lon</code> above); drag the marker to move it. The ring shows the radius.</small>
   </fieldset>
 

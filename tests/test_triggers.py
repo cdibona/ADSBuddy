@@ -490,3 +490,29 @@ class TestIcaoCandidates:
     def test_four_letter_used_as_is(self):
         from app.geocode import icao_candidates
         assert icao_candidates("KBFI") == ["KBFI"]
+
+
+class TestResolveIcao:
+    def test_k_prefix_candidate_wins(self):
+        from app.geocode import _resolve_icao
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = [
+            {"icaoId": "SEA", "lat": 1.0, "lon": 2.0},          # bare-code match (lower priority)
+            {"icaoId": "KSEA", "lat": 47.4499, "lon": -122.3118},  # K-prefix (should win)
+        ]
+        client = AsyncMock()
+        client.get = AsyncMock(return_value=resp)
+        center = asyncio.run(_resolve_icao("SEA", client))
+        assert center is not None
+        assert round(center.lat, 4) == 47.4499
+        assert round(center.lon, 4) == -122.3118
+
+    def test_none_when_no_candidate_matches(self):
+        from app.geocode import _resolve_icao
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.json.return_value = []
+        client = AsyncMock()
+        client.get = AsyncMock(return_value=resp)
+        assert asyncio.run(_resolve_icao("ZZZ", client)) is None
