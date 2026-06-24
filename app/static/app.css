@@ -708,3 +708,13 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   color: var(--muted);
   border: 1px dashed color-mix(in srgb, var(--muted) 40%, transparent);
 }
+
+/* —— Geofence picker map (trigger form) ───────────────────────────────────── */
+.geofence-map {
+  height: 280px;
+  width: 100%;
+  margin-top: var(--s3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}

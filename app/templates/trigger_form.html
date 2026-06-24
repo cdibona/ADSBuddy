@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} — ADSBuddy{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+{% endblock %}
 {% block content %}
 <h1>{{ title }}</h1>
 
@@ -127,6 +131,10 @@
     {% elif trigger and trigger.center_lat is not none %}
     <small class="muted">Resolved to {{ "%.4f"|format(trigger.center_lat) }}, {{ "%.4f"|format(trigger.center_lon) }}.</small>
     {% endif %}
+    <div id="geofence-map" class="geofence-map"
+         data-center-lat="{{ trigger.center_lat if (trigger and trigger.center_lat is not none) else (map_center.lat if map_center else '') }}"
+         data-center-lon="{{ trigger.center_lon if (trigger and trigger.center_lon is not none) else (map_center.lon if map_center else '') }}"></div>
+    <small class="muted">Or click the map to drop the center (sets <code>lat,lon</code> above); drag the marker to move it. The ring shows the radius.</small>
   </fieldset>
 
   <label>Cooldown (seconds)
@@ -140,4 +148,61 @@
     <a class="btn-secondary" href="/triggers">Cancel</a>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+  (function () {
+    var el = document.getElementById('geofence-map');
+    if (!el || !window.L) return;
+    var centerInput = document.querySelector('[name="geofence_center"]');
+    var radiusInput = document.querySelector('[name="geofence_radius_miles"]');
+
+    function milesToM() { return (parseFloat(radiusInput.value) || 25) * 1609.34; }
+    function parseLatLon(s) {
+      var m = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/.exec(s || '');
+      return m ? [parseFloat(m[1]), parseFloat(m[2])] : null;
+    }
+
+    var map = L.map(el, { scrollWheelZoom: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var marker = null, circle = null;
+    function place(lat, lon) {
+      centerInput.value = lat.toFixed(4) + ',' + lon.toFixed(4);
+      if (!marker) {
+        marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+        marker.on('dragend', function () { var p = marker.getLatLng(); place(p.lat, p.lng); });
+      } else { marker.setLatLng([lat, lon]); }
+      if (!circle) {
+        circle = L.circle([lat, lon], { radius: milesToM(), color: '#ffb000', fillColor: '#ffb000', fillOpacity: 0.08 }).addTo(map);
+      } else { circle.setLatLng([lat, lon]); circle.setRadius(milesToM()); }
+    }
+
+    // Initialize from the typed center (lat,lon) if present, else the resolved/
+    // receiver default supplied as data-attributes.
+    var init = parseLatLon(centerInput.value);
+    if (!init) {
+      var dl = parseFloat(el.dataset.centerLat), dn = parseFloat(el.dataset.centerLon);
+      if (!isNaN(dl) && !isNaN(dn)) init = [dl, dn];
+    }
+    if (init) {
+      map.setView(init, 9);
+      // Only drop a marker if the field actually holds a lat,lon (don't clobber a typed code/ZIP).
+      if (parseLatLon(centerInput.value)) place(init[0], init[1]);
+    } else {
+      map.setView([39.5, -98.35], 4);  // continental US fallback
+    }
+
+    map.on('click', function (e) {
+      place(e.latlng.lat, e.latlng.lng);
+      if (map.getZoom() < 9) map.setView(e.latlng, 9);
+    });
+    radiusInput.addEventListener('input', function () { if (circle) circle.setRadius(milesToM()); });
+  })();
+</script>
 {% endblock %}

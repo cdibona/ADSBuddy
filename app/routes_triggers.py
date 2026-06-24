@@ -274,6 +274,15 @@ async def _get_route_lookup_enabled(db: AsyncSession) -> bool:
     return (value or "true").lower() == "true"
 
 
+async def _geofence_map_center(db: AsyncSession) -> dict | None:
+    """Default center for the geofence picker map — the receiver, if known."""
+    lat = _float_or_none(await settings_store.get(db, "receiver_lat"))
+    lon = _float_or_none(await settings_store.get(db, "receiver_lon"))
+    if lat is None or lon is None:
+        return None
+    return {"lat": lat, "lon": lon}
+
+
 @router.get("/triggers", response_class=HTMLResponse)
 async def triggers_list(
     request: Request,
@@ -346,6 +355,7 @@ async def trigger_new_form(
             "route_lookup_enabled": route_lookup_enabled,
             "prefill": prefill,
             "prefill_error": prefill_error,
+            "map_center": await _geofence_map_center(db),
         },
     )
 
@@ -409,6 +419,7 @@ async def trigger_edit_form(
             "route_lookup_enabled": route_lookup_enabled,
             "prefill": {},
             "prefill_error": None,
+            "map_center": await _geofence_map_center(db),
         },
     )
 

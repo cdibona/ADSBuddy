@@ -316,3 +316,26 @@ class TestFilterBarRendering:
         assert 'href="/aircraft"' in out
         # Active letter chip marked.
         assert "chip-on" in out
+
+
+class TestGeofencePicker:
+    def _render(self, trigger, map_center):
+        import types
+        from app.routes_triggers import templates
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/triggers/new"))
+        return templates.env.get_template("trigger_form.html").render(
+            request=req, user=types.SimpleNamespace(username="a", is_admin=False),
+            trigger=trigger, action="/triggers/new", title="New trigger",
+            route_lookup_enabled=True, prefill={}, prefill_error=None,
+            map_center=map_center)
+
+    def test_map_present_with_leaflet_and_default_center(self):
+        out = self._render(None, {"lat": 47.6, "lon": -122.5})
+        assert 'id="geofence-map"' in out
+        assert "leaflet@1.9.4/dist/leaflet.js" in out
+        assert 'data-center-lat="47.6"' in out
+        assert "geofence_radius_miles" in out  # picker syncs to this input
+
+    def test_map_without_center_still_renders(self):
+        out = self._render(None, None)
+        assert 'id="geofence-map"' in out
