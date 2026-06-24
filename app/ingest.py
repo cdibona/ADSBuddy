@@ -18,7 +18,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import flight_routes, notifications, triggers as trigger_engine
@@ -184,6 +184,48 @@ async def _maybe_cleanup_sightings() -> None:
         log.debug("Sightings cleanup: nothing to prune (cutoff %s).", cutoff_str)
 
 
+async def downsample_estimate(session: AsyncSession, interval: int) -> tuple[int, int]:
+    """(total_sightings, rows_that_would_be_deleted) keeping ~1 per (hex, source,
+    ``interval``-second bucket). Read-only — a dry run for the admin action."""
+    row = (
+        await session.execute(
+            text(
+                "SELECT count(*) AS total, "
+                "count(*) - count(DISTINCT (icao_hex, source, "
+                "floor(extract(epoch from seen_at) / :iv))) AS would_del "
+                "FROM sightings"
+            ),
+            {"iv": interval},
+        )
+    ).one()
+    return int(row.total), int(row.would_del)
+
+
+async def downsample_run(session: AsyncSession, interval: int) -> int:
+    """Delete redundant sightings, keeping the earliest row in each
+    (hex, source, ``interval``-second bucket). Batched per hex (uses the
+    icao_hex index); commits per hex. Irreversible. Returns rows deleted."""
+    hexes = (
+        await session.execute(text("SELECT DISTINCT icao_hex FROM sightings"))
+    ).scalars().all()
+    total = 0
+    for hx in hexes:
+        res = await session.execute(
+            text(
+                "DELETE FROM sightings s USING ("
+                " SELECT id, row_number() OVER ("
+                "   PARTITION BY source, floor(extract(epoch from seen_at) / :iv)"
+                "   ORDER BY seen_at) AS rn"
+                " FROM sightings WHERE icao_hex = :hex) r"
+                " WHERE s.id = r.id AND r.rn > 1"
+            ),
+            {"iv": interval, "hex": hx},
+        )
+        total += res.rowcount
+        await session.commit()
+    return total
+
+
 async def _upsert_aircraft(session: AsyncSession, entry: dict[str, Any]) -> Aircraft | None:
     hex_id = _strip(entry.get("hex"), 8)
     if not hex_id:
@@ -283,14 +325,39 @@ async def _learn_receiver_location(
         log.debug("Could not fetch receiver.json for source %r; will retry.", source.name, exc_info=True)
 
 
-async def _trigger_context(session: AsyncSession) -> tuple[list, bool, bool]:
-    """Shared per-batch context: (active_triggers, need_routes, store_raw)."""
+def _parse_min_interval(raw: str | None) -> int:
+    """Seconds between stored sightings per (aircraft, source). 0 = store all."""
+    if raw is None or not raw.strip():
+        return 0
+    try:
+        return max(0, int(raw.strip()))
+    except ValueError:
+        return 0
+
+
+async def _trigger_context(session: AsyncSession) -> tuple[list, bool, bool, int]:
+    """Shared per-batch context: (active_triggers, need_routes, store_raw, min_interval)."""
     active_triggers = await trigger_engine.load_active_triggers(session)
     need_routes = any(
         t.origin_icaos.strip() or t.destination_icaos.strip() for t in active_triggers
     )
     store_raw = (await get_setting(session, "store_raw_sightings") or "false").lower() == "true"
-    return active_triggers, need_routes, store_raw
+    min_interval = _parse_min_interval(await get_setting(session, "sighting_min_interval_seconds"))
+    return active_triggers, need_routes, store_raw, min_interval
+
+
+async def _recent_sighting_times(
+    session: AsyncSession, source_name: str, hexes: list[str]
+) -> dict[str, datetime]:
+    """Most-recent stored sighting time per hex for this source (for de-dup)."""
+    if not hexes:
+        return {}
+    rows = await session.execute(
+        select(Sighting.icao_hex, func.max(Sighting.seen_at))
+        .where(Sighting.icao_hex.in_(hexes), Sighting.source == source_name)
+        .group_by(Sighting.icao_hex)
+    )
+    return {hx: ts for hx, ts in rows.all()}
 
 
 async def process_entries(
@@ -301,14 +368,25 @@ async def process_entries(
     active_triggers: list,
     need_routes: bool,
     store_raw: bool,
+    min_interval: int = 0,
 ) -> tuple[list[TriggerFiring], int]:
     """Upsert aircraft, store sightings (tagged ``source_name``), enrich routes,
     and evaluate triggers for one batch of aircraft.json entries. Caller commits.
 
-    Shared by the poll tick and the push endpoint. Returns (new_firings, blocked).
+    De-dup: when ``min_interval`` > 0, store at most one sighting per
+    (aircraft, source) per ``min_interval`` seconds (the first after a gap is
+    always stored). Trigger evaluation still runs for every entry. Shared by the
+    poll tick and the push endpoint. Returns (new_firings, blocked).
     """
     new_firings: list[TriggerFiring] = []
     blocked_total = 0
+    now = datetime.now(timezone.utc)
+
+    last_seen: dict[str, datetime] = {}
+    if min_interval > 0:
+        hexes = [h for h in (_strip(e.get("hex"), 8) for e in entries) if h]
+        last_seen = await _recent_sighting_times(session, source_name, [h.lower() for h in hexes])
+
     for entry in entries:
         hex_id = _strip(entry.get("hex"), 8)
         if not hex_id:
@@ -328,10 +406,18 @@ async def process_entries(
                 origin = route.origin_icao
                 destination = route.destination_icao
 
-        sighting = _build_sighting(hex_id, entry, origin, destination, store_raw)
-        if sighting is not None:
-            sighting.source = source_name
-            session.add(sighting)
+        # Storage de-dup (does NOT affect trigger evaluation below).
+        store_it = True
+        if min_interval > 0:
+            prev = last_seen.get(hex_id)
+            if prev is not None and (now - prev).total_seconds() < min_interval:
+                store_it = False
+        if store_it:
+            sighting = _build_sighting(hex_id, entry, origin, destination, store_raw)
+            if sighting is not None:
+                sighting.source = source_name
+                session.add(sighting)
+                last_seen[hex_id] = now  # so a repeated hex in this batch isn't re-stored
 
         if active_triggers:
             facts = trigger_engine.AircraftFacts(
@@ -394,9 +480,9 @@ async def _tick(client: httpx.AsyncClient) -> int:
                 log.warning("Source %r fetch failed; skipping this tick.", source.name, exc_info=True)
                 continue
 
-            active_triggers, need_routes, store_raw = await _trigger_context(session)
+            active_triggers, need_routes, store_raw, min_interval = await _trigger_context(session)
             new_firings, blocked = await process_entries(
-                session, client, source.name, entries, active_triggers, need_routes, store_raw
+                session, client, source.name, entries, active_triggers, need_routes, store_raw, min_interval
             )
             source.last_seen_at = datetime.now(timezone.utc)
             await session.commit()

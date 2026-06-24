@@ -181,6 +181,16 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         ),
     ),
     SettingSpec(
+        key="sighting_min_interval_seconds",
+        default="180",
+        description=(
+            "Per aircraft per source, store at most one sighting every this many "
+            "seconds (plus the first one after a gap). Dramatically reduces storage "
+            "vs. saving every poll. Trigger evaluation still runs every tick. "
+            "0 or blank stores every position. Default: 180 (3 min)."
+        ),
+    ),
+    SettingSpec(
         key="sightings_retention_days",
         default="30",
         description=(

@@ -59,10 +59,10 @@ async def _handle_push(source: RadioSource, request: Request, db: AsyncSession) 
         log.warning("Push source %r sent %d entries; capping at %d.", source.name, len(entries), _MAX_PUSH_ENTRIES)
         entries = entries[:_MAX_PUSH_ENTRIES]
 
-    active_triggers, need_routes, store_raw = await ingest._trigger_context(db)
+    active_triggers, need_routes, store_raw, min_interval = await ingest._trigger_context(db)
     async with httpx.AsyncClient() as client:
         new_firings, _blocked = await ingest.process_entries(
-            db, client, source.name, entries, active_triggers, need_routes, store_raw
+            db, client, source.name, entries, active_triggers, need_routes, store_raw, min_interval
         )
         source.last_seen_at = datetime.now(timezone.utc)
         await db.commit()

@@ -322,6 +322,29 @@ async def admin_system(
     )
 
 
+@router.post("/system/downsample")
+async def admin_system_downsample(
+    action: str = Form("estimate"),
+    confirm: str = Form(""),
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Estimate or run the historical sighting downsample (keep ~1 per interval)."""
+    from app.ingest import _parse_min_interval, downsample_estimate, downsample_run
+
+    interval = _parse_min_interval(await get_setting(db, "sighting_min_interval_seconds")) or 180
+    if action == "run" and confirm == "yes":
+        deleted = await downsample_run(db, interval)
+        return RedirectResponse(
+            url=f"/admin/system?downsampled={deleted}", status_code=status.HTTP_303_SEE_OTHER
+        )
+    total, would = await downsample_estimate(db, interval)
+    return RedirectResponse(
+        url=f"/admin/system?est_total={total}&est_del={would}&iv={interval}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.get("/notifications", response_class=HTMLResponse)
 async def admin_notifications(
     request: Request,

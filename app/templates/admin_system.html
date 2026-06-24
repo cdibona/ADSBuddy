@@ -42,6 +42,34 @@
   </div>
 </div>
 
+{% set q = request.query_params if request.query_params else {} %}
+<div class="detail-card">
+  <h2 class="detail-card-title">Sighting storage</h2>
+  <p class="muted">Reduce stored sightings by keeping ~one per aircraft per source per
+  <code>sighting_min_interval_seconds</code> window. This rewrites historical data and is <strong>irreversible</strong> — estimate first.</p>
+
+  {% if q.get("downsampled") is not none %}
+  <div class="flash flash-success" role="alert">Downsample complete — deleted {{ "{:,}".format(q.get("downsampled")|int) }} rows.</div>
+  {% endif %}
+
+  <form method="post" action="/admin/system/downsample" class="purge-bar">
+    <input type="hidden" name="action" value="estimate">
+    <button type="submit" class="btn-small">Estimate downsample</button>
+    <span class="muted">Dry run — counts what would be removed.</span>
+  </form>
+
+  {% if q.get("est_total") is not none %}
+  <p class="muted">Would delete <strong>{{ "{:,}".format(q.get("est_del")|int) }}</strong> of
+    {{ "{:,}".format(q.get("est_total")|int) }} sightings (keep ~1 per {{ q.get("iv") }}s).</p>
+  <form method="post" action="/admin/system/downsample"
+        onsubmit="return confirm('Permanently delete the redundant sightings? This cannot be undone.');">
+    <input type="hidden" name="action" value="run">
+    <input type="hidden" name="confirm" value="yes">
+    <button type="submit" class="btn-small danger">Run downsample now</button>
+  </form>
+  {% endif %}
+</div>
+
 <div class="detail-card">
   <h2 class="detail-card-title">System settings</h2>
   <p class="muted">Runtime config (radio, ingest, storage, retention, site). Saved to Postgres; takes effect on next read.</p>
