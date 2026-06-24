@@ -216,6 +216,12 @@ class Trigger(Base):
     type_codes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     owner_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     squawk_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Exclusions (NOT): a match also requires NONE of these to match. Same
+    # syntax/semantics as the positive fields of the same name.
+    exclude_tail_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    exclude_flight_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    exclude_type_codes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    exclude_owner_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     origin_icaos: Mapped[str] = mapped_column(Text, nullable=False, default="")
     destination_icaos: Mapped[str] = mapped_column(Text, nullable=False, default="")
 

@@ -200,6 +200,14 @@ def trigger_condition_items(t: Trigger) -> list[tuple[str, str]]:
             items.append(("within", f"{t.radius_miles:g} mi of {t.geofence_center}"))
         else:
             items.append(("within", f"{t.geofence_center} (unresolved)"))
+    if t.exclude_tail_patterns:
+        items.append(("not tail", t.exclude_tail_patterns))
+    if t.exclude_flight_patterns:
+        items.append(("not flight", t.exclude_flight_patterns))
+    if t.exclude_type_codes:
+        items.append(("not type", t.exclude_type_codes))
+    if t.exclude_owner_patterns:
+        items.append(("not owner", t.exclude_owner_patterns))
     return items
 
 
@@ -371,6 +379,10 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.type_codes = _strip_or_empty(form.get("type_codes"))
     trigger.owner_patterns = _strip_or_empty(form.get("owner_patterns"))
     trigger.squawk_patterns = _strip_or_empty(form.get("squawk_patterns"))
+    trigger.exclude_tail_patterns = _strip_or_empty(form.get("exclude_tail_patterns"))
+    trigger.exclude_flight_patterns = _strip_or_empty(form.get("exclude_flight_patterns"))
+    trigger.exclude_type_codes = _strip_or_empty(form.get("exclude_type_codes"))
+    trigger.exclude_owner_patterns = _strip_or_empty(form.get("exclude_owner_patterns"))
     trigger.origin_icaos = _strip_or_empty(form.get("origin_icaos"))
     trigger.destination_icaos = _strip_or_empty(form.get("destination_icaos"))
     trigger.min_year = _int_or_none(form.get("min_year"))

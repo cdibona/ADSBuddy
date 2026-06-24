@@ -113,6 +113,29 @@
   </fieldset>
 
   <fieldset>
+    <legend>Exclusions (NOT — must not match)</legend>
+    <div class="grid-2">
+      <label>Exclude tail numbers
+        <input name="exclude_tail_patterns" placeholder="e.g. N12345, N9*"
+               value="{{ trigger.exclude_tail_patterns if trigger else '' }}">
+      </label>
+      <label>Exclude flight callsigns
+        <input name="exclude_flight_patterns" placeholder="e.g. DAL*"
+               value="{{ trigger.exclude_flight_patterns if trigger else '' }}">
+      </label>
+      <label>Exclude type codes
+        <input name="exclude_type_codes" placeholder="e.g. DHC2, DHC3"
+               value="{{ trigger.exclude_type_codes if trigger else '' }}">
+      </label>
+      <label>Exclude owner / operator
+        <input name="exclude_owner_patterns" placeholder="e.g. NetJets"
+               value="{{ trigger.exclude_owner_patterns if trigger else '' }}">
+      </label>
+    </div>
+    <small class="muted">A match also requires none of these to match. E.g. "older than 70 years" + exclude type <code>DHC2</code> = vintage aircraft <em>except</em> the de Havilland Beaver.</small>
+  </fieldset>
+
+  <fieldset>
     <legend>Geofence</legend>
     <div class="grid-2">
       <label>Center

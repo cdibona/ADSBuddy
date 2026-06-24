@@ -40,6 +40,10 @@ def _make_trigger(**kw) -> SimpleNamespace:
         type_codes="",
         owner_patterns="",
         squawk_patterns="",
+        exclude_tail_patterns="",
+        exclude_flight_patterns="",
+        exclude_type_codes="",
+        exclude_owner_patterns="",
         origin_icaos="",
         destination_icaos="",
         min_year=None,
@@ -516,3 +520,32 @@ class TestResolveIcao:
         client = AsyncMock()
         client.get = AsyncMock(return_value=resp)
         assert asyncio.run(_resolve_icao("ZZZ", client)) is None
+
+
+class TestExclusions:
+    def test_exclude_type_blocks_match(self):
+        # Vintage (older than 70) but NOT a DHC2.
+        t = _make_trigger(min_age_years=70, exclude_type_codes="DHC2")
+        beaver = _make_facts(type_code="DHC2", year=1950)
+        cub = _make_facts(type_code="J3", year=1946)
+        assert not matches(t, beaver, NOW_YEAR)   # excluded
+        assert matches(t, cub, NOW_YEAR)          # old + not excluded
+
+    def test_exclude_tail_wildcard(self):
+        t = _make_trigger(exclude_tail_patterns="N9*")
+        assert not matches(t, _make_facts(registration="N9ABC"), NOW_YEAR)
+        assert matches(t, _make_facts(registration="N12345"), NOW_YEAR)
+
+    def test_exclude_owner_substring(self):
+        t = _make_trigger(exclude_owner_patterns="NetJets")
+        assert not matches(t, _make_facts(owner_op="NetJets Aviation"), NOW_YEAR)
+        assert matches(t, _make_facts(owner_op="United Air Lines Inc"), NOW_YEAR)
+
+    def test_empty_exclusions_do_not_block(self):
+        t = _make_trigger(tail_patterns="N12345")
+        assert matches(t, _make_facts(registration="N12345"), NOW_YEAR)
+
+    def test_exclude_none_value_not_excluded(self):
+        # An aircraft with no type can't be excluded by a type exclusion.
+        t = _make_trigger(exclude_type_codes="DHC2")
+        assert matches(t, _make_facts(type_code=None), NOW_YEAR)

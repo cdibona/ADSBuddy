@@ -151,6 +151,16 @@ def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
         return False
     if not _within_geofence(trigger, facts):
         return False
+
+    # Exclusions (NOT): reject if any populated exclude-set matches.
+    if (ex := _csv(trigger.exclude_tail_patterns)) and _any_pattern(ex, facts.registration):
+        return False
+    if (ex := _csv(trigger.exclude_flight_patterns)) and _any_pattern(ex, facts.callsign):
+        return False
+    if (ex := _csv(trigger.exclude_type_codes)) and _any_exact(ex, facts.type_code):
+        return False
+    if (ex := _csv(trigger.exclude_owner_patterns)) and _any_contains(ex, facts.owner_op):
+        return False
     return True
 
 
