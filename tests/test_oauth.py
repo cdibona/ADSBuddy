@@ -62,12 +62,38 @@ class TestProviderConfig:
     def test_configured_providers(self, monkeypatch):
         from app import oauth
         async def fake_get(db, key):
-            vals = {"oauth_google_client_id": "gid", "oauth_google_client_secret": "gsec",
+            vals = {"site_base_url": "https://h:8443",
+                    "oauth_google_client_id": "gid", "oauth_google_client_secret": "gsec",
                     "oauth_github_client_id": "", "oauth_github_client_secret": ""}
             return vals.get(key, "")
         monkeypatch.setattr(oauth, "get_setting", fake_get)
         out = asyncio.run(oauth.configured_providers(None))
         assert out == ["google"]   # github not configured
+
+    def test_no_providers_without_base_url(self, monkeypatch):
+        from app import oauth
+        async def fake_get(db, key):
+            return {"oauth_google_client_id": "gid", "oauth_google_client_secret": "gsec"}.get(key, "")
+        monkeypatch.setattr(oauth, "get_setting", fake_get)
+        assert asyncio.run(oauth.configured_providers(None)) == []
+
+
+class TestVerifiedEmailOnly:
+    def test_google_unverified_dropped(self):
+        from app.oauth import _verified_google_email
+        assert _verified_google_email({"email": "a@b.com", "email_verified": True}) == "a@b.com"
+        assert _verified_google_email({"email": "a@b.com", "email_verified": False}) is None
+        assert _verified_google_email({"email": "a@b.com"}) is None
+
+    def test_github_only_verified_primary(self):
+        from app.oauth import _verified_github_email
+        emails = [
+            {"email": "unv@x.com", "verified": False, "primary": True},
+            {"email": "ver@x.com", "verified": True, "primary": False},
+        ]
+        assert _verified_github_email(emails) == "ver@x.com"
+        assert _verified_github_email([{"email": "u@x.com", "verified": False}]) is None
+        assert _verified_github_email([]) is None
 
 
 def test_login_renders_oauth_buttons():

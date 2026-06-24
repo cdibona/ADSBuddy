@@ -16,11 +16,6 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _redirect_uri(request: Request, base: str, provider: str) -> str:
-    base = (base or str(request.base_url)).rstrip("/")
-    return f"{base}/auth/oauth/{provider}/callback"
-
-
 @router.get("/auth/oauth/{provider}/login")
 async def oauth_login(provider: str, request: Request, db: AsyncSession = Depends(get_session)):
     if provider not in oauth_mod.PROVIDERS:
@@ -28,9 +23,13 @@ async def oauth_login(provider: str, request: Request, db: AsyncSession = Depend
     creds = await oauth_mod.provider_credentials(db, provider)
     if creds is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Provider not configured")
+    # Build the redirect URI from the configured base only — never the
+    # client-controlled Host header (would allow code exfiltration).
+    base = (await get_setting(db, "site_base_url") or "").strip().rstrip("/")
+    if not base:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Set site_base_url to enable OAuth.")
     client = oauth_mod.build_client(provider, *creds)
-    base = await get_setting(db, "site_base_url") or ""
-    return await client.authorize_redirect(request, _redirect_uri(request, base, provider))
+    return await client.authorize_redirect(request, f"{base}/auth/oauth/{provider}/callback")
 
 
 @router.get("/auth/oauth/{provider}/callback")

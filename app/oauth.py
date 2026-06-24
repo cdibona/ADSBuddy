@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User, UserIdentity
-from app.security import new_session_id
+from app.security import hash_password, new_session_id
 from app.settings_store import get as get_setting
 
 log = logging.getLogger(__name__)
@@ -33,7 +33,11 @@ async def provider_credentials(db: AsyncSession, provider: str) -> tuple[str, st
 
 
 async def configured_providers(db: AsyncSession) -> list[str]:
-    """Providers that have credentials set (for showing login buttons)."""
+    """Providers usable for sign-in: credentials set AND site_base_url set (we
+    need an absolute, trusted redirect URI — we never trust the Host header)."""
+    base = (await get_setting(db, "site_base_url")) or ""
+    if not base.strip():
+        return []
     out = []
     for p in PROVIDERS:
         if await provider_credentials(db, p):
@@ -68,23 +72,37 @@ def build_client(provider: str, client_id: str, client_secret: str):
     return getattr(oauth, provider)
 
 
+def _verified_google_email(info: dict) -> str | None:
+    """Only trust Google's email when it asserts the address is verified."""
+    if info.get("email_verified") in (True, "true", "True", 1):
+        return info.get("email") or None
+    return None
+
+
+def _verified_github_email(emails: list[dict]) -> str | None:
+    """Pick GitHub's primary *verified* email (never an unverified one)."""
+    verified = [e for e in emails if e.get("verified")]
+    primary = next((e for e in verified if e.get("primary")), None)
+    primary = primary or (verified[0] if verified else None)
+    return primary.get("email") if primary else None
+
+
 async def fetch_identity(provider: str, client, request) -> tuple[str, str | None]:
-    """Complete the callback and return (subject, email)."""
+    """Complete the callback and return (subject, verified_email_or_None).
+
+    The email is returned ONLY when the provider asserts it verified — account
+    linking keys on email, so an unverified (attacker-chosen) address must never
+    match an existing account.
+    """
     token = await client.authorize_access_token(request)
     if provider == "google":
         info = token.get("userinfo") or await client.userinfo(token=token)
-        return str(info["sub"]), (info.get("email") or None)
-    # github
-    resp = await client.get("user", token=token)
-    u = resp.json()
-    email = u.get("email")
-    if not email:
-        er = await client.get("user/emails", token=token)
-        emails = er.json() if er.status_code == 200 else []
-        primary = next((e for e in emails if e.get("primary")), None)
-        primary = primary or (emails[0] if emails else None)
-        email = primary.get("email") if primary else None
-    return str(u["id"]), (email or None)
+        return str(info["sub"]), _verified_google_email(info)
+    # github: ignore the (possibly unverified) profile email; use /user/emails.
+    u = (await client.get("user", token=token)).json()
+    er = await client.get("user/emails", token=token)
+    emails = er.json() if er.status_code == 200 else []
+    return str(u["id"]), _verified_github_email(emails)
 
 
 async def _unique_username(db: AsyncSession, base: str) -> str:
@@ -128,7 +146,7 @@ async def resolve_user(
     if auto_provision and email:
         user = User(
             username=await _unique_username(db, email.split("@", 1)[0]),
-            password_hash=new_session_id(),  # unusable random; OAuth-only account
+            password_hash=hash_password(new_session_id()),  # unusable random; OAuth-only account
             is_admin=False,
             is_active=True,
             email=email,
