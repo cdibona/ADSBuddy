@@ -317,6 +317,24 @@ async def admin_system(
             .where(NotificationDelivery.status == "failed")
         )
     ).scalar_one()
+    # Per-trigger firing counts (noisiest first) for the targeted-purge dropdown.
+    fc = {
+        tid: n
+        for tid, n in (
+            await db.execute(
+                select(TriggerFiring.trigger_id, func.count()).group_by(TriggerFiring.trigger_id)
+            )
+        ).all()
+    }
+    trigger_firing_counts = sorted(
+        (
+            {"id": tid, "name": name, "count": fc.get(tid, 0)}
+            for tid, name in (
+                await db.execute(select(Trigger.id, Trigger.name))
+            ).all()
+        ),
+        key=lambda r: (-r["count"], r["name"].lower()),
+    )
     db_revision = (
         await db.execute(text("SELECT version_num FROM alembic_version"))
     ).scalar_one_or_none()
@@ -342,6 +360,7 @@ async def admin_system(
             "last_firing": last_firing,
             "paused_firings": paused_firings,
             "failed_firings": failed_firings,
+            "trigger_firing_counts": trigger_firing_counts,
             "settings": system_settings,
         },
     )
@@ -393,6 +412,34 @@ async def admin_purge_paused_firings(
         await db.commit()
     return RedirectResponse(
         url=f"/admin/system?firings_purged={total}", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
+@router.post("/system/purge-firings")
+async def admin_purge_firings(
+    trigger_id: str = Form("all"),
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Purge firings for one trigger, or all of them. Batched. Deliveries detach
+    via ON DELETE SET NULL, so the delivery log is preserved."""
+    base = select(TriggerFiring.id)
+    if trigger_id != "all":
+        try:
+            tid = int(trigger_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid trigger id")
+        base = base.where(TriggerFiring.trigger_id == tid)
+    total = 0
+    while True:
+        ids = (await db.execute(base.limit(5000))).scalars().all()
+        if not ids:
+            break
+        res = await db.execute(delete(TriggerFiring).where(TriggerFiring.id.in_(ids)))
+        total += res.rowcount
+        await db.commit()
+    return RedirectResponse(
+        url=f"/admin/system?firings_cleared={total}", status_code=status.HTTP_303_SEE_OTHER
     )
 
 

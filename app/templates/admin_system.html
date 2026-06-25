@@ -106,6 +106,33 @@
 </div>
 
 <div class="detail-card">
+  <h2 class="detail-card-title">Purge firings — by trigger or all</h2>
+  <p class="muted">Clear false/noisy firings without touching the triggers themselves. You can still
+  test a trigger against history, so debugging doesn't have to pollute the firings list. Irreversible
+  (the notification-delivery log is preserved).</p>
+  {% if q.get("firings_cleared") is not none %}
+  <div class="flash flash-success" role="alert">Purged {{ "{:,}".format(q.get("firings_cleared")|int) }} firing(s).</div>
+  {% endif %}
+
+  <form method="post" action="/admin/system/purge-firings" class="purge-bar"
+        onsubmit="return confirm('Delete all firings for the selected trigger?');">
+    <label class="filter-bar-label" for="purge-trigger">Trigger</label>
+    <select name="trigger_id" id="purge-trigger">
+      {% for t in trigger_firing_counts|default([]) %}
+      <option value="{{ t.id }}">{{ t.name }} — {{ "{:,}".format(t.count) }} firing{{ "s" if t.count != 1 else "" }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn-small">Purge this trigger's firings</button>
+  </form>
+
+  <form method="post" action="/admin/system/purge-firings"
+        onsubmit="return confirm('Permanently delete ALL {{ counts.firings }} firings across every trigger? This cannot be undone.');">
+    <input type="hidden" name="trigger_id" value="all">
+    <button type="submit" class="btn-small danger">Purge ALL {{ "{:,}".format(counts.firings) }} firings</button>
+  </form>
+</div>
+
+<div class="detail-card">
   <h2 class="detail-card-title">System settings</h2>
   <p class="muted">Runtime config (radio, ingest, storage, retention, site). Saved to Postgres; takes effect on next read.</p>
   {% include "_settings_list.html" %}

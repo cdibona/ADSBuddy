@@ -77,3 +77,29 @@ def test_admin_system_failed_purge_flash():
         url=types.SimpleNamespace(path="/admin/system"),
         query_params={"failed_purged": "42"}))
     assert "Purged 42 firing(s) with a failed delivery" in out
+
+
+def test_purge_firings_route_registered():
+    from app.routes_admin import router
+    paths = {r.path for r in router.routes if hasattr(r, "path")}
+    assert "/admin/system/purge-firings" in paths
+
+
+def test_admin_system_purge_by_trigger_and_all():
+    out = _render_system(
+        counts={k: (123 if k == "firings" else 0) for k in
+                ["aircraft", "sightings", "firings", "triggers", "users", "channels", "deliveries", "routes"]},
+        trigger_firing_counts=[{"id": 3, "name": "SeaTac departures", "count": 143},
+                               {"id": 9, "name": "Bezos", "count": 0}])
+    # per-trigger dropdown with counts + targeted purge
+    assert "SeaTac departures — 143 firings" in out
+    assert 'action="/admin/system/purge-firings"' in out
+    # purge-all button shows total
+    assert "Purge ALL 123 firings" in out
+
+
+def test_admin_system_firings_cleared_flash():
+    out = _render_system(request=types.SimpleNamespace(
+        url=types.SimpleNamespace(path="/admin/system"),
+        query_params={"firings_cleared": "143"}))
+    assert "Purged 143 firing(s)" in out
