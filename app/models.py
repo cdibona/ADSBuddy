@@ -285,6 +285,8 @@ class Trigger(Base):
     radius_miles: Mapped[float | None] = mapped_column(Float)
 
     cooldown_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=3600)
+    # Counts as 'newsworthy' in the periodic airspace summary's special-news line.
+    summary_priority: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )

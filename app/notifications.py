@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import html
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import Any
 
 import aiosmtplib
 import httpx
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aircraft_helpers import (
@@ -34,6 +34,7 @@ from app.models import (
     CHANNEL_KINDS,
     NotificationChannel,
     NotificationDelivery,
+    Sighting,
     Trigger,
     TriggerChannel,
     TriggerFiring,
@@ -628,14 +629,26 @@ async def send_transport_test(
 
     Returns (ok, message) for the admin UI — does not record a delivery row.
     """
-    trigger, firing = await latest_firing_and_trigger(session)
     try:
         if kind == "vestaboard":
+            trigger, firing = await latest_firing_and_trigger(session)
             code = await _send_vestaboard(session, client, None, trigger, firing)
             return True, f"Test sent (HTTP {code}) — check the board."
         elif kind == "trmnl":
-            code = await _send_trmnl(session, client, None, trigger, firing)
-            return True, f"Test sent (HTTP {code}). Reload the TRMNL Edit-Markup page — its preview renders from this push."
+            # TRMNL is the summary device, so its test shows the current summary.
+            url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
+            if not url:
+                raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
+            if "/api/custom_plugins/" in url and url.rstrip("/").endswith("custom_plugins"):
+                raise ChannelNotConfigured(
+                    "TRMNL webhook URL is missing its plugin UUID — copy the full Webhook URL "
+                    "from the plugin's settings (e.g. https://trmnl.com/api/custom_plugins/<uuid>)."
+                )
+            summary = await build_summary(session)
+            resp = await client.post(url, json={"merge_variables": _summary_trmnl_mv(summary)}, timeout=15.0)
+            resp.raise_for_status()
+            return True, (f"Summary sent (HTTP {resp.status_code}) — {summary['count']} aircraft. "
+                          "Reload the TRMNL Edit-Markup page; its preview renders from this push.")
         else:
             return False, f"Unknown transport: {kind}"
     except ChannelNotConfigured as e:
@@ -770,3 +783,106 @@ async def send_test(
     sample if nothing has fired). Used by the profile UI."""
     trigger, firing = await latest_firing_and_trigger(session)
     return await _dispatch_one(session, client, channel, trigger, firing, is_test=True)
+
+
+# ---- Airspace summary (periodic global digest) ----------------------------
+
+_SUMMARY_ICON = "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f4e1.svg"  # 📡
+
+
+def _int_setting(raw: str | None, default: int) -> int:
+    try:
+        return max(0, int((raw or "").strip()))
+    except ValueError:
+        return default
+
+
+def _human_ago(now: datetime, then: datetime | None) -> str:
+    if then is None:
+        return "?"
+    secs = max(0, int((now - then).total_seconds()))
+    if secs < 3600:
+        return f"{secs // 60}m"
+    if secs < 86400:
+        return f"{secs // 3600}h"
+    return f"{secs // 86400}d"
+
+
+async def build_summary(session: AsyncSession) -> dict:
+    """Aggregate the airspace for the periodic summary: aircraft count in the
+    window + a 'special news' line from qualifying (summary_priority) triggers."""
+    now = datetime.now(timezone.utc)
+    window = _int_setting(await get_setting(session, "summary_window_minutes"), 15) or 15
+    cutoff = now - timedelta(minutes=window)
+    count = (
+        await session.execute(
+            select(func.count(func.distinct(Sighting.icao_hex))).where(Sighting.seen_at >= cutoff)
+        )
+    ).scalar_one()
+
+    lookback_h = _int_setting(await get_setting(session, "summary_news_lookback_hours"), 6) or 6
+    recent = (
+        await session.execute(
+            select(Trigger.name, TriggerFiring.fired_at)
+            .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .where(Trigger.summary_priority.is_(True), TriggerFiring.fired_at >= now - timedelta(hours=lookback_h))
+            .order_by(TriggerFiring.fired_at.desc())
+            .limit(3)
+        )
+    ).all()
+    if recent:
+        news = " · ".join(f"{name} {_human_ago(now, fired)} ago" for name, fired in recent[:2])
+    else:
+        last = (
+            await session.execute(
+                select(Trigger.name, TriggerFiring.fired_at)
+                .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+                .where(Trigger.summary_priority.is_(True))
+                .order_by(TriggerFiring.fired_at.desc())
+                .limit(1)
+            )
+        ).first()
+        news = f"Time since last {last[0]}: {_human_ago(now, last[1])}" if last else "No priority events yet"
+
+    return {"count": int(count), "window_minutes": window, "news": news, "generated_at": now}
+
+
+def _summary_trmnl_mv(s: dict) -> dict:
+    return {
+        "count": str(s["count"]),
+        "window": f"{s['window_minutes']} MIN",
+        "news": s["news"],
+        "time": s["generated_at"].strftime("%H:%M UTC"),
+        "icon_url": _SUMMARY_ICON,
+    }
+
+
+def _summary_vb_matrix(s: dict) -> list[list[int]]:
+    bar = [_VB_BLUE] * _VB_COLS
+    lines = ["AIRSPACE", f"{s['count']} AIRCRAFT", f"LAST {s['window_minutes']} MIN", s["news"]]
+    return [bar, *(_vb_center(line) for line in lines), bar]
+
+
+async def run_summary(session: AsyncSession, client: httpx.AsyncClient) -> tuple[dict, list[str]]:
+    """Build the summary and push it to the enabled, configured transports.
+    Returns (summary, list-of-transports-sent)."""
+    summary = await build_summary(session)
+    sent: list[str] = []
+    to_trmnl = ((await get_setting(session, "summary_to_trmnl")) or "true").lower() == "true"
+    to_vb = ((await get_setting(session, "summary_to_vestaboard")) or "false").lower() == "true"
+
+    if to_trmnl and await trmnl_configured(session):
+        url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
+        resp = await client.post(url, json={"merge_variables": _summary_trmnl_mv(summary)}, timeout=15.0)
+        resp.raise_for_status()
+        sent.append("TRMNL")
+    if to_vb and await vestaboard_configured(session):
+        key = (await get_setting(session, "vestaboard_api_key") or "").strip()
+        resp = await client.post(
+            "https://rw.vestaboard.com/",
+            headers={"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"},
+            json={"characters": _summary_vb_matrix(summary)}, timeout=15.0,
+        )
+        resp.raise_for_status()
+        sent.append("Vestaboard")
+    return summary, sent

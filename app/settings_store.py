@@ -36,14 +36,20 @@ _AUTH_KEYS = frozenset({
     "oauth_github_client_id", "oauth_github_client_secret",
     "oauth_auto_provision",
 })
+_SUMMARY_KEYS = frozenset({
+    "summary_enabled", "summary_interval_minutes", "summary_window_minutes",
+    "summary_to_trmnl", "summary_to_vestaboard", "summary_news_lookback_hours",
+})
 
 
 def setting_category(key: str) -> str:
-    """Return the admin tab a setting belongs to: 'notifications', 'auth', or 'system'."""
+    """Return the admin tab a setting belongs to: 'notifications', 'auth', 'summary', or 'system'."""
     if key in _NOTIFICATION_KEYS:
         return "notifications"
     if key in _AUTH_KEYS:
         return "auth"
+    if key in _SUMMARY_KEYS:
+        return "summary"
     return "system"
 
 
@@ -236,6 +242,46 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
             "Absolute base URL (e.g. https://webstag.tail41807.ts.net:8443) used to "
             "build links in notifications and OAuth redirect URIs. Blank = links omitted."
         ),
+    ),
+    # ---- Airspace summary (periodic digest for TRMNL/Vestaboard) -----------
+    SettingSpec(
+        key="summary_enabled",
+        default="false",
+        description="Master switch for the periodic airspace summary push. 'true'/'false'.",
+    ),
+    SettingSpec(
+        key="summary_interval_minutes",
+        default="15",
+        description="How often to push the airspace summary (minutes). Default 15 (TRMNL refresh).",
+    ),
+    SettingSpec(
+        key="summary_window_minutes",
+        default="15",
+        description="How far back the summary looks for the aircraft count (minutes). Default 15.",
+    ),
+    SettingSpec(
+        key="summary_to_trmnl",
+        default="true",
+        description="Push the summary to the TRMNL transport (if configured). 'true'/'false'.",
+    ),
+    SettingSpec(
+        key="summary_to_vestaboard",
+        default="false",
+        description="Push the summary to the Vestaboard transport (if configured). 'true'/'false'.",
+    ),
+    SettingSpec(
+        key="summary_news_lookback_hours",
+        default="6",
+        description=(
+            "If no 'qualifying' trigger fired within the summary window, the news line "
+            "falls back to 'time since last <name>'. This is how far back to look for that "
+            "last event before giving up. Default 6 hours."
+        ),
+    ),
+    SettingSpec(
+        key="summary_last_run",
+        default="",
+        description="Internal: ISO timestamp of the last summary push (managed automatically).",
     ),
     # ---- OAuth / SSO (optional; blank = disabled) --------------------------
     SettingSpec(

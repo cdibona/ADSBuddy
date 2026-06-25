@@ -409,6 +409,7 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.name = _strip_or_empty(form.get("name")) or "Untitled"
     trigger.notes = _strip_or_empty(form.get("notes"))
     trigger.is_active = form.get("is_active") == "true"
+    trigger.summary_priority = form.get("summary_priority") == "true"
     trigger.tail_patterns = _strip_or_empty(form.get("tail_patterns"))
     trigger.flight_patterns = _strip_or_empty(form.get("flight_patterns"))
     trigger.type_codes = _strip_or_empty(form.get("type_codes"))

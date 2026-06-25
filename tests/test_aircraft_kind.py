@@ -89,3 +89,42 @@ def test_vestaboard_matrix_emergency_is_red():
                               squawk="7700", emergency=None)
     m = n._vestaboard_matrix(types.SimpleNamespace(name="EMERG"), f)
     assert m[0] == [n._VB_RED] * 22
+
+
+class TestSummary:
+    def _firing(self, name, ago_sec, priority=True):
+        # build a (name, fired_at) row-ish via SimpleNamespace not needed; tested via build_summary mock
+        pass
+
+    def test_human_ago(self):
+        from datetime import datetime, timezone, timedelta
+        from app.notifications import _human_ago
+        now = datetime(2026, 6, 25, 12, 0, tzinfo=timezone.utc)
+        assert _human_ago(now, now - timedelta(minutes=4)) == "4m"
+        assert _human_ago(now, now - timedelta(hours=2)) == "2h"
+        assert _human_ago(now, now - timedelta(days=3)) == "3d"
+        assert _human_ago(now, None) == "?"
+
+    def test_summary_trmnl_mv_and_vb_matrix(self):
+        from datetime import datetime, timezone
+        from app import notifications as n
+        s = {"count": 47, "window_minutes": 15, "news": "Lifeflight 4m ago",
+             "generated_at": datetime(2026, 6, 25, 16, 49, tzinfo=timezone.utc)}
+        mv = n._summary_trmnl_mv(s)
+        assert mv["count"] == "47" and mv["window"] == "15 MIN" and mv["news"] == "Lifeflight 4m ago"
+        assert mv["icon_url"].endswith("emoji_u1f4e1.svg")
+        m = n._summary_vb_matrix(s)
+        assert len(m) == 6 and all(len(r) == 22 for r in m)
+        assert m[0] == [n._VB_BLUE] * 22   # bar
+
+
+def test_summary_route_registered():
+    from app.routes_admin import router
+    paths = {r.path for r in router.routes if hasattr(r, "path")}
+    assert "/admin/notifications/summary-now" in paths
+
+
+def test_summary_settings_categorized():
+    from app.settings_store import setting_category
+    assert setting_category("summary_enabled") == "summary"
+    assert setting_category("summary_interval_minutes") == "summary"

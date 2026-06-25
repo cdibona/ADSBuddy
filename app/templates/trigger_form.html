@@ -34,6 +34,12 @@
     Active
   </label>
 
+  <label class="checkbox">
+    <input type="checkbox" name="summary_priority" value="true"
+           {% if trigger and trigger.summary_priority %}checked{% endif %}>
+    Include in the airspace summary's “special news” (e.g. Lifeflight overhead)
+  </label>
+
   <fieldset>
     <legend>Aircraft identity (any match)</legend>
     <label>Tail numbers (registrations)

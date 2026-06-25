@@ -569,11 +569,36 @@ async def admin_notifications(
             ),
             "vestaboard_settings": pick(["vestaboard_api_key"]),
             "trmnl_settings": pick(["trmnl_webhook_url"]),
+            "summary_settings": pick([
+                "summary_enabled", "summary_interval_minutes", "summary_window_minutes",
+                "summary_to_trmnl", "summary_to_vestaboard", "summary_news_lookback_hours",
+            ]),
             "smtp_ok": await notifications.smtp_configured(db),
             "twilio_ok": await notifications.twilio_configured(db),
             "vestaboard_ok": await notifications.vestaboard_configured(db),
             "trmnl_ok": await notifications.trmnl_configured(db),
         },
+    )
+
+
+@router.post("/notifications/summary-now")
+async def admin_summary_now(
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Build + push the airspace summary immediately (to enabled transports)."""
+    import httpx
+    from urllib.parse import quote
+
+    try:
+        async with httpx.AsyncClient() as client:
+            summary, sent = await notifications.run_summary(db, client)
+        msg = (f"Summary sent to {', '.join(sent)} — {summary['count']} aircraft."
+               if sent else "Nothing sent — enable a transport (TRMNL/Vestaboard) and configure it.")
+    except Exception as e:  # noqa: BLE001
+        msg = f"Summary failed: {e}"
+    return RedirectResponse(
+        url=f"/admin/notifications?summary_msg={quote(msg)}", status_code=status.HTTP_303_SEE_OTHER
     )
 
 
@@ -710,6 +735,7 @@ async def admin_settings_set(
     # Return to the tab the setting lives on.
     dest = {
         "notifications": "/admin/notifications",
+        "summary": "/admin/notifications",
         "auth": "/admin",
         "system": "/admin/system",
     }[setting_category(key)]

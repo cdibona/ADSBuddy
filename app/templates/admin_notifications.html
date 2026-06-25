@@ -75,8 +75,10 @@
     TRMNL
     {% if trmnl_ok %}<span class="badge-active">configured</span>{% else %}<span class="badge-paused">not set up</span>{% endif %}
   </h2>
-  <p class="muted">Powers the <strong>TRMNL</strong> channel kind — POSTs firing details to a TRMNL
-  webhook (Private Plugin → Webhook strategy) as <code>merge_variables</code>.</p>
+  <p class="muted">The <strong>summary device</strong> — TRMNL receives the periodic airspace digest
+  (aircraft count + a “special news” line) via a Private Plugin webhook as <code>merge_variables</code>.
+  Per-firing alerts go to Discord by default, so the e-ink screen stays a calm rollup.
+  Configure the cadence in <strong>Airspace summary</strong> below.</p>
   {% with settings = trmnl_settings %}{% include "_settings_list.html" %}{% endwith %}
 
   <div class="help-note">
@@ -100,40 +102,26 @@
   &lt;div class="grid"&gt;
     &lt;div class="item"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
-      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[10cqw] h--[10cqw]"&gt;&lt;/div&gt;
+      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[12cqw] h--[12cqw]"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
-        &lt;span class="value value--xxlarge value--tnums" data-value-fit="true"&gt;{{ aircraft }}&lt;/span&gt;
-        &lt;span class="label"&gt;{{ trigger }}{% if kind_label != "" %} · {{ kind_label }}{% endif %}&lt;/span&gt;
+        &lt;span class="value value--xxxlarge value--tnums" data-value-fit="true"&gt;{{ count }}&lt;/span&gt;
+        &lt;span class="label"&gt;aircraft · {{ window }}&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
   &lt;div class="grid"&gt;
-    &lt;div class="item col--span-4"&gt;
+    &lt;div class="item"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
-        &lt;span class="value value--small value--tnums" data-value-fit="true"&gt;{% if type != "" %}{{ type }}{% else %}—{% endif %}&lt;/span&gt;
-        &lt;span class="label"&gt;Type&lt;/span&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class="item col--span-4"&gt;
-      &lt;div class="meta"&gt;&lt;/div&gt;
-      &lt;div class="content"&gt;
-        &lt;span class="value value--small value--tnums" data-value-fit="true"&gt;{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}&lt;/span&gt;
-        &lt;span class="label"&gt;Alt&lt;/span&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-    &lt;div class="item col--span-4"&gt;
-      &lt;div class="meta"&gt;&lt;/div&gt;
-      &lt;div class="content"&gt;
-        &lt;span class="value value--small" data-value-fit="true"&gt;{% if route != "" %}{{ route }}{% else %}—{% endif %}&lt;/span&gt;
-        &lt;span class="label"&gt;Route&lt;/span&gt;
+        &lt;span class="value value--small" data-value-fit="true"&gt;{{ news }}&lt;/span&gt;
+        &lt;span class="label"&gt;Special news&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="title_bar"&gt;
   &lt;img class="image" src="{{ icon_url }}"&gt;
-  &lt;span class="title"&gt;ADSBuddy · {{ kind_label }}&lt;/span&gt;
+  &lt;span class="title"&gt;ADSBuddy · Airspace&lt;/span&gt;
   &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
 &lt;/div&gt;{% endraw %}</pre>
 </details>
@@ -148,18 +136,11 @@
         </div>
 <details><summary class="muted" style="cursor:pointer;font-size:0.85em">show / hide sample data</summary>
 <pre id="trmnl-sample" class="code-block">{
-  "trigger": "Elon Musk",
-  "aircraft": "N628TS",
-  "callsign": "N628TS",
-  "type": "GLF6",
-  "year": "2015",
-  "altitude": "38000",
-  "route": "KSJC → KPDX",
-  "time": "2026-06-25 16:00 UTC",
-  "kind": "jet",
-  "kind_label": "Jet",
-  "icon_url": "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u2708.svg",
-  "text": "Elon Musk N628TS GLF6 38000ft"
+  "count": "47",
+  "window": "15 MIN",
+  "news": "Likely Lifeflight 4m ago · Emergency squawk 38m ago",
+  "time": "16:49 UTC",
+  "icon_url": "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f4e1.svg"
 }</pre>
 </details>
         <span class="muted">(The TRMNL console lines "Build: plugins.js …" and "Highcharts not detected" are normal — not errors.)</span>
@@ -181,6 +162,22 @@
     <div class="flash flash-error" role="alert">TRMNL test failed: {{ qp.get("msg") }}</div>
     {% endif %}
   {% endif %}
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Airspace summary</h2>
+  <p class="muted">A periodic global digest pushed to TRMNL/Vestaboard: the aircraft count over the
+  window plus a “special news” line built from triggers you mark <em>Include in the airspace summary</em>.
+  If none of those fired within <code>summary_news_lookback_hours</code>, the line falls back to
+  “time since last &lt;trigger&gt;”. Default cadence 15 min (TRMNL's refresh).</p>
+  {% if qp.get("summary_msg") is not none %}
+  <div class="flash flash-success" role="alert">{{ qp.get("summary_msg") }}</div>
+  {% endif %}
+  {% with settings = summary_settings|default([]) %}{% include "_settings_list.html" %}{% endwith %}
+  <form method="post" action="/admin/notifications/summary-now" class="purge-bar">
+    <button type="submit" class="btn-small">Send summary now</button>
+    <span class="muted">Builds + pushes the current summary to the enabled transports.</span>
+  </form>
 </div>
 
 <div class="detail-card">

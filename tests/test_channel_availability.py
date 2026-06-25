@@ -78,18 +78,17 @@ def test_send_transport_test_ok_and_unconfigured(monkeypatch):
     from app import notifications
     from unittest.mock import AsyncMock
 
-    # Don't hit the DB for "most recent firing" in this unit test.
+    # Vestaboard test = latest firing; don't hit the DB.
     monkeypatch.setattr(notifications, "latest_firing_and_trigger",
                         AsyncMock(return_value=(notifications._sample_trigger(), notifications._sample_firing())))
-    # configured -> _send_vestaboard succeeds -> (True, ...)
-    monkeypatch.setattr(notifications, "_send_vestaboard", AsyncMock(return_value=None))
+    monkeypatch.setattr(notifications, "_send_vestaboard", AsyncMock(return_value=200))
     ok, msg = asyncio.run(notifications.send_transport_test(None, None, "vestaboard"))
     assert ok and "sent" in msg.lower()
 
-    # not configured -> ChannelNotConfigured -> (False, reason)
-    async def raiser(*a, **k):
-        raise notifications.ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
-    monkeypatch.setattr(notifications, "_send_trmnl", raiser)
+    # TRMNL test = summary; unconfigured webhook URL -> ChannelNotConfigured.
+    async def empty_get(s, key):
+        return ""
+    monkeypatch.setattr(notifications, "get_setting", empty_get)
     ok, msg = asyncio.run(notifications.send_transport_test(None, None, "trmnl"))
     assert not ok and "not configured" in msg
 
