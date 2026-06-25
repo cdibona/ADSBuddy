@@ -97,6 +97,7 @@
   &lt;div class="grid"&gt;
     &lt;div class="item"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[14cqw] h--[14cqw]"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
         &lt;span class="value value--xxxlarge value--tnums"&gt;{{ aircraft }}&lt;/span&gt;
         &lt;span class="label"&gt;{{ trigger }}{% if kind_label != "" %} · {{ kind_label }}{% endif %}&lt;/span&gt;
@@ -132,8 +133,8 @@
 &lt;/div&gt;
 
 &lt;div class="title_bar"&gt;
-  &lt;img class="image" src="https://trmnl.com/images/plugins/trmnl--render.svg"&gt;
-  &lt;span class="title"&gt;ADSBuddy&lt;/span&gt;
+  &lt;img class="image" src="{{ icon_url }}"&gt;
+  &lt;span class="title"&gt;ADSBuddy · {{ kind_label }}&lt;/span&gt;
   &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
 &lt;/div&gt;{% endraw %}</pre>
       </li>
@@ -155,6 +156,7 @@
   "time": "2026-06-25 16:00 UTC",
   "kind": "jet",
   "kind_label": "Jet",
+  "icon_url": "https://cdn.jsdelivr.net/gh/twitter/twemoji@v14.0.2/assets/svg/2708.svg",
   "text": "Elon Musk N628TS GLF6 38000ft"
 }</pre>
         <span class="muted">(The TRMNL console lines "Build: plugins.js …" and "Highcharts not detected" are normal — not errors.)</span>

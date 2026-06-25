@@ -13,6 +13,10 @@ import urllib.parse
 # when no category was received. Unknown falls back to a generic plane.
 _KIND_ICON = {"helicopter": "🚁", "light": "🛩️", "jet": "✈️", "plane": "✈️"}
 _KIND_LABEL = {"helicopter": "Helicopter", "light": "Light plane", "jet": "Jet", "plane": "Aircraft"}
+# Public twemoji SVGs (TRMNL renders server-side, so it needs a reachable URL —
+# not our tailnet host). Pinned release for stability.
+_TWEMOJI = "https://cdn.jsdelivr.net/gh/twitter/twemoji@v14.0.2/assets/svg/{}.svg"
+_KIND_ICON_CODE = {"helicopter": "1f681", "light": "1f6e9", "jet": "2708", "plane": "2708"}
 
 _HELI_TYPES = frozenset({
     "R22", "R44", "R66", "B06", "B407", "B412", "B429", "EC20", "EC25", "EC30",
@@ -52,6 +56,11 @@ def kind_icon(type_code: str | None, category: str | None = None) -> str:
 def kind_label(type_code: str | None, category: str | None = None) -> str:
     """Human label for the aircraft's coarse kind (Helicopter / Light plane / Jet)."""
     return _KIND_LABEL[aircraft_kind(type_code, category)]
+
+
+def kind_icon_url(type_code: str | None, category: str | None = None) -> str:
+    """Public SVG airframe icon URL for the aircraft's coarse kind."""
+    return _TWEMOJI.format(_KIND_ICON_CODE[aircraft_kind(type_code, category)])
 
 
 def registration_url(reg: str | None) -> str | None:

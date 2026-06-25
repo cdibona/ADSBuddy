@@ -56,3 +56,11 @@ def test_helicopter_gets_heli_icon():
     t = types.SimpleNamespace(name="Helo", center_lat=None, radius_miles=None)
     embed = build_discord_embed(t, f, "")
     assert embed["title"].startswith("🚁")
+
+
+def test_kind_icon_urls_are_public_svgs():
+    from app.aircraft_helpers import kind_icon_url
+    assert kind_icon_url("EC35", "A7").endswith("/1f681.svg")   # helicopter
+    assert kind_icon_url("C172", None).endswith("/1f6e9.svg")   # light plane
+    assert kind_icon_url("B738", "A3").endswith("/2708.svg")    # jet
+    assert kind_icon_url("B738", "A3").startswith("https://")   # public, fetchable by TRMNL

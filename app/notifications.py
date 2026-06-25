@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.aircraft_helpers import (
     aircraft_kind,
     kind_icon,
+    kind_icon_url,
     kind_label,
     opensky_url,
     registration_provider,
@@ -501,7 +502,8 @@ async def _send_trmnl(
         mv = {
             "trigger": trigger.name, "aircraft": "(test)", "callsign": "", "type": "",
             "altitude": "", "route": "", "year": "", "time": "",
-            "kind": "plane", "kind_label": "Aircraft", "text": _compact_text(trigger, None),
+            "kind": "plane", "kind_label": "Aircraft",
+            "icon_url": kind_icon_url(None, None), "text": _compact_text(trigger, None),
         }
     else:
         route = ""
@@ -518,6 +520,7 @@ async def _send_trmnl(
             "time": firing.fired_at.strftime("%Y-%m-%d %H:%M UTC") if firing.fired_at else "",
             "kind": aircraft_kind(firing.type_code, firing.category),
             "kind_label": kind_label(firing.type_code, firing.category),
+            "icon_url": kind_icon_url(firing.type_code, firing.category),
             "text": _compact_text(trigger, firing),
         }
     resp = await client.post(url, json={"merge_variables": mv}, timeout=15.0)
