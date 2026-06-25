@@ -137,6 +137,74 @@
   &lt;span class="title"&gt;ADSBuddy · {{ kind_label }}&lt;/span&gt;
   &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
 &lt;/div&gt;{% endraw %}</pre>
+
+        <details style="margin-top:0.6rem">
+          <summary style="cursor:pointer"><strong>Other layouts — Half &amp; Quadrant</strong></summary>
+          <p class="muted" style="margin:0.4rem 0">Each layout has its <em>own</em> markup tab in Edit Markup, and TRMNL
+          renders whichever matches how the plugin is placed: a normal <strong>Playlist</strong> item shows
+          <strong>Full</strong>; put it in a <strong>Mashup</strong> to use the smaller ones — 2 stacked = Half Horizontal,
+          2 side-by-side = Half Vertical, 4-up = Quadrant. Paste each block into its matching tab (leave a tab blank to
+          show nothing at that size). <a href="https://help.trmnl.com/en/articles/9510536-private-plugins" target="_blank" rel="noopener">Mashups &amp; layouts ↗</a></p>
+
+          <div style="margin:0.4rem 0"><strong>Half Horizontal</strong>
+            <button type="button" class="btn-small" style="margin-left:0.4rem" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-hh').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy';},1500);})(this)">Copy</button></div>
+<pre id="trmnl-hh" class="code-block">{% raw %}&lt;div class="layout"&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[9cqw] h--[9cqw]"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--xlarge value--tnums"&gt;{{ aircraft }}&lt;/span&gt;
+        &lt;span class="label"&gt;{{ trigger }} · {{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if altitude != "" %} · {{ altitude }} ft{% endif %}{% if route != "" %} · {{ route }}{% endif %}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="title_bar"&gt;
+  &lt;img class="image" src="{{ icon_url }}"&gt;
+  &lt;span class="title"&gt;ADSBuddy&lt;/span&gt;
+  &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
+&lt;/div&gt;{% endraw %}</pre>
+
+          <div style="margin:0.4rem 0"><strong>Half Vertical</strong>
+            <button type="button" class="btn-small" style="margin-left:0.4rem" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-hv').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy';},1500);})(this)">Copy</button></div>
+<pre id="trmnl-hv" class="code-block">{% raw %}&lt;div class="layout layout--col gap--medium"&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[18cqw] h--[18cqw]"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--xlarge value--tnums"&gt;{{ aircraft }}&lt;/span&gt;
+        &lt;span class="label"&gt;{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="divider"&gt;&lt;/div&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums"&gt;{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}&lt;/span&gt;&lt;span class="label"&gt;Altitude&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value"&gt;{% if route != "" %}{{ route }}{% else %}—{% endif %}&lt;/span&gt;&lt;span class="label"&gt;Route&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="title_bar"&gt;
+  &lt;span class="title"&gt;ADSBuddy&lt;/span&gt;
+  &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
+&lt;/div&gt;{% endraw %}</pre>
+
+          <div style="margin:0.4rem 0"><strong>Quadrant</strong>
+            <button type="button" class="btn-small" style="margin-left:0.4rem" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-q').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy';},1500);})(this)">Copy</button></div>
+<pre id="trmnl-q" class="code-block">{% raw %}&lt;div class="layout"&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[14cqw] h--[14cqw]"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--large value--tnums"&gt;{{ aircraft }}&lt;/span&gt;
+        &lt;span class="label"&gt;{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if altitude != "" %} · {{ altitude }} ft{% endif %}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;{% endraw %}</pre>
+        </details>
       </li>
       <li><strong>Make the preview render</strong> — the Edit-Markup preview is blank until TRMNL has
         data to merge (the <code>{{ "{{ trigger }}" }}</code> fields are empty otherwise). Either click
