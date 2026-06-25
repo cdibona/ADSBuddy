@@ -295,6 +295,23 @@ class Trigger(Base):
     )
 
 
+class TriggerChannel(Base):
+    """Optional per-trigger channel allow-list (many-to-many).
+
+    No rows for a trigger ⇒ deliver to ALL the owner's active channels (default).
+    One or more rows ⇒ deliver only to those channels.
+    """
+
+    __tablename__ = "trigger_channels"
+
+    trigger_id: Mapped[int] = mapped_column(
+        ForeignKey("triggers.id", ondelete="CASCADE"), primary_key=True
+    )
+    channel_id: Mapped[int] = mapped_column(
+        ForeignKey("notification_channels.id", ondelete="CASCADE"), primary_key=True
+    )
+
+
 class TriggerFiring(Base):
     """One row per trigger match. Subject to per-(trigger, aircraft) cooldown."""
 
@@ -331,7 +348,7 @@ class TriggerFiring(Base):
 
 # ---- Notifications ---------------------------------------------------------
 
-CHANNEL_KINDS = ("discord", "email", "webhook", "sms_twilio")
+CHANNEL_KINDS = ("discord", "email", "webhook", "sms_twilio", "vestaboard", "trmnl")
 
 
 class NotificationChannel(Base):

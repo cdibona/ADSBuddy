@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -23,7 +23,14 @@ import httpx
 from app import geocode, settings_store, timefmt, version
 from app.database import get_session
 from app.deps import require_user
-from app.models import NotificationChannel, NotificationDelivery, Trigger, TriggerFiring, User
+from app.models import (
+    NotificationChannel,
+    NotificationDelivery,
+    Trigger,
+    TriggerChannel,
+    TriggerFiring,
+    User,
+)
 
 from app.aircraft_helpers import (
     opensky_url,
@@ -392,6 +399,8 @@ async def trigger_new_form(
             "prefill": prefill,
             "prefill_error": prefill_error,
             "map_center": await _geofence_map_center(db),
+            "channels": await _owner_channels(db, user.id),
+            "selected_channel_ids": [],
         },
     )
 
@@ -422,17 +431,52 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.cooldown_seconds = cooldown if cooldown is not None else 3600
 
 
+async def _owner_channels(db: AsyncSession, user_id: int) -> list[NotificationChannel]:
+    return (
+        await db.execute(
+            select(NotificationChannel)
+            .where(NotificationChannel.user_id == user_id)
+            .order_by(NotificationChannel.kind, NotificationChannel.name)
+        )
+    ).scalars().all()
+
+
+async def _set_trigger_channels(
+    db: AsyncSession, trigger: Trigger, raw_ids: list[str]
+) -> None:
+    """Replace a trigger's channel allow-list. Empty selection = all (no rows).
+
+    Only the owner's own channels are accepted.
+    """
+    await db.execute(delete(TriggerChannel).where(TriggerChannel.trigger_id == trigger.id))
+    valid = {c.id for c in await _owner_channels(db, trigger.owner_id)}
+    chosen = set()
+    for r in raw_ids:
+        try:
+            cid = int(r)
+        except (TypeError, ValueError):
+            continue
+        if cid in valid:
+            chosen.add(cid)
+    for cid in chosen:
+        db.add(TriggerChannel(trigger_id=trigger.id, channel_id=cid))
+
+
 @router.post("/triggers/new")
 async def trigger_new_submit(
     request: Request,
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
-    form = dict(await request.form())
+    raw_form = await request.form()
+    channel_ids = raw_form.getlist("channels")
+    form = dict(raw_form)
     trigger = Trigger(owner_id=user.id, name="")
     _apply_form_to_trigger(trigger, form)
     warning = await _apply_geofence(trigger, form)
     db.add(trigger)
+    await db.commit()
+    await _set_trigger_channels(db, trigger, channel_ids)
     await db.commit()
     resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
     if warning:
@@ -451,6 +495,13 @@ async def trigger_edit_form(
 ):
     trigger = await _load_trigger(db, trigger_id, user)
     route_lookup_enabled = await _get_route_lookup_enabled(db)
+    selected = list(
+        (
+            await db.execute(
+                select(TriggerChannel.channel_id).where(TriggerChannel.trigger_id == trigger.id)
+            )
+        ).scalars()
+    )
     return templates.TemplateResponse(
         request,
         "trigger_form.html",
@@ -463,6 +514,8 @@ async def trigger_edit_form(
             "prefill": {},
             "prefill_error": None,
             "map_center": await _geofence_map_center(db),
+            "channels": await _owner_channels(db, user.id),
+            "selected_channel_ids": selected,
         },
     )
 
@@ -475,9 +528,12 @@ async def trigger_edit_submit(
     db: AsyncSession = Depends(get_session),
 ):
     trigger = await _load_trigger(db, trigger_id, user)
-    form = dict(await request.form())
+    raw_form = await request.form()
+    channel_ids = raw_form.getlist("channels")
+    form = dict(raw_form)
     _apply_form_to_trigger(trigger, form)
     warning = await _apply_geofence(trigger, form)
+    await _set_trigger_channels(db, trigger, channel_ids)
     await db.commit()
     resp = RedirectResponse(url="/triggers", status_code=status.HTTP_303_SEE_OTHER)
     if warning:

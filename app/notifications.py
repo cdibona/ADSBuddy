@@ -24,6 +24,7 @@ from app.models import (
     NotificationChannel,
     NotificationDelivery,
     Trigger,
+    TriggerChannel,
     TriggerFiring,
 )
 from app.settings_store import get as get_setting
@@ -55,12 +56,20 @@ async def twilio_configured(session: AsyncSession) -> bool:
     return bool(sid and token and from_num)
 
 
+async def vestaboard_configured(session: AsyncSession) -> bool:
+    return bool((await get_setting(session, "vestaboard_api_key") or "").strip())
+
+
+async def trmnl_configured(session: AsyncSession) -> bool:
+    return bool((await get_setting(session, "trmnl_webhook_url") or "").strip())
+
+
 async def available_channel_kinds(session: AsyncSession) -> list[str]:
     """Channel kinds a user can actually use right now.
 
     Discord and generic webhooks need no admin setup, so they're always offered.
-    Email and Twilio SMS depend on admin transport config, so they appear only
-    once SMTP / Twilio are set up.
+    Email, Twilio SMS, Vestaboard, and TRMNL depend on admin transport config,
+    so they appear only once their transport is set up.
     """
     avail: list[str] = []
     for kind in CHANNEL_KINDS:
@@ -69,6 +78,10 @@ async def available_channel_kinds(session: AsyncSession) -> list[str]:
         elif kind == "email" and await smtp_configured(session):
             avail.append(kind)
         elif kind == "sms_twilio" and await twilio_configured(session):
+            avail.append(kind)
+        elif kind == "vestaboard" and await vestaboard_configured(session):
+            avail.append(kind)
+        elif kind == "trmnl" and await trmnl_configured(session):
             avail.append(kind)
     return avail
 
@@ -375,6 +388,66 @@ async def _record(
     )
 
 
+def _compact_text(trigger: Trigger, firing: TriggerFiring | None) -> str:
+    """Short one-glance message for small displays (Vestaboard ~132 chars)."""
+    if firing is None:
+        return f"ADSBuddy test: {trigger.name}"[:132]
+    ident = firing.registration or firing.icao_hex
+    parts = [trigger.name, ident or "?"]
+    if firing.callsign:
+        parts.append(firing.callsign)
+    if firing.type_code:
+        parts.append(firing.type_code)
+    if firing.altitude_baro is not None:
+        parts.append(f"{firing.altitude_baro}ft")
+    return " ".join(parts)[:132]
+
+
+async def _send_vestaboard(
+    session: AsyncSession,
+    client: httpx.AsyncClient,
+    channel: NotificationChannel,
+    trigger: Trigger,
+    firing: TriggerFiring | None,
+) -> None:
+    key = (await get_setting(session, "vestaboard_api_key") or "").strip()
+    if not key:
+        raise ChannelNotConfigured("Vestaboard not configured (vestaboard_api_key is empty).")
+    resp = await client.post(
+        "https://rw.vestaboard.com/",
+        headers={"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"},
+        json={"text": _compact_text(trigger, firing)},
+        timeout=15.0,
+    )
+    resp.raise_for_status()
+
+
+async def _send_trmnl(
+    session: AsyncSession,
+    client: httpx.AsyncClient,
+    channel: NotificationChannel,
+    trigger: Trigger,
+    firing: TriggerFiring | None,
+) -> None:
+    url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
+    if not url:
+        raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
+    if firing is None:
+        mv = {"trigger": trigger.name, "aircraft": "(test)", "text": _compact_text(trigger, None)}
+    else:
+        mv = {
+            "trigger": trigger.name,
+            "aircraft": firing.registration or firing.icao_hex,
+            "callsign": firing.callsign or "",
+            "type": firing.type_code or "",
+            "altitude": firing.altitude_baro,
+            "time": firing.fired_at.strftime("%Y-%m-%d %H:%M:%S UTC") if firing.fired_at else "",
+            "text": _compact_text(trigger, firing),
+        }
+    resp = await client.post(url, json={"merge_variables": mv}, timeout=15.0)
+    resp.raise_for_status()
+
+
 async def _dispatch_one(
     session: AsyncSession,
     client: httpx.AsyncClient,
@@ -402,6 +475,10 @@ async def _dispatch_one(
             await _send_sms_twilio(
                 session, client, channel, _format_message(trigger, firing, channel)
             )
+        elif channel.kind == "vestaboard":
+            await _send_vestaboard(session, client, channel, trigger, firing)
+        elif channel.kind == "trmnl":
+            await _send_trmnl(session, client, channel, trigger, firing)
         await _record(session, channel, firing, "sent", None, is_test)
         return True
     except ChannelNotConfigured as e:
@@ -456,11 +533,25 @@ async def deliver_for_firings(
     for c in chans:
         by_owner.setdefault(c.user_id, []).append(c)
 
+    # Per-trigger channel allow-lists. A trigger with no rows uses ALL channels.
+    selections: dict[int, set[int]] = {}
+    for tid, cid in (
+        await session.execute(
+            select(TriggerChannel.trigger_id, TriggerChannel.channel_id).where(
+                TriggerChannel.trigger_id.in_(trigger_ids)
+            )
+        )
+    ).all():
+        selections.setdefault(tid, set()).add(cid)
+
     for firing in firings:
         trigger = triggers.get(firing.trigger_id)
         if trigger is None:
             continue
+        allowed = selections.get(trigger.id)
         for channel in by_owner.get(trigger.owner_id, ()):
+            if allowed is not None and channel.id not in allowed:
+                continue
             await _dispatch_one(session, client, channel, trigger, firing, is_test=False)
 
 

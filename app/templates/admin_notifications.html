@@ -35,6 +35,26 @@
 </div>
 
 <div class="detail-card">
+  <h2 class="detail-card-title">
+    Vestaboard
+    {% if vestaboard_ok %}<span class="badge-active">configured</span>{% else %}<span class="badge-paused">not set up</span>{% endif %}
+  </h2>
+  <p class="muted">Powers the <strong>Vestaboard</strong> channel kind — posts a compact firing to a
+  split-flap board via its Read-Write API. One key = one board.</p>
+  {% with settings = vestaboard_settings %}{% include "_settings_list.html" %}{% endwith %}
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">
+    TRMNL
+    {% if trmnl_ok %}<span class="badge-active">configured</span>{% else %}<span class="badge-paused">not set up</span>{% endif %}
+  </h2>
+  <p class="muted">Powers the <strong>TRMNL</strong> channel kind — POSTs firing details to a TRMNL
+  webhook (Private Plugin → Webhook strategy) as <code>merge_variables</code>.</p>
+  {% with settings = trmnl_settings %}{% include "_settings_list.html" %}{% endwith %}
+</div>
+
+<div class="detail-card">
   <h2 class="detail-card-title">Per-user channels</h2>
   <p class="muted">
     Individual destinations (a Discord webhook, an email address, a phone number,

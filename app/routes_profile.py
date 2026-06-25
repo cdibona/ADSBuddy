@@ -37,6 +37,8 @@ CHANNEL_KIND_LABELS = {
     "email": "Email",
     "webhook": "Webhook",
     "sms_twilio": "SMS (Twilio)",
+    "vestaboard": "Vestaboard",
+    "trmnl": "TRMNL",
 }
 
 
@@ -61,6 +63,9 @@ def _build_config(kind: str, form: dict[str, str]) -> dict[str, Any]:
         return cfg
     if kind == "sms_twilio":
         return {"to_phone": _strip(form.get("to_phone"))}
+    if kind in ("vestaboard", "trmnl"):
+        # Destination (API key / webhook URL) is admin-global; no per-channel config.
+        return {}
     raise HTTPException(status_code=400, detail=f"Unknown channel kind: {kind!r}")
 
 

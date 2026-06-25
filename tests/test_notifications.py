@@ -169,7 +169,8 @@ class TestDeliverForFirings:
         channel_rows.scalars.return_value = MagicMock()
         channel_rows.scalars.return_value.all.return_value = [channel]
 
-        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows])
+        sel_rows = MagicMock(); sel_rows.all.return_value = []  # no per-trigger channel allow-list
+        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows, sel_rows])
 
         with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
             self._run(session, client, [firing_a])
@@ -206,7 +207,8 @@ class TestDeliverForFirings:
         channel_rows.scalars.return_value = MagicMock()
         channel_rows.scalars.return_value.all.return_value = [channel]
 
-        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows])
+        sel_rows = MagicMock(); sel_rows.all.return_value = []  # no per-trigger channel allow-list
+        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows, sel_rows])
 
         with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
             self._run(session, client, [firing_bezos, firing_helo])
@@ -254,7 +256,8 @@ class TestDeliverForFirings:
         channel_rows.scalars.return_value = MagicMock()
         channel_rows.scalars.return_value.all.return_value = [channel]
 
-        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows])
+        sel_rows = MagicMock(); sel_rows.all.return_value = []  # no per-trigger channel allow-list
+        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows, sel_rows])
 
         with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
             self._run(session, client, [firing_known, firing_orphan])
@@ -281,7 +284,8 @@ class TestDeliverForFirings:
         channel_rows.scalars.return_value = MagicMock()
         channel_rows.scalars.return_value.all.return_value = []  # no channels
 
-        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows])
+        sel_rows = MagicMock(); sel_rows.all.return_value = []  # no per-trigger channel allow-list
+        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows, sel_rows])
 
         with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
             self._run(session, client, [firing_a])
@@ -300,3 +304,30 @@ class TestDeliverForFirings:
         client.post.assert_not_called()
         # Session queries should also not run
         session.execute.assert_not_called()
+
+
+class TestPerTriggerChannelSelection:
+    def test_selection_excludes_unlisted_channel(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+        import asyncio
+        from app.notifications import deliver_for_firings
+
+        trigger_a = _trigger(1, "Bezos")
+        firing_a = _firing(trigger_id=1)
+        channel = _channel(id=1, user_id=1, kind="discord")
+
+        posts = []
+        client = MagicMock()
+        client.post = AsyncMock(side_effect=lambda *a, **k: posts.append(k) or MagicMock(status_code=204))
+
+        session = AsyncMock(); session.add = MagicMock()
+        trigger_rows = MagicMock(); trigger_rows.scalars.return_value = [trigger_a]
+        channel_rows = MagicMock()
+        channel_rows.scalars.return_value = MagicMock()
+        channel_rows.scalars.return_value.all.return_value = [channel]
+        sel_rows = MagicMock(); sel_rows.all.return_value = [(1, 99)]  # trigger 1 -> only channel 99
+        session.execute = AsyncMock(side_effect=[trigger_rows, channel_rows, sel_rows])
+
+        with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
+            asyncio.run(deliver_for_firings(session, client, [firing_a]))
+        assert posts == []  # channel 1 not in the allow-list -> no delivery

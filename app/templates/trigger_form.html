@@ -186,6 +186,24 @@
     <small class="muted">Same (trigger, aircraft) won't re-fire within this window.</small>
   </label>
 
+  <fieldset>
+    <legend>Notification channels</legend>
+    {% if channels %}
+    <p class="muted">Which of your channels this trigger delivers to.
+    <strong>Leave all unchecked to use every channel</strong> (the default).</p>
+    {% for c in channels %}
+    <label class="checkbox">
+      <input type="checkbox" name="channels" value="{{ c.id }}"
+             {% if c.id in (selected_channel_ids or []) %}checked{% endif %}>
+      {{ c.name }} <span class="muted">({{ c.kind }}{% if not c.is_active %}, inactive{% endif %})</span>
+    </label>
+    {% endfor %}
+    {% else %}
+    <p class="muted">No notification channels yet — add some under
+      <a href="/profile">Profile</a>. Firings are still recorded regardless.</p>
+    {% endif %}
+  </fieldset>
+
   <div class="actions">
     <button type="submit">Save</button>
     <a class="btn-secondary" href="/triggers">Cancel</a>

@@ -46,3 +46,23 @@ def test_admin_notifications_groups_render():
         smtp_ok=True, twilio_ok=False)
     assert "SMTP (email)" in out and "Twilio (SMS)" in out
     assert "configured" in out and "not set up" in out
+
+
+def test_vestaboard_and_trmnl_gated(monkeypatch):
+    from app import notifications
+    _patch_settings(monkeypatch, {})
+    kinds = asyncio.run(notifications.available_channel_kinds(None))
+    assert "vestaboard" not in kinds and "trmnl" not in kinds
+    _patch_settings(monkeypatch, {"vestaboard_api_key": "key", "trmnl_webhook_url": "https://x"})
+    kinds = asyncio.run(notifications.available_channel_kinds(None))
+    assert "vestaboard" in kinds and "trmnl" in kinds
+
+
+def test_compact_text_truncates():
+    import types
+    from app import notifications
+    trig = types.SimpleNamespace(name="X" * 200)
+    firing = types.SimpleNamespace(registration="N1", icao_hex="a", callsign="UAL1",
+                                   type_code="B738", altitude_baro=35000)
+    out = notifications._compact_text(trig, firing)
+    assert len(out) <= 132

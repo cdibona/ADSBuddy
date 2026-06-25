@@ -79,6 +79,24 @@
         <code>twilio_auth_token</code>, <code>twilio_from_number</code>).
       </small>
     </fieldset>
+  {% elif kind == "vestaboard" %}
+    <fieldset>
+      <legend>Vestaboard</legend>
+      <small class="muted">
+        Posts a compact one-line firing to your Vestaboard. The board is set
+        server-side via the <code>vestaboard_api_key</code> in
+        <a href="/admin/notifications">admin notifications</a> — no per-channel config needed.
+      </small>
+    </fieldset>
+  {% elif kind == "trmnl" %}
+    <fieldset>
+      <legend>TRMNL</legend>
+      <small class="muted">
+        POSTs firing details (as <code>merge_variables</code>) to your TRMNL webhook,
+        set server-side via <code>trmnl_webhook_url</code> in
+        <a href="/admin/notifications">admin notifications</a> — no per-channel config needed.
+      </small>
+    </fieldset>
   {% endif %}
 
   <div class="actions">

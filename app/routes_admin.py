@@ -567,8 +567,12 @@ async def admin_notifications(
             "twilio_settings": pick(
                 ["twilio_account_sid", "twilio_auth_token", "twilio_from_number"]
             ),
+            "vestaboard_settings": pick(["vestaboard_api_key"]),
+            "trmnl_settings": pick(["trmnl_webhook_url"]),
             "smtp_ok": await notifications.smtp_configured(db),
             "twilio_ok": await notifications.twilio_configured(db),
+            "vestaboard_ok": await notifications.vestaboard_configured(db),
+            "trmnl_ok": await notifications.trmnl_configured(db),
         },
     )
 
