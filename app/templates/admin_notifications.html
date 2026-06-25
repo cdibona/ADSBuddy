@@ -94,23 +94,13 @@
         <div style="margin:0.4rem 0">
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
         </div>
-<pre id="trmnl-markup" class="code-block">{% raw %}<div class="layout layout--col gap--large">
+<pre id="trmnl-markup" class="code-block">{% raw %}<div class="layout">
   <div class="columns">
     <div class="column">
       <span class="label label--small">{{ trigger }}</span>
-      <span class="value value--xxlarge value--tnums">{{ aircraft }}</span>
+      <span class="value value--large">{{ aircraft }}</span>
       <span class="label">{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if year != "" %} · {{ year }}{% endif %}</span>
-    </div>
-  </div>
-  <div class="columns">
-    <div class="column">
-      <div class="item"><div class="content"><span class="value value--small">{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}</span><span class="label">Altitude</span></div></div>
-    </div>
-    <div class="column">
-      <div class="item"><div class="content"><span class="value value--small">{% if route != "" %}{{ route }}{% else %}—{% endif %}</span><span class="label">Route</span></div></div>
-    </div>
-    <div class="column">
-      <div class="item"><div class="content"><span class="value value--small">{% if callsign != "" %}{{ callsign }}{% else %}—{% endif %}</span><span class="label">Callsign</span></div></div>
+      <span class="description">{% if altitude != "" %}{{ altitude }} ft{% endif %}{% if route != "" %} · {{ route }}{% endif %}{% if callsign != "" %} · {{ callsign }}{% endif %}</span>
     </div>
   </div>
 </div>
