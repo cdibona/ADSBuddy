@@ -77,15 +77,42 @@
   </h2>
   <p class="muted">Powers the <strong>TRMNL</strong> channel kind — POSTs firing details to a TRMNL
   webhook (Private Plugin → Webhook strategy) as <code>merge_variables</code>.</p>
-  <p class="help-note">🖥️ At <a href="https://trmnl.com/login" target="_blank" rel="noopener">trmnl.com ↗</a> →
-  Plugins → add a <strong>Private Plugin</strong> with the <strong>Webhook</strong> strategy, then copy its
-  <strong>Webhook URL</strong> — it ends in the plugin UUID, e.g.
-  <code>https://trmnl.com/api/custom_plugins/&lt;uuid&gt;</code> — into <code>trmnl_webhook_url</code>.
-  Add Full-layout markup using our variables (<code>trigger, aircraft, callsign, type, altitude, time, text</code>);
-  the e-ink screen updates on its own refresh cycle.
-  <a href="https://docs.trmnl.com/go/private-plugins/webhooks" target="_blank" rel="noopener">Webhook docs ↗</a> ·
-  <a href="https://help.trmnl.com/en/articles/9510536-private-plugins" target="_blank" rel="noopener">Plugin help ↗</a></p>
   {% with settings = trmnl_settings %}{% include "_settings_list.html" %}{% endwith %}
+
+  <div class="help-note">
+    <p style="margin-top:0"><strong>One-time setup</strong> (TRMNL has no API to set markup, so this paste is required once):</p>
+    <ol style="margin:0.3rem 0 0.6rem 1.1rem;padding:0">
+      <li><strong>Webhook URL</strong> — at <a href="https://trmnl.com/login" target="_blank" rel="noopener">trmnl.com ↗</a> →
+        Plugins → Private Plugin (Webhook strategy); paste its Webhook URL (ends in the plugin UUID) into
+        <code>trmnl_webhook_url</code> above. ✓ You've done this.</li>
+      <li><strong>Display template</strong> — in that <em>same plugin's settings</em> click <strong>Edit Markup</strong>,
+        paste the block below into the <strong>Full</strong> layout, and Save:
+        <div style="margin:0.4rem 0">
+          <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
+        </div>
+<pre id="trmnl-markup" class="code-block">{% raw %}<div class="view view--full">
+  <div class="layout">
+    <div class="columns">
+      <div class="column">
+        <span class="title">{{ trigger }}</span>
+        <span class="value value--large">{{ aircraft }}</span>
+        <span class="label">{{ type }}{% if callsign != "" %} · {{ callsign }}{% endif %}{% if altitude != "" %} · {{ altitude }} ft{% endif %}</span>
+        <span class="description">{{ text }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="title_bar">
+    <span class="title">ADSBuddy</span>
+    <span class="instance">{{ time }}</span>
+  </div>
+</div>{% endraw %}</pre>
+      </li>
+      <li><strong>Test</strong> — click <em>Send test</em> below, then the e-ink screen updates on its next
+        refresh (press the device button or Force Refresh in TRMNL to see it immediately).</li>
+    </ol>
+    <a href="https://docs.trmnl.com/go/private-plugins/webhooks" target="_blank" rel="noopener">Webhook docs ↗</a> ·
+    <a href="https://help.trmnl.com/en/articles/9510536-private-plugins" target="_blank" rel="noopener">Plugin help ↗</a>
+  </div>
   <form method="post" action="/admin/notifications/test/trmnl" class="purge-bar">
     <button type="submit" class="btn-small">Send test</button>
     <span class="muted">POSTs a sample payload to the webhook now.</span>

@@ -777,3 +777,11 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   margin: 0.5rem 0;
   line-height: 1.5;
 }
+
+/* Copyable template/code block (e.g. TRMNL markup in admin guidance). */
+.code-block {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.6rem 0.75rem; overflow-x: auto; font-family: var(--font-data);
+  font-size: 0.8em; line-height: 1.4; color: var(--ink); white-space: pre; margin: 0;
+}
+.help-note ol li { margin-bottom: 0.4rem; }
