@@ -810,6 +810,17 @@ def _int_setting(raw: str | None, default: int) -> int:
         return default
 
 
+def _human_age(now: datetime, then: datetime | None) -> str:
+    """Combined age like '5d4h6m' / '4h6m' / '6m'."""
+    if then is None:
+        return "?"
+    secs = max(0, int((now - then).total_seconds()))
+    d, rem = divmod(secs, 86400)
+    h, rem = divmod(rem, 3600)
+    m = rem // 60
+    return (f"{d}d" if d else "") + (f"{h}h" if (h or d) else "") + f"{m}m"
+
+
 def _human_ago(now: datetime, then: datetime | None) -> str:
     if then is None:
         return "?"
@@ -869,25 +880,25 @@ async def build_summary(session: AsyncSession) -> dict:
         ).first()
         news = f"Time since last {last[0]}: {_human_ago(now, last[1])}" if last else "No priority events yet"
 
-    # Emergency line: emergency-coded firings in the window.
-    emerg = (
+    # Last alert: most recent emergency-coded firing EVER, with its age. Blank if
+    # there's never been one (no "no emergencies" filler — there isn't room).
+    last_emerg = (
         await session.execute(
             select(TriggerFiring.registration, TriggerFiring.icao_hex, TriggerFiring.squawk, TriggerFiring.fired_at)
-            .where(
-                TriggerFiring.fired_at >= cutoff,
-                or_(TriggerFiring.squawk.in_(list(_EMERGENCY_SQUAWKS)), TriggerFiring.emergency.isnot(None)),
-            )
+            .where(or_(TriggerFiring.squawk.in_(list(_EMERGENCY_SQUAWKS)), TriggerFiring.emergency.isnot(None)))
             .order_by(TriggerFiring.fired_at.desc())
-            .limit(3)
+            .limit(1)
         )
-    ).all()
-    if emerg:
-        emergency = "⚠ " + " · ".join(f"{(r[0] or r[1])} {r[2] or 'EMG'}" for r in emerg[:2])
+    ).first()
+    if last_emerg is not None:
+        ident = (last_emerg[0] or last_emerg[1] or "").strip()
+        sq = last_emerg[2] or "EMG"
+        last_alert = f"Last Alert ({_human_age(now, last_emerg[3])} old): {ident} {sq}".strip()
     else:
-        emergency = "No emergencies"
+        last_alert = ""
 
     return {"count": int(count), "window_minutes": window, "news": news,
-            "emergency": emergency, "breakdown": buckets, "generated_at": now}
+            "last_alert": last_alert, "breakdown": buckets, "generated_at": now}
 
 
 def _breakdown_line(b: dict) -> str:
@@ -902,7 +913,7 @@ def _summary_trmnl_mv(s: dict) -> dict:
         "count": str(s["count"]),
         "window": f"{s['window_minutes']} MIN",
         "news": s["news"],
-        "emergency": s.get("emergency", ""),
+        "last_alert": s.get("last_alert", ""),
         "helicopters": str(b.get("helicopter", 0)),
         "light": str(b.get("light", 0)),
         "jets": str(b.get("private_jet", 0)),
@@ -915,9 +926,9 @@ def _summary_trmnl_mv(s: dict) -> dict:
 
 
 def _summary_vb_matrix(s: dict) -> list[list[int]]:
-    em = s.get("emergency", "")
-    bar = [_VB_RED if (em and not em.lower().startswith("no ")) else _VB_BLUE] * _VB_COLS
-    lines = [f"{s['count']} AIRCRAFT {s['window_minutes']}M", _breakdown_line(s.get("breakdown", {})), s["news"], em]
+    bar = [_VB_BLUE] * _VB_COLS
+    lines = [f"{s['count']} AIRCRAFT {s['window_minutes']}M",
+             _breakdown_line(s.get("breakdown", {})), s["news"], s.get("last_alert", "")]
     return [bar, *(_vb_center(line) for line in lines), bar]
 
 
@@ -933,19 +944,21 @@ def _summary_text(s: dict) -> dict[str, str]:
 
 
 def _summary_discord_embed(s: dict) -> dict:
-    em = s.get("emergency", "")
+    last_alert = s.get("last_alert", "")
     b = s.get("breakdown", {})
     breakdown = (f"🚁 {b.get('helicopter',0)} · 🛩️ {b.get('light',0)} · ✈️ {b.get('private_jet',0)} jets "
                  f"· 📦 {b.get('cargo',0)} cargo · 🌊 {b.get('seaplane',0)} sea · 🛫 {b.get('airliner',0)} airliners")
+    fields = [
+        {"name": "Breakdown", "value": breakdown, "inline": False},
+        {"name": "Special news", "value": s["news"] or "—", "inline": False},
+    ]
+    if last_alert:
+        fields.append({"name": "Alert", "value": last_alert, "inline": False})
     return {
         "title": f"📡 Airspace summary — {s['count']} aircraft",
         "description": f"last {s['window_minutes']} min",
-        "color": 0xED4245 if (em and not em.lower().startswith("no ")) else 0x3BA55D,
-        "fields": [
-            {"name": "Breakdown", "value": breakdown, "inline": False},
-            {"name": "Special news", "value": s["news"] or "—", "inline": False},
-            {"name": "Emergency", "value": em or "—", "inline": False},
-        ],
+        "color": 0x3BA55D,
+        "fields": fields,
         "footer": {"text": "ADSBuddy"},
         "timestamp": s["generated_at"].isoformat(),
     }

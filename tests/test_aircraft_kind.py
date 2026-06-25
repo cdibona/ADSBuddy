@@ -157,3 +157,26 @@ def test_channel_mode_and_interval_parsing():
     assert _summary_interval("7") == 7
     assert _summary_interval("0") == 1      # clamp
     assert _summary_interval("x") == 15
+
+
+def test_human_age_combined():
+    from datetime import datetime, timezone, timedelta
+    from app.notifications import _human_age
+    now = datetime(2026, 6, 25, 12, 0, tzinfo=timezone.utc)
+    assert _human_age(now, now - timedelta(days=5, hours=4, minutes=6)) == "5d4h6m"
+    assert _human_age(now, now - timedelta(hours=4, minutes=6)) == "4h6m"
+    assert _human_age(now, now - timedelta(minutes=6)) == "6m"
+
+
+def test_summary_trmnl_mv_has_breakdown_and_last_alert():
+    from datetime import datetime, timezone
+    from app import notifications as n
+    s = {"count": 88, "window_minutes": 15, "news": "x",
+         "last_alert": "Last Alert (5d4h6m old): N12345 7700",
+         "breakdown": {"helicopter": 4, "light": 24, "private_jet": 13, "cargo": 0,
+                       "seaplane": 2, "airliner": 45, "other": 0},
+         "generated_at": datetime(2026, 6, 25, 16, 49, tzinfo=timezone.utc)}
+    mv = n._summary_trmnl_mv(s)
+    assert mv["count"] == "88" and mv["helicopters"] == "4" and mv["seaplanes"] == "2"
+    assert mv["jets"] == "13" and mv["airliners"] == "45"
+    assert mv["last_alert"].startswith("Last Alert (5d4h6m old)")

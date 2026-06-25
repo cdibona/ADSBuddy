@@ -99,33 +99,30 @@
         </div>
 <details><summary class="muted" style="cursor:pointer;font-size:0.85em">show / hide markup</summary>
 <pre id="trmnl-markup" class="code-block">{% raw %}&lt;div class="layout"&gt;
-  &lt;div class="grid"&gt;
-    &lt;div class="item"&gt;
-      &lt;div class="meta"&gt;&lt;/div&gt;
-      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[12cqw] h--[12cqw]"&gt;&lt;/div&gt;
-      &lt;div class="content"&gt;
-        &lt;span class="value value--xxxlarge value--tnums" data-value-fit="true"&gt;{{ count }}&lt;/span&gt;
-        &lt;span class="label"&gt;aircraft · {{ window }}&lt;/span&gt;
+  &lt;div class="columns"&gt;
+    &lt;div class="column"&gt;
+      &lt;div class="item"&gt;
+        &lt;div class="meta"&gt;&lt;/div&gt;
+        &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[16cqw] h--[16cqw]"&gt;&lt;/div&gt;
+        &lt;div class="content"&gt;
+          &lt;span class="value value--xxxlarge value--tnums" data-value-fit="true"&gt;{{ count }}&lt;/span&gt;
+          &lt;span class="label"&gt;aircraft · {{ window }}&lt;/span&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
     &lt;/div&gt;
-  &lt;/div&gt;
-  &lt;div class="grid"&gt;
-    &lt;div class="item col--span-2"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ helicopters }}&lt;/span&gt;&lt;span class="label"&gt;Heli&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-    &lt;div class="item col--span-2"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ light }}&lt;/span&gt;&lt;span class="label"&gt;Light&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-    &lt;div class="item col--span-3"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ jets }}&lt;/span&gt;&lt;span class="label"&gt;Jets&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-    &lt;div class="item col--span-3"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ cargo }}&lt;/span&gt;&lt;span class="label"&gt;Cargo&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-    &lt;div class="item col--span-2"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ seaplanes }}&lt;/span&gt;&lt;span class="label"&gt;Sea&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-  &lt;/div&gt;
-  &lt;div class="grid"&gt;
-    &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small" data-value-fit="true"&gt;{{ news }}&lt;/span&gt;&lt;span class="label"&gt;Special news&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
-  &lt;/div&gt;
-  &lt;div class="grid"&gt;
-    &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small" data-value-fit="true"&gt;{{ emergency }}&lt;/span&gt;&lt;span class="label"&gt;Emergency&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class="column"&gt;
+      &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small value--tnums"&gt;{{ helicopters }}&lt;/span&gt;&lt;span class="label"&gt;Helicopters&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small value--tnums"&gt;{{ light }}&lt;/span&gt;&lt;span class="label"&gt;Light planes&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small value--tnums"&gt;{{ jets }}&lt;/span&gt;&lt;span class="label"&gt;Private jets&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small value--tnums"&gt;{{ cargo }}&lt;/span&gt;&lt;span class="label"&gt;Cargo&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small value--tnums"&gt;{{ seaplanes }}&lt;/span&gt;&lt;span class="label"&gt;Seaplanes&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small value--tnums"&gt;{{ airliners }}&lt;/span&gt;&lt;span class="label"&gt;Airliners&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="title_bar"&gt;
   &lt;img class="image" src="{{ icon_url }}"&gt;
-  &lt;span class="title"&gt;ADSBuddy · Airspace&lt;/span&gt;
+  &lt;span class="title"&gt;{{ last_alert }}&lt;/span&gt;
   &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
 &lt;/div&gt;{% endraw %}</pre>
 </details>
@@ -140,15 +137,15 @@
         </div>
 <details><summary class="muted" style="cursor:pointer;font-size:0.85em">show / hide sample data</summary>
 <pre id="trmnl-sample" class="code-block">{
-  "count": "47",
+  "count": "88",
   "window": "15 MIN",
-  "helicopters": "3",
-  "light": "8",
-  "jets": "5",
-  "cargo": "2",
-  "seaplanes": "1",
-  "news": "Likely Lifeflight 4m ago",
-  "emergency": "No emergencies",
+  "helicopters": "4",
+  "light": "24",
+  "jets": "13",
+  "cargo": "0",
+  "seaplanes": "2",
+  "airliners": "45",
+  "last_alert": "Last Alert (5d4h6m old): N12345 7700",
   "time": "16:49 UTC",
   "icon_url": "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f4e1.svg"
 }</pre>
