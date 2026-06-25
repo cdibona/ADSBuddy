@@ -14,6 +14,14 @@
   <a href="/firings?since=7d" class="chip{% if since == '7d' %} chip-on{% endif %}">Last 7 days</a>
 </div>
 
+{% if paused_firings_count %}
+<form method="post" action="/firings/purge-paused" class="purge-bar"
+      onsubmit="return confirm('Permanently delete {{ paused_firings_count }} firing(s) from paused triggers? This cannot be undone.');">
+  <button type="submit" class="btn-small danger">Purge {{ "{:,}".format(paused_firings_count) }} firing{{ "s" if paused_firings_count != 1 else "" }} from paused triggers</button>
+  <span class="muted">Clears leftover firings whose trigger is currently paused.</span>
+</form>
+{% endif %}
+
 <p class="muted">
   {% if total %}
     {{ start }}–{{ end }} of {{ total }} firing{{ "s" if total != 1 else "" }}, newest first.

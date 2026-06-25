@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -488,6 +488,38 @@ async def trigger_delete(
     return resp
 
 
+def _paused_firings_filter(stmt, user: User):
+    """Scope a firings query to firings whose trigger is currently paused
+    (and, for non-admins, owned by the user)."""
+    stmt = stmt.join(Trigger, Trigger.id == TriggerFiring.trigger_id).where(
+        Trigger.is_active.is_(False)
+    )
+    if not user.is_admin:
+        stmt = stmt.where(Trigger.owner_id == user.id)
+    return stmt
+
+
+@router.post("/firings/purge-paused")
+async def purge_paused_firings(
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_session),
+):
+    """Delete leftover firings whose trigger is currently paused. Batched.
+    Deliveries point at firings via ON DELETE SET NULL, so they're untouched."""
+    id_stmt = _paused_firings_filter(select(TriggerFiring.id), user).limit(5000)
+    total = 0
+    while True:
+        ids = (await db.execute(id_stmt)).scalars().all()
+        if not ids:
+            break
+        res = await db.execute(delete(TriggerFiring).where(TriggerFiring.id.in_(ids)))
+        total += res.rowcount
+        await db.commit()
+    resp = RedirectResponse(url="/firings", status_code=status.HTTP_303_SEE_OTHER)
+    _set_flash(resp, "success", f"Purged {total:,} firing(s) from paused triggers.")
+    return resp
+
+
 @router.get("/firings", response_class=HTMLResponse)
 async def firings_list(
     request: Request,
@@ -581,6 +613,11 @@ async def firings_list(
             if f.id not in delivery_status and t.owner_id not in owners_with_channels:
                 delivery_status[f.id] = "na"
 
+    # Count of leftover firings from paused triggers (drives the purge button).
+    paused_firings_count: int = (
+        await db.execute(_paused_firings_filter(select(func.count(TriggerFiring.id)), user))
+    ).scalar_one()
+
     flash = _pop_flash(request)
     response = templates.TemplateResponse(
         request,
@@ -588,6 +625,7 @@ async def firings_list(
         {
             "user": user,
             "rows": rows,
+            "paused_firings_count": paused_firings_count,
             "delivery_status": delivery_status,
             "total": total,
             "page": page,
