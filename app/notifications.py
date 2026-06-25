@@ -746,8 +746,17 @@ async def deliver_for_firings(
         if trigger is None:
             continue
         allowed = selections.get(trigger.id)
-        for channel in by_owner.get(trigger.owner_id, ()):
-            if allowed is not None and channel.id not in allowed:
+        owner_channels = by_owner.get(trigger.owner_id, ())
+        # Smart default when there's no explicit allow-list: deliver to Discord
+        # only if the owner has a Discord channel (so high-volume triggers don't
+        # blast the physical/limited outputs); otherwise fall back to all
+        # channels so users without Discord aren't silently muted.
+        default_discord_only = allowed is None and any(c.kind == "discord" for c in owner_channels)
+        for channel in owner_channels:
+            if allowed is not None:
+                if channel.id not in allowed:
+                    continue
+            elif default_discord_only and channel.kind != "discord":
                 continue
             await _dispatch_one(session, client, channel, trigger, firing, is_test=False)
 

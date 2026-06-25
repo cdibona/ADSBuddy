@@ -332,3 +332,63 @@ class TestPerTriggerChannelSelection:
         with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
             asyncio.run(deliver_for_firings(session, client, [firing_a]))
         assert posts == []  # channel 1 not in the allow-list -> no delivery
+
+
+class TestDiscordDefaultRouting:
+    def test_no_allowlist_delivers_discord_only(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+        import asyncio
+        from app.notifications import deliver_for_firings
+
+        trig = _trigger(1, "Vintage")
+        firing = _firing(trigger_id=1)
+        discord = _channel(id=1, user_id=1, kind="discord")
+        vesta = _channel(id=2, user_id=1, kind="vestaboard")
+
+        posts = []
+        client = MagicMock()
+        client.post = AsyncMock(side_effect=lambda *a, **k: posts.append(k.get("json")) or MagicMock(status_code=204))
+
+        session = AsyncMock(); session.add = MagicMock()
+        trig_rows = MagicMock(); trig_rows.scalars.return_value = [trig]
+        chan_rows = MagicMock(); chan_rows.scalars.return_value = MagicMock()
+        chan_rows.scalars.return_value.all.return_value = [discord, vesta]
+        sel_rows = MagicMock(); sel_rows.all.return_value = []   # no allow-list
+        session.execute = AsyncMock(side_effect=[trig_rows, chan_rows, sel_rows])
+
+        with patch("app.notifications.get_setting", new=AsyncMock(return_value="true")):
+            asyncio.run(deliver_for_firings(session, client, [firing]))
+        # Only the Discord channel was hit; Vestaboard skipped by default.
+        assert len(posts) == 1
+        assert posts[0].get("embeds") is not None   # discord embed payload
+
+
+class TestDiscordDefaultFallback:
+    def test_owner_without_discord_gets_all_channels(self):
+        from unittest.mock import AsyncMock, MagicMock, patch
+        import asyncio
+        from app.notifications import deliver_for_firings
+
+        trig = _trigger(1, "Admin trig", owner_id=2)
+        firing = _firing(trigger_id=1)
+        email = _channel(id=3, user_id=2, kind="email", name="mail")
+        webhook = SimpleNamespace(id=4, user_id=2, kind="webhook", name="hook",
+                                  config={"url": "https://sink.example.com/hook"})
+
+        posts = []
+        client = MagicMock()
+        client.post = AsyncMock(side_effect=lambda *a, **k: posts.append(k.get("json")) or MagicMock(status_code=204))
+
+        session = AsyncMock(); session.add = MagicMock()
+        trig_rows = MagicMock(); trig_rows.scalars.return_value = [trig]
+        chan_rows = MagicMock(); chan_rows.scalars.return_value = MagicMock()
+        chan_rows.scalars.return_value.all.return_value = [email, webhook]
+        sel_rows = MagicMock(); sel_rows.all.return_value = []
+        session.execute = AsyncMock(side_effect=[trig_rows, chan_rows, sel_rows])
+
+        async def fake_get(s, key): return "" if key.startswith("smtp") else "true"
+        with patch("app.notifications.get_setting", new=AsyncMock(side_effect=fake_get)):
+            asyncio.run(deliver_for_firings(session, client, [firing]))
+        # No Discord -> both non-discord channels still attempted (webhook posts;
+        # email is skipped only because SMTP isn't configured, not by routing).
+        assert len(posts) >= 1   # webhook delivered (not muted by the discord default)

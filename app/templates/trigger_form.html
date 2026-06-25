@@ -189,8 +189,9 @@
   <fieldset>
     <legend>Notification channels</legend>
     {% if channels %}
-    <p class="muted">Which of your channels this trigger delivers to.
-    <strong>Leave all unchecked to use every channel</strong> (the default).</p>
+    <p class="muted"><strong>Leave all unchecked for the default — your Discord channel(s) only.</strong>
+    To opt this trigger into other outputs (Vestaboard, email, TRMNL, …), check exactly the channels it
+    should use (include Discord if you still want it there).</p>
     {% for c in channels %}
     <label class="checkbox">
       <input type="checkbox" name="channels" value="{{ c.id }}"
