@@ -25,7 +25,8 @@
                placeholder="https://discord.com/api/webhooks/.../..."
                value="{{ (channel.config.get('webhook_url') if channel else '') or '' }}">
         <small class="muted">
-          Create one under Server Settings → Integrations → Webhooks in Discord.
+          In Discord: <strong>Server Settings → Integrations → Webhooks → New Webhook → Copy Webhook URL</strong>.
+          <a href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" target="_blank" rel="noopener">Guide ↗</a>
         </small>
       </label>
       <label>Bot display name (optional)

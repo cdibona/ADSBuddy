@@ -22,6 +22,11 @@
   </h2>
   <p class="muted">Powers the <strong>email</strong> channel kind. Until <code>smtp_host</code> is
   set, users aren't offered email channels.</p>
+  <p class="help-note">📧 <strong>Gmail:</strong> host <code>smtp.gmail.com</code>, port <code>587</code>,
+  username = your address, and for <code>smtp_password</code> create an
+  <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password ↗</a>
+  (requires 2-Step Verification — a normal password won't work).
+  <a href="https://support.google.com/mail/answer/185833" target="_blank" rel="noopener">Guide ↗</a></p>
   {% with settings = smtp_settings %}{% include "_settings_list.html" %}{% endwith %}
 </div>
 
@@ -32,6 +37,11 @@
   </h2>
   <p class="muted">Powers the <strong>SMS</strong> channel kind. Needs account SID, auth token,
   and a from-number; until all three are set, users aren't offered SMS channels.</p>
+  <p class="help-note">📱 Find your <strong>Account SID</strong> + <strong>Auth Token</strong> on the
+  <a href="https://console.twilio.com/" target="_blank" rel="noopener">Twilio Console ↗</a> dashboard, and
+  buy/choose a sending number under
+  <a href="https://console.twilio.com/us1/develop/phone-numbers/manage/incoming" target="_blank" rel="noopener">Phone Numbers ↗</a>
+  (E.164 format, e.g. <code>+15551234567</code>).</p>
   {% with settings = twilio_settings %}{% include "_settings_list.html" %}{% endwith %}
 </div>
 
@@ -42,6 +52,10 @@
   </h2>
   <p class="muted">Powers the <strong>Vestaboard</strong> channel kind — posts a compact firing to a
   split-flap board via its Read-Write API. One key = one board.</p>
+  <p class="help-note">🔑 At <a href="https://web.vestaboard.com/" target="_blank" rel="noopener">web.vestaboard.com ↗</a>
+  open the <strong>API</strong> tab (Developer / Settings), toggle the Read-Write API to enabled, and copy the
+  key into <code>vestaboard_api_key</code> (shown once — save it).
+  <a href="https://docs.vestaboard.com/docs/read-write-api/introduction/" target="_blank" rel="noopener">Docs ↗</a></p>
   {% with settings = vestaboard_settings %}{% include "_settings_list.html" %}{% endwith %}
   <form method="post" action="/admin/notifications/test/vestaboard" class="purge-bar">
     <button type="submit" class="btn-small">Send test</button>
@@ -63,6 +77,14 @@
   </h2>
   <p class="muted">Powers the <strong>TRMNL</strong> channel kind — POSTs firing details to a TRMNL
   webhook (Private Plugin → Webhook strategy) as <code>merge_variables</code>.</p>
+  <p class="help-note">🖥️ At <a href="https://trmnl.com/login" target="_blank" rel="noopener">trmnl.com ↗</a> →
+  Plugins → add a <strong>Private Plugin</strong> with the <strong>Webhook</strong> strategy, then copy its
+  <strong>Webhook URL</strong> — it ends in the plugin UUID, e.g.
+  <code>https://trmnl.com/api/custom_plugins/&lt;uuid&gt;</code> — into <code>trmnl_webhook_url</code>.
+  Add Full-layout markup using our variables (<code>trigger, aircraft, callsign, type, altitude, time, text</code>);
+  the e-ink screen updates on its own refresh cycle.
+  <a href="https://docs.trmnl.com/go/private-plugins/webhooks" target="_blank" rel="noopener">Webhook docs ↗</a> ·
+  <a href="https://help.trmnl.com/en/articles/9510536-private-plugins" target="_blank" rel="noopener">Plugin help ↗</a></p>
   {% with settings = trmnl_settings %}{% include "_settings_list.html" %}{% endwith %}
   <form method="post" action="/admin/notifications/test/trmnl" class="purge-bar">
     <button type="submit" class="btn-small">Send test</button>
