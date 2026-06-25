@@ -110,13 +110,17 @@
     &lt;/div&gt;
   &lt;/div&gt;
   &lt;div class="grid"&gt;
-    &lt;div class="item"&gt;
-      &lt;div class="meta"&gt;&lt;/div&gt;
-      &lt;div class="content"&gt;
-        &lt;span class="value value--small" data-value-fit="true"&gt;{{ news }}&lt;/span&gt;
-        &lt;span class="label"&gt;Special news&lt;/span&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
+    &lt;div class="item col--span-2"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ helicopters }}&lt;/span&gt;&lt;span class="label"&gt;Heli&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class="item col--span-2"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ light }}&lt;/span&gt;&lt;span class="label"&gt;Light&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class="item col--span-3"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ jets }}&lt;/span&gt;&lt;span class="label"&gt;Jets&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class="item col--span-3"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ cargo }}&lt;/span&gt;&lt;span class="label"&gt;Cargo&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;div class="item col--span-2"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--tnums" data-value-fit="true"&gt;{{ seaplanes }}&lt;/span&gt;&lt;span class="label"&gt;Sea&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small" data-value-fit="true"&gt;{{ news }}&lt;/span&gt;&lt;span class="label"&gt;Special news&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;&lt;div class="meta"&gt;&lt;/div&gt;&lt;div class="content"&gt;&lt;span class="value value--small" data-value-fit="true"&gt;{{ emergency }}&lt;/span&gt;&lt;span class="label"&gt;Emergency&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;div class="title_bar"&gt;
@@ -138,7 +142,13 @@
 <pre id="trmnl-sample" class="code-block">{
   "count": "47",
   "window": "15 MIN",
-  "news": "Likely Lifeflight 4m ago · Emergency squawk 38m ago",
+  "helicopters": "3",
+  "light": "8",
+  "jets": "5",
+  "cargo": "2",
+  "seaplanes": "1",
+  "news": "Likely Lifeflight 4m ago",
+  "emergency": "No emergencies",
   "time": "16:49 UTC",
   "icon_url": "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u1f4e1.svg"
 }</pre>
@@ -166,10 +176,12 @@
 
 <div class="detail-card">
   <h2 class="detail-card-title">Airspace summary</h2>
-  <p class="muted">A periodic global digest pushed to TRMNL/Vestaboard: the aircraft count over the
-  window plus a “special news” line built from triggers you mark <em>Include in the airspace summary</em>.
-  If none of those fired within <code>summary_news_lookback_hours</code>, the line falls back to
-  “time since last &lt;trigger&gt;”. Default cadence 15 min (TRMNL's refresh).</p>
+  <p class="muted">A periodic digest: aircraft count + a fun breakdown (helicopters / light / private
+  jets / cargo / seaplanes), a “special news” line from triggers you mark <em>Include in the airspace
+  summary</em> (falling back to “time since last &lt;trigger&gt;” after <code>summary_news_lookback_hours</code>),
+  and an emergency line. <strong>Where it goes &amp; how often is per target now:</strong> create a channel under
+  <a href="/profile">Profile → channels</a>, set its <strong>Mode = Summary</strong>, and pick its cadence
+  (e.g. TRMNL every 7 min). These two settings just shape the <em>content</em>:</p>
   {% if qp.get("summary_msg") is not none %}
   <div class="flash flash-success" role="alert">{{ qp.get("summary_msg") }}</div>
   {% endif %}

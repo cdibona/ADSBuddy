@@ -46,6 +46,18 @@ def _strip(v: str | None) -> str:
     return (v or "").strip()
 
 
+def _channel_mode(raw: str | None) -> str:
+    v = (raw or "everything").strip().lower()
+    return v if v in ("everything", "emergency", "summary") else "everything"
+
+
+def _summary_interval(raw: str | None) -> int:
+    try:
+        return min(1440, max(1, int((raw or "15").strip())))
+    except ValueError:
+        return 15
+
+
 def _build_config(kind: str, form: dict[str, str]) -> dict[str, Any]:
     if kind == "discord":
         cfg = {"webhook_url": _strip(form.get("webhook_url"))}
@@ -183,6 +195,8 @@ async def channel_new_submit(
         name=name,
         is_active=form.get("is_active") == "true",
         config=_build_config(kind, form),
+        mode=_channel_mode(form.get("mode")),
+        summary_interval_minutes=_summary_interval(form.get("summary_interval_minutes")),
     )
     db.add(channel)
     await db.commit()
@@ -223,6 +237,8 @@ async def channel_edit_submit(
     channel.name = _strip(form.get("name")) or channel.name
     channel.is_active = form.get("is_active") == "true"
     channel.config = _build_config(channel.kind, form)
+    channel.mode = _channel_mode(form.get("mode"))
+    channel.summary_interval_minutes = _summary_interval(form.get("summary_interval_minutes"))
     await db.commit()
     return RedirectResponse(url="/profile", status_code=status.HTTP_303_SEE_OTHER)
 

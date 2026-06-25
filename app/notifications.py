@@ -17,7 +17,7 @@ from typing import Any
 
 import aiosmtplib
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aircraft_helpers import (
@@ -28,6 +28,7 @@ from app.aircraft_helpers import (
     opensky_url,
     registration_provider,
     registration_url,
+    summary_kind,
     type_url,
 )
 from app.models import (
@@ -101,6 +102,10 @@ async def available_channel_kinds(session: AsyncSession) -> list[str]:
 # ---------- Discord embed --------------------------------------------------
 
 _EMERGENCY_SQUAWKS = {"7500", "7600", "7700"}
+
+
+def _is_emergency(firing: TriggerFiring) -> bool:
+    return bool((getattr(firing, "squawk", None) in _EMERGENCY_SQUAWKS) or getattr(firing, "emergency", None))
 
 
 def _firing_color(trigger: Trigger, firing: TriggerFiring) -> int:
@@ -765,11 +770,19 @@ async def deliver_for_firings(
         # blast the physical/limited outputs); otherwise fall back to all
         # channels so users without Discord aren't silently muted.
         default_discord_only = allowed is None and any(c.kind == "discord" for c in owner_channels)
+        emergency = _is_emergency(firing)
         for channel in owner_channels:
             if allowed is not None:
                 if channel.id not in allowed:
                     continue
             elif default_discord_only and channel.kind != "discord":
+                continue
+            # Target mode: summary channels never get per-firing; emergency
+            # channels only get emergency firings; everything gets all.
+            mode = getattr(channel, "mode", "everything")
+            if mode == "summary":
+                continue
+            if mode == "emergency" and not emergency:
                 continue
             await _dispatch_one(session, client, channel, trigger, firing, is_test=False)
 
@@ -814,11 +827,23 @@ async def build_summary(session: AsyncSession) -> dict:
     now = datetime.now(timezone.utc)
     window = _int_setting(await get_setting(session, "summary_window_minutes"), 15) or 15
     cutoff = now - timedelta(minutes=window)
-    count = (
+
+    # One row per distinct aircraft seen in the window (latest sighting), with the
+    # facts we need to classify it into the fun breakdown buckets.
+    rows = (
         await session.execute(
-            select(func.count(func.distinct(Sighting.icao_hex))).where(Sighting.seen_at >= cutoff)
+            text(
+                "SELECT DISTINCT ON (s.icao_hex) a.type_code, a.owner_op, s.category "
+                "FROM sightings s JOIN aircraft a ON a.icao_hex = s.icao_hex "
+                "WHERE s.seen_at >= :cut ORDER BY s.icao_hex, s.seen_at DESC"
+            ),
+            {"cut": cutoff},
         )
-    ).scalar_one()
+    ).all()
+    count = len(rows)
+    buckets = {k: 0 for k in ("helicopter", "seaplane", "light", "private_jet", "cargo", "airliner", "other")}
+    for type_code, owner_op, category in rows:
+        buckets[summary_kind(type_code, category, owner_op)] += 1
 
     lookback_h = _int_setting(await get_setting(session, "summary_news_lookback_hours"), 6) or 6
     recent = (
@@ -844,45 +869,183 @@ async def build_summary(session: AsyncSession) -> dict:
         ).first()
         news = f"Time since last {last[0]}: {_human_ago(now, last[1])}" if last else "No priority events yet"
 
-    return {"count": int(count), "window_minutes": window, "news": news, "generated_at": now}
+    # Emergency line: emergency-coded firings in the window.
+    emerg = (
+        await session.execute(
+            select(TriggerFiring.registration, TriggerFiring.icao_hex, TriggerFiring.squawk, TriggerFiring.fired_at)
+            .where(
+                TriggerFiring.fired_at >= cutoff,
+                or_(TriggerFiring.squawk.in_(list(_EMERGENCY_SQUAWKS)), TriggerFiring.emergency.isnot(None)),
+            )
+            .order_by(TriggerFiring.fired_at.desc())
+            .limit(3)
+        )
+    ).all()
+    if emerg:
+        emergency = "⚠ " + " · ".join(f"{(r[0] or r[1])} {r[2] or 'EMG'}" for r in emerg[:2])
+    else:
+        emergency = "No emergencies"
+
+    return {"count": int(count), "window_minutes": window, "news": news,
+            "emergency": emergency, "breakdown": buckets, "generated_at": now}
+
+
+def _breakdown_line(b: dict) -> str:
+    """Compact breakdown for small displays, e.g. 'HELI 3 LIGHT 5 JET 12 CARGO 2 SEA 1'."""
+    return (f"HELI {b.get('helicopter',0)}  LIGHT {b.get('light',0)}  JET {b.get('private_jet',0)}"
+            f"  CARGO {b.get('cargo',0)}  SEA {b.get('seaplane',0)}")
 
 
 def _summary_trmnl_mv(s: dict) -> dict:
+    b = s.get("breakdown", {})
     return {
         "count": str(s["count"]),
         "window": f"{s['window_minutes']} MIN",
         "news": s["news"],
+        "emergency": s.get("emergency", ""),
+        "helicopters": str(b.get("helicopter", 0)),
+        "light": str(b.get("light", 0)),
+        "jets": str(b.get("private_jet", 0)),
+        "cargo": str(b.get("cargo", 0)),
+        "seaplanes": str(b.get("seaplane", 0)),
+        "airliners": str(b.get("airliner", 0)),
         "time": s["generated_at"].strftime("%H:%M UTC"),
         "icon_url": _SUMMARY_ICON,
     }
 
 
 def _summary_vb_matrix(s: dict) -> list[list[int]]:
-    bar = [_VB_BLUE] * _VB_COLS
-    lines = ["AIRSPACE", f"{s['count']} AIRCRAFT", f"LAST {s['window_minutes']} MIN", s["news"]]
+    em = s.get("emergency", "")
+    bar = [_VB_RED if (em and not em.lower().startswith("no ")) else _VB_BLUE] * _VB_COLS
+    lines = [f"{s['count']} AIRCRAFT {s['window_minutes']}M", _breakdown_line(s.get("breakdown", {})), s["news"], em]
     return [bar, *(_vb_center(line) for line in lines), bar]
 
 
-async def run_summary(session: AsyncSession, client: httpx.AsyncClient) -> tuple[dict, list[str]]:
-    """Build the summary and push it to the enabled, configured transports.
-    Returns (summary, list-of-transports-sent)."""
-    summary = await build_summary(session)
-    sent: list[str] = []
-    to_trmnl = ((await get_setting(session, "summary_to_trmnl")) or "true").lower() == "true"
-    to_vb = ((await get_setting(session, "summary_to_vestaboard")) or "false").lower() == "true"
+def _summary_text(s: dict) -> dict[str, str]:
+    return {
+        "subject": f"[ADSBuddy] Airspace summary — {s['count']} aircraft",
+        "text": (
+            f"Airspace summary\n{s['count']} aircraft in last {s['window_minutes']} min\n"
+            f"News: {s['news']}\nEmergency: {s.get('emergency', '')}\n"
+            f"At: {s['generated_at'].strftime('%Y-%m-%d %H:%M:%S UTC')}"
+        ),
+    }
 
-    if to_trmnl and await trmnl_configured(session):
+
+def _summary_discord_embed(s: dict) -> dict:
+    em = s.get("emergency", "")
+    b = s.get("breakdown", {})
+    breakdown = (f"🚁 {b.get('helicopter',0)} · 🛩️ {b.get('light',0)} · ✈️ {b.get('private_jet',0)} jets "
+                 f"· 📦 {b.get('cargo',0)} cargo · 🌊 {b.get('seaplane',0)} sea · 🛫 {b.get('airliner',0)} airliners")
+    return {
+        "title": f"📡 Airspace summary — {s['count']} aircraft",
+        "description": f"last {s['window_minutes']} min",
+        "color": 0xED4245 if (em and not em.lower().startswith("no ")) else 0x3BA55D,
+        "fields": [
+            {"name": "Breakdown", "value": breakdown, "inline": False},
+            {"name": "Special news", "value": s["news"] or "—", "inline": False},
+            {"name": "Emergency", "value": em or "—", "inline": False},
+        ],
+        "footer": {"text": "ADSBuddy"},
+        "timestamp": s["generated_at"].isoformat(),
+    }
+
+
+async def send_summary_to_channel(
+    session: AsyncSession, client: httpx.AsyncClient, channel: NotificationChannel, summary: dict
+) -> None:
+    """Render + push the summary to one channel via its own transport."""
+    kind = channel.kind
+    if kind == "trmnl":
         url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
+        if not url:
+            raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
         resp = await client.post(url, json={"merge_variables": _summary_trmnl_mv(summary)}, timeout=15.0)
         resp.raise_for_status()
-        sent.append("TRMNL")
-    if to_vb and await vestaboard_configured(session):
+    elif kind == "vestaboard":
         key = (await get_setting(session, "vestaboard_api_key") or "").strip()
+        if not key:
+            raise ChannelNotConfigured("Vestaboard not configured (vestaboard_api_key is empty).")
         resp = await client.post(
             "https://rw.vestaboard.com/",
             headers={"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"},
             json={"characters": _summary_vb_matrix(summary)}, timeout=15.0,
         )
         resp.raise_for_status()
-        sent.append("Vestaboard")
+    elif kind == "discord":
+        url = (channel.config or {}).get("webhook_url")
+        if not url:
+            raise ChannelNotConfigured("Discord channel is missing 'webhook_url' in config.")
+        body = {"username": (channel.config or {}).get("username") or "ADSBuddy",
+                "embeds": [_summary_discord_embed(summary)]}
+        resp = await client.post(url, json=body, timeout=_HTTP_TIMEOUT)
+        if resp.status_code >= 300:
+            raise RuntimeError(f"Discord webhook returned {resp.status_code}")
+    elif kind == "webhook":
+        url = (channel.config or {}).get("url")
+        if not url:
+            raise ChannelNotConfigured("Webhook channel is missing 'url' in config.")
+        headers = {}
+        if (channel.config or {}).get("auth_header"):
+            headers["Authorization"] = channel.config["auth_header"]
+        resp = await client.post(url, json={"summary": {**summary, "generated_at": summary["generated_at"].isoformat()}},
+                                 headers=headers, timeout=_HTTP_TIMEOUT)
+        if resp.status_code >= 300:
+            raise RuntimeError(f"Webhook returned {resp.status_code}")
+    elif kind == "email":
+        await _send_email(session, channel, _summary_text(summary), trigger=None, firing=None)
+    elif kind == "sms_twilio":
+        await _send_sms_twilio(session, client, channel, _summary_text(summary))
+    else:
+        raise ChannelNotConfigured(f"Summary not supported for kind {kind!r}")
+
+
+async def _active_summary_channels(session: AsyncSession) -> list[NotificationChannel]:
+    return (
+        await session.execute(
+            select(NotificationChannel).where(
+                NotificationChannel.mode == "summary", NotificationChannel.is_active.is_(True)
+            )
+        )
+    ).scalars().all()
+
+
+async def deliver_summaries(session: AsyncSession, client: httpx.AsyncClient) -> None:
+    """Push the airspace summary to each summary-mode channel that's due (its own
+    cadence). Caller's session; we commit last_summary_at."""
+    channels = await _active_summary_channels(session)
+    if not channels:
+        return
+    now = datetime.now(timezone.utc)
+    due = [
+        c for c in channels
+        if c.last_summary_at is None
+        or (now - c.last_summary_at).total_seconds() >= max(1, c.summary_interval_minutes) * 60
+    ]
+    if not due:
+        return
+    summary = await build_summary(session)
+    for c in due:
+        try:
+            await send_summary_to_channel(session, client, c, summary)
+            c.last_summary_at = now
+        except Exception:
+            log.warning("Summary push to channel %s (%s) failed.", c.id, c.kind, exc_info=True)
+    await session.commit()
+
+
+async def run_summary(session: AsyncSession, client: httpx.AsyncClient) -> tuple[dict, list[str]]:
+    """Build + push the summary to ALL active summary-mode channels now (admin
+    'Send summary now'). Returns (summary, names-sent)."""
+    summary = await build_summary(session)
+    now = datetime.now(timezone.utc)
+    sent: list[str] = []
+    for c in await _active_summary_channels(session):
+        try:
+            await send_summary_to_channel(session, client, c, summary)
+            c.last_summary_at = now
+            sent.append(f"{c.name} ({c.kind})")
+        except Exception as e:  # noqa: BLE001
+            log.warning("Summary push to %s failed: %s", c.kind, e)
+    await session.commit()
     return summary, sent

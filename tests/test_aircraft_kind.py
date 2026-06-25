@@ -128,3 +128,32 @@ def test_summary_settings_categorized():
     from app.settings_store import setting_category
     assert setting_category("summary_enabled") == "summary"
     assert setting_category("summary_interval_minutes") == "summary"
+
+
+def test_summary_kind_buckets():
+    from app.aircraft_helpers import summary_kind
+    assert summary_kind("EC35", "A7") == "helicopter"
+    assert summary_kind("DHC2", None) == "seaplane"        # Beaver
+    assert summary_kind("C172", "A1") == "light"
+    assert summary_kind("GLF6", "A2") == "private_jet"     # Gulfstream
+    assert summary_kind("B748", "A5", "ATLAS AIR INC") == "cargo"   # operator-based
+    assert summary_kind("B738", "A3", "UNITED") == "airliner"
+    assert summary_kind("ZZZZ", None, None) == "other"
+
+
+def test_is_emergency():
+    import types
+    from app.notifications import _is_emergency
+    assert _is_emergency(types.SimpleNamespace(squawk="7700", emergency=None))
+    assert _is_emergency(types.SimpleNamespace(squawk=None, emergency="general"))
+    assert not _is_emergency(types.SimpleNamespace(squawk="1200", emergency=None))
+
+
+def test_channel_mode_and_interval_parsing():
+    from app.routes_profile import _channel_mode, _summary_interval
+    assert _channel_mode("summary") == "summary"
+    assert _channel_mode("bogus") == "everything"
+    assert _channel_mode(None) == "everything"
+    assert _summary_interval("7") == 7
+    assert _summary_interval("0") == 1      # clamp
+    assert _summary_interval("x") == 15

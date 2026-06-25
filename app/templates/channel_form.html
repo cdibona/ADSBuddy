@@ -17,6 +17,21 @@
   </label>
   <small class="muted">New channels start disabled — fill in the destination below, save, then check Active once it's ready.</small>
 
+  <label>Mode
+    <select name="mode">
+      <option value="everything"{% if not channel or channel.mode == "everything" %} selected{% endif %}>Everything — every firing routed here</option>
+      <option value="emergency"{% if channel and channel.mode == "emergency" %} selected{% endif %}>Emergency only — just 7500/7600/7700 &amp; emergencies</option>
+      <option value="summary"{% if channel and channel.mode == "summary" %} selected{% endif %}>Summary — a periodic airspace digest (no per-firing)</option>
+    </select>
+    <small class="muted">A <strong>summary</strong> target (e.g. a TRMNL display) gets a rolling airspace digest on its own timing below, with a special-news + emergency line.</small>
+  </label>
+
+  <label>Summary every (minutes)
+    <input type="number" name="summary_interval_minutes" min="1" max="1440"
+           value="{{ channel.summary_interval_minutes if channel else 15 }}">
+    <small class="muted">Only used in Summary mode. e.g. 7 = a fresh digest every 7 minutes.</small>
+  </label>
+
   {% if kind == "discord" %}
     <fieldset>
       <legend>Discord</legend>

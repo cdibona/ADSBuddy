@@ -63,6 +63,45 @@ def kind_icon_url(type_code: str | None, category: str | None = None) -> str:
     return _NOTO.format(_KIND_ICON_CODE[aircraft_kind(type_code, category)])
 
 
+# Finer buckets for the airspace-summary breakdown (best-effort — ADS-B can't be
+# exact). Owner/operator strings drive cargo detection; type-code prefixes drive
+# the business-jet vs airliner split.
+_SEAPLANE_TYPES = frozenset({"DHC2", "DHC3", "DHC6", "PC6", "C185", "C180", "BE18", "SBSO"})
+_CARGO_OPERATORS = (
+    "FEDEX", "UPS", " CARGO", "ATLAS AIR", "DHL", "KALITTA", "ABX", "POLAR",
+    "AMAZON", "PRIME AIR", "CARGOLUX", "NIPPON CARGO", "WESTERN GLOBAL", "FREIGHT",
+)
+_BIZJET_PREFIXES = (
+    "GLF", "GALX", "GLEX", "GL5", "GL7", "CL30", "CL35", "CL60", "CL64", "C25",
+    "C500", "C510", "C525", "C550", "C560", "C56", "C650", "C680", "C68", "C700",
+    "C750", "LJ", "E55P", "E50P", "E545", "E550", "FA", "F2TH", "F900", "H25",
+    "HA4T", "BE40", "PRM1", "BD10", "BD70", "PC24",
+)
+
+
+def summary_kind(type_code: str | None, category: str | None = None, owner_op: str | None = None) -> str:
+    """Finer kind for the summary: helicopter / seaplane / light / private_jet /
+    cargo / airliner / other. Best-effort from category, type code, and operator."""
+    cat = (category or "").strip().upper()
+    tc = (type_code or "").strip().upper()
+    own = (owner_op or "").strip().upper()
+    if cat == "A7" or tc in _HELI_TYPES:
+        return "helicopter"
+    if tc in _SEAPLANE_TYPES:
+        return "seaplane"
+    if own and any(op in own for op in _CARGO_OPERATORS):
+        return "cargo"
+    if cat == "A1" or tc in _LIGHT_TYPES:
+        return "light"
+    if any(tc.startswith(p) for p in _BIZJET_PREFIXES):
+        return "private_jet"
+    if cat in ("A3", "A4", "A5"):
+        return "airliner"
+    if cat in ("A2", "A6"):
+        return "private_jet"
+    return "other"
+
+
 def registration_url(reg: str | None) -> str | None:
     """Return an external registry lookup URL for an aircraft registration.
 

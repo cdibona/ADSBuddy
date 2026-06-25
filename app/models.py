@@ -373,6 +373,13 @@ class NotificationChannel(Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # What this target receives:
+    #   'everything' — every firing routed to it (default)
+    #   'emergency'  — only emergency firings (squawk 7500/7600/7700 or emergency)
+    #   'summary'    — a periodic airspace digest (no per-firing), on its own cadence
+    mode: Mapped[str] = mapped_column(String(16), nullable=False, default="everything")
+    summary_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
+    last_summary_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )

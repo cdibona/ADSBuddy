@@ -569,10 +569,7 @@ async def admin_notifications(
             ),
             "vestaboard_settings": pick(["vestaboard_api_key"]),
             "trmnl_settings": pick(["trmnl_webhook_url"]),
-            "summary_settings": pick([
-                "summary_enabled", "summary_interval_minutes", "summary_window_minutes",
-                "summary_to_trmnl", "summary_to_vestaboard", "summary_news_lookback_hours",
-            ]),
+            "summary_settings": pick(["summary_window_minutes", "summary_news_lookback_hours"]),
             "smtp_ok": await notifications.smtp_configured(db),
             "twilio_ok": await notifications.twilio_configured(db),
             "vestaboard_ok": await notifications.vestaboard_configured(db),

@@ -25,7 +25,6 @@ from app import flight_routes, notifications, triggers as trigger_engine
 from app.database import SessionLocal
 from app.models import Aircraft, NotificationDelivery, RadioSource, Sighting, TriggerFiring
 from app.settings_store import get as get_setting
-from app.settings_store import set_value
 
 log = logging.getLogger(__name__)
 
@@ -544,27 +543,9 @@ async def run_forever(stop_event: asyncio.Event) -> None:
 
 
 async def _maybe_send_summary(client: httpx.AsyncClient) -> None:
-    """Push the periodic airspace summary when enabled and due."""
-    async with SessionLocal() as session:
-        if ((await get_setting(session, "summary_enabled")) or "false").lower() != "true":
-            return
-        try:
-            interval_min = max(1, int((await get_setting(session, "summary_interval_minutes")) or "15"))
-        except ValueError:
-            interval_min = 15
-        now = datetime.now(timezone.utc)
-        last_raw = (await get_setting(session, "summary_last_run")) or ""
-        if last_raw:
-            try:
-                last = datetime.fromisoformat(last_raw)
-                if (now - last).total_seconds() < interval_min * 60:
-                    return
-            except ValueError:
-                pass
-        try:
-            summary, sent = await notifications.run_summary(session, client)
-            await set_value(session, "summary_last_run", now.isoformat())
-            if sent:
-                log.info("Airspace summary pushed to %s (%d aircraft).", ", ".join(sent), summary["count"])
-        except Exception:
-            log.warning("Airspace summary push failed; will retry next cycle.", exc_info=True)
+    """Push the airspace summary to each summary-mode channel that's due."""
+    try:
+        async with SessionLocal() as session:
+            await notifications.deliver_summaries(session, client)
+    except Exception:
+        log.warning("Airspace summary push failed; will retry next cycle.", exc_info=True)

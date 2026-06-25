@@ -48,7 +48,7 @@ def setting_category(key: str) -> str:
         return "notifications"
     if key in _AUTH_KEYS:
         return "auth"
-    if key in _SUMMARY_KEYS:
+    if key in _SUMMARY_KEYS or key.startswith("summary_"):
         return "summary"
     return "system"
 
