@@ -477,6 +477,7 @@ async def _send_vestaboard(
         timeout=15.0,
     )
     resp.raise_for_status()
+    return resp.status_code
 
 
 async def _send_trmnl(
@@ -521,6 +522,7 @@ async def _send_trmnl(
         }
     resp = await client.post(url, json={"merge_variables": mv}, timeout=15.0)
     resp.raise_for_status()
+    return resp.status_code
 
 
 def _sample_trigger() -> Trigger:
@@ -560,12 +562,13 @@ async def send_transport_test(
     firing = _sample_firing()
     try:
         if kind == "vestaboard":
-            await _send_vestaboard(session, client, None, trigger, firing)
+            code = await _send_vestaboard(session, client, None, trigger, firing)
+            return True, f"Test sent (HTTP {code}) — check the board."
         elif kind == "trmnl":
-            await _send_trmnl(session, client, None, trigger, firing)
+            code = await _send_trmnl(session, client, None, trigger, firing)
+            return True, f"Test sent (HTTP {code}). Reload the TRMNL Edit-Markup page — its preview renders from this push."
         else:
             return False, f"Unknown transport: {kind}"
-        return True, "Test sent."
     except ChannelNotConfigured as e:
         return False, str(e)
     except Exception as e:  # noqa: BLE001

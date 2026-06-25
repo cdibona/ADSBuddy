@@ -63,7 +63,7 @@
   </form>
   {% if qp.get("tested") == "vestaboard" %}
     {% if qp.get("ok") == "1" %}
-    <div class="flash flash-success" role="alert">Vestaboard test sent.</div>
+    <div class="flash flash-success" role="alert">{{ qp.get("msg") or "Vestaboard test sent." }}</div>
     {% else %}
     <div class="flash flash-error" role="alert">Vestaboard test failed: {{ qp.get("msg") }}</div>
     {% endif %}
@@ -109,8 +109,30 @@
   <span class="instance">{{ time }}</span>
 </div>{% endraw %}</pre>
       </li>
-      <li><strong>Test</strong> — click <em>Send test</em> below, then the e-ink screen updates on its next
-        refresh (press the device button or Force Refresh in TRMNL to see it immediately).</li>
+      <li><strong>Make the preview render</strong> — the Edit-Markup preview is blank until TRMNL has
+        data to merge (the <code>{{ "{{ trigger }}" }}</code> fields are empty otherwise). Either click
+        <em>Send test</em> below and reload the editor, or paste this into the editor's
+        <strong>Sample / Preview data</strong> field so it renders right away:
+        <div style="margin:0.4rem 0">
+          <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-sample').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy sample data';},1500);})(this)">Copy sample data</button>
+        </div>
+<pre id="trmnl-sample" class="code-block">{
+  "trigger": "Elon Musk",
+  "aircraft": "N628TS",
+  "callsign": "N628TS",
+  "type": "GLF6",
+  "year": "2015",
+  "altitude": "38000",
+  "route": "KSJC → KPDX",
+  "time": "2026-06-25 16:00 UTC",
+  "kind": "jet",
+  "kind_label": "Jet",
+  "text": "Elon Musk N628TS GLF6 38000ft"
+}</pre>
+        <span class="muted">(The TRMNL console lines "Build: plugins.js …" and "Highcharts not detected" are normal — not errors.)</span>
+      </li>
+      <li><strong>Test on the device</strong> — click <em>Send test</em> below; the e-ink screen updates on its
+        next refresh (press the device button or Force Refresh in TRMNL to see it immediately).</li>
     </ol>
     <a href="https://docs.trmnl.com/go/private-plugins/webhooks" target="_blank" rel="noopener">Webhook docs ↗</a> ·
     <a href="https://help.trmnl.com/en/articles/9510536-private-plugins" target="_blank" rel="noopener">Plugin help ↗</a>
@@ -121,7 +143,7 @@
   </form>
   {% if qp.get("tested") == "trmnl" %}
     {% if qp.get("ok") == "1" %}
-    <div class="flash flash-success" role="alert">TRMNL test sent.</div>
+    <div class="flash flash-success" role="alert">{{ qp.get("msg") or "TRMNL test sent." }}</div>
     {% else %}
     <div class="flash flash-error" role="alert">TRMNL test failed: {{ qp.get("msg") }}</div>
     {% endif %}
