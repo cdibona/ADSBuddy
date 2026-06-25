@@ -604,15 +604,31 @@ def _sample_firing() -> TriggerFiring:
     )
 
 
+async def latest_firing_and_trigger(session: AsyncSession):
+    """The most recent real firing + its trigger, or the synthetic sample if none."""
+    row = (
+        await session.execute(
+            select(TriggerFiring, Trigger)
+            .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .order_by(TriggerFiring.fired_at.desc())
+            .limit(1)
+        )
+    ).first()
+    if row is not None:
+        firing, trigger = row
+        return trigger, firing
+    return _sample_trigger(), _sample_firing()
+
+
 async def send_transport_test(
     session: AsyncSession, client: httpx.AsyncClient, kind: str
 ) -> tuple[bool, str]:
-    """Send a realistic sample firing to an admin-configured transport (vestaboard/trmnl).
+    """Send the most recent real firing to an admin transport (vestaboard/trmnl);
+    falls back to a synthetic sample if nothing has fired yet.
 
     Returns (ok, message) for the admin UI — does not record a delivery row.
     """
-    trigger = _sample_trigger()
-    firing = _sample_firing()
+    trigger, firing = await latest_firing_and_trigger(session)
     try:
         if kind == "vestaboard":
             code = await _send_vestaboard(session, client, None, trigger, firing)
@@ -741,9 +757,7 @@ async def send_test(
     client: httpx.AsyncClient,
     channel: NotificationChannel,
 ) -> bool:
-    """Send a realistic sample firing through one channel. Used by the profile UI."""
-    # Use a stand-in trigger + a fully-populated sample firing so the test looks
-    # like a real alert (rather than a bare "this is a test" line).
-    fake_trigger = _sample_trigger()
-    fake_trigger.owner_id = channel.user_id
-    return await _dispatch_one(session, client, channel, fake_trigger, _sample_firing(), is_test=True)
+    """Send the most recent real firing through one channel (or a synthetic
+    sample if nothing has fired). Used by the profile UI."""
+    trigger, firing = await latest_firing_and_trigger(session)
+    return await _dispatch_one(session, client, channel, trigger, firing, is_test=True)

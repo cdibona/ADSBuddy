@@ -78,6 +78,9 @@ def test_send_transport_test_ok_and_unconfigured(monkeypatch):
     from app import notifications
     from unittest.mock import AsyncMock
 
+    # Don't hit the DB for "most recent firing" in this unit test.
+    monkeypatch.setattr(notifications, "latest_firing_and_trigger",
+                        AsyncMock(return_value=(notifications._sample_trigger(), notifications._sample_firing())))
     # configured -> _send_vestaboard succeeds -> (True, ...)
     monkeypatch.setattr(notifications, "_send_vestaboard", AsyncMock(return_value=None))
     ok, msg = asyncio.run(notifications.send_transport_test(None, None, "vestaboard"))
@@ -128,3 +131,14 @@ def test_sample_firing_is_realistic():
     assert f.registration == "N628TS" and f.type_code == "GLF6" and f.altitude_baro == 38000
     text = notifications._compact_text(notifications._sample_trigger(), f)
     assert "N628TS" in text and "GLF6" in text  # test renders like a real firing
+
+
+def test_latest_firing_falls_back_to_sample():
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock
+    from app import notifications
+    # No firings -> .first() is None -> synthetic sample.
+    res = MagicMock(); res.first.return_value = None
+    session = AsyncMock(); session.execute = AsyncMock(return_value=res)
+    trigger, firing = asyncio.run(notifications.latest_firing_and_trigger(session))
+    assert trigger.name == "ADSBuddy test" and firing.registration == "N628TS"

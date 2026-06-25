@@ -95,50 +95,48 @@
         <div style="margin:0.4rem 0">
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
         </div>
-<pre id="trmnl-markup" class="code-block">{% raw %}&lt;div class="layout layout--col gap--space-between"&gt;
+<details><summary class="muted" style="cursor:pointer;font-size:0.85em">show / hide markup</summary>
+<pre id="trmnl-markup" class="code-block">{% raw %}&lt;div class="layout"&gt;
   &lt;div class="grid"&gt;
     &lt;div class="item"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
-      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[12cqw] h--[12cqw]"&gt;&lt;/div&gt;
+      &lt;div class="icon"&gt;&lt;img src="{{ icon_url }}" class="w--[10cqw] h--[10cqw]"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
-        &lt;span class="value value--xxxlarge value--tnums" data-value-fit="true"&gt;{{ aircraft }}&lt;/span&gt;
+        &lt;span class="value value--xxlarge value--tnums" data-value-fit="true"&gt;{{ aircraft }}&lt;/span&gt;
         &lt;span class="label"&gt;{{ trigger }}{% if kind_label != "" %} · {{ kind_label }}{% endif %}&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
-
-  &lt;div class="divider"&gt;&lt;/div&gt;
-
   &lt;div class="grid"&gt;
-    &lt;div class="item col--span-3"&gt;
+    &lt;div class="item col--span-4"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
-        &lt;span class="value value--large value--tnums" data-value-fit="true"&gt;{% if type != "" %}{{ type }}{% else %}—{% endif %}&lt;/span&gt;
-        &lt;span class="label"&gt;Type{% if year != "" %} · {{ year }}{% endif %}&lt;/span&gt;
+        &lt;span class="value value--small value--tnums" data-value-fit="true"&gt;{% if type != "" %}{{ type }}{% else %}—{% endif %}&lt;/span&gt;
+        &lt;span class="label"&gt;Type&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
-    &lt;div class="item col--span-3"&gt;
+    &lt;div class="item col--span-4"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
-        &lt;span class="value value--large value--tnums" data-value-fit="true"&gt;{% if altitude != "" %}{{ altitude }}{% else %}—{% endif %}&lt;/span&gt;
-        &lt;span class="label"&gt;Altitude (ft)&lt;/span&gt;
+        &lt;span class="value value--small value--tnums" data-value-fit="true"&gt;{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}&lt;/span&gt;
+        &lt;span class="label"&gt;Alt&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
-    &lt;div class="item col--span-6"&gt;
+    &lt;div class="item col--span-4"&gt;
       &lt;div class="meta"&gt;&lt;/div&gt;
       &lt;div class="content"&gt;
-        &lt;span class="value value--large" data-value-fit="true"&gt;{% if route != "" %}{{ route }}{% else %}—{% endif %}&lt;/span&gt;
-        &lt;span class="label"&gt;Route{% if callsign != "" %} · {{ callsign }}{% endif %}&lt;/span&gt;
+        &lt;span class="value value--small" data-value-fit="true"&gt;{% if route != "" %}{{ route }}{% else %}—{% endif %}&lt;/span&gt;
+        &lt;span class="label"&gt;Route&lt;/span&gt;
       &lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
-
 &lt;div class="title_bar"&gt;
   &lt;img class="image" src="{{ icon_url }}"&gt;
   &lt;span class="title"&gt;ADSBuddy · {{ kind_label }}&lt;/span&gt;
   &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
 &lt;/div&gt;{% endraw %}</pre>
+</details>
 
       </li>
       <li><strong>Make the preview render</strong> — the Edit-Markup preview is blank until TRMNL has
@@ -148,6 +146,7 @@
         <div style="margin:0.4rem 0">
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-sample').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy sample data';},1500);})(this)">Copy sample data</button>
         </div>
+<details><summary class="muted" style="cursor:pointer;font-size:0.85em">show / hide sample data</summary>
 <pre id="trmnl-sample" class="code-block">{
   "trigger": "Elon Musk",
   "aircraft": "N628TS",
@@ -162,6 +161,7 @@
   "icon_url": "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/svg/emoji_u2708.svg",
   "text": "Elon Musk N628TS GLF6 38000ft"
 }</pre>
+</details>
         <span class="muted">(The TRMNL console lines "Build: plugins.js …" and "Highcharts not detected" are normal — not errors.)</span>
       </li>
       <li><strong>Test on the device</strong> — click <em>Send test</em> below; the e-ink screen updates on its
