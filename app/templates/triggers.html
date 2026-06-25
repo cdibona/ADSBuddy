@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Triggers — ADSBuddy{% endblock %}
 {% block content %}
+{% set per_page = per_page|default(20) %}
+{% set per_page_options = per_page_options|default([20, 50, 100]) %}
+{% set page = page|default(1) %}
+{% set total_pages = total_pages|default(1) %}
+{% set total = total|default(triggers|length) %}
+{% set start = start|default(1 if triggers else 0) %}
+{% set end = end|default(triggers|length) %}
 <div class="page-head">
   <h1>Triggers</h1>
   <a class="btn" href="/triggers/new">New trigger</a>
@@ -15,9 +22,19 @@
 
 <div class="filter-bar">
   <span class="filter-bar-label">Show</span>
-  <a href="/triggers?status=all" class="chip{% if status == 'all' %} chip-on{% endif %}">All ({{ counts.all }})</a>
-  <a href="/triggers?status=active" class="chip{% if status == 'active' %} chip-on{% endif %}">Active ({{ counts.active }})</a>
-  <a href="/triggers?status=paused" class="chip{% if status == 'paused' %} chip-on{% endif %}">Paused ({{ counts.paused }})</a>
+  <a href="/triggers?status=all&per_page={{ per_page }}" class="chip{% if status == 'all' %} chip-on{% endif %}">All ({{ counts.all }})</a>
+  <a href="/triggers?status=active&per_page={{ per_page }}" class="chip{% if status == 'active' %} chip-on{% endif %}">Active ({{ counts.active }})</a>
+  <a href="/triggers?status=paused&per_page={{ per_page }}" class="chip{% if status == 'paused' %} chip-on{% endif %}">Paused ({{ counts.paused }})</a>
+</div>
+
+<div class="filter-bar">
+  <span class="filter-bar-label">Per page</span>
+  {% for n in per_page_options %}
+  <a href="/triggers?status={{ status }}&per_page={{ n }}" class="chip{% if per_page == n %} chip-on{% endif %}">{{ n }}</a>
+  {% endfor %}
+  <span class="muted" style="margin-left:auto">
+    {% if total %}{{ start }}–{{ end }} of {{ total }}{% else %}0{% endif %} trigger{{ "s" if total != 1 else "" }}
+  </span>
 </div>
 
 <div class="table-scroll">
@@ -79,4 +96,19 @@
   </tbody>
 </table>
 </div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a href="/triggers?status={{ status }}&per_page={{ per_page }}&page={{ page - 1 }}">&larr; Prev</a>
+  {% else %}<span class="disabled">&larr; Prev</span>{% endif %}
+  {% for p in range(1, total_pages + 1) %}
+    {% if p == page %}<span class="pg-current">{{ p }}</span>
+    {% else %}<a href="/triggers?status={{ status }}&per_page={{ per_page }}&page={{ p }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+  {% if page < total_pages %}
+  <a href="/triggers?status={{ status }}&per_page={{ per_page }}&page={{ page + 1 }}">Next &rarr;</a>
+  {% else %}<span class="disabled">Next &rarr;</span>{% endif %}
+</div>
+{% endif %}
 {% endblock %}

@@ -297,14 +297,21 @@ async def _geofence_map_center(db: AsyncSession) -> dict | None:
     return {"lat": lat, "lon": lon}
 
 
+_TRIGGER_PER_PAGE_OPTIONS = (20, 50, 100)
+
+
 @router.get("/triggers", response_class=HTMLResponse)
 async def triggers_list(
     request: Request,
     status_filter: str | None = Query(None, alias="status"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20),
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
     status = _normalize_trigger_status(status_filter)
+    if per_page not in _TRIGGER_PER_PAGE_OPTIONS:
+        per_page = 20
     stmt = (
         select(Trigger)
         .options(selectinload(Trigger.owner))
@@ -322,11 +329,19 @@ async def triggers_list(
         "paused": sum(1 for t in all_triggers if not t.is_active),
     }
     if status == "active":
-        triggers = [t for t in all_triggers if t.is_active]
+        filtered = [t for t in all_triggers if t.is_active]
     elif status == "paused":
-        triggers = [t for t in all_triggers if not t.is_active]
+        filtered = [t for t in all_triggers if not t.is_active]
     else:
-        triggers = list(all_triggers)
+        filtered = list(all_triggers)
+
+    total = len(filtered)
+    total_pages = max(1, math.ceil(total / per_page))
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+    start = offset + 1 if total else 0
+    end = min(offset + per_page, total)
+    triggers = filtered[offset : offset + per_page]
 
     flash = _pop_flash(request)
     response = templates.TemplateResponse(
@@ -338,6 +353,13 @@ async def triggers_list(
             "status": status,
             "counts": counts,
             "flash": flash,
+            "page": page,
+            "per_page": per_page,
+            "per_page_options": _TRIGGER_PER_PAGE_OPTIONS,
+            "total": total,
+            "total_pages": total_pages,
+            "start": start,
+            "end": end,
         },
     )
     if flash:

@@ -245,7 +245,9 @@ class TestFilterBarRendering:
         assert "All (9)" in out
         # The active filter chip is marked.
         assert "chip-on" in out
-        assert 'href="/triggers?status=active"' in out
+        assert 'href="/triggers?status=active&per_page=20"' in out
+        # Per-page chooser is present (20 default / 50 / 100).
+        assert 'href="/triggers?status=active&per_page=50"' in out
 
     def test_firings_filter_bar_and_actions(self, fake_request, admin_user):
         from app.routes_triggers import templates
@@ -323,3 +325,35 @@ class TestGeofencePicker:
     def test_map_without_center_still_renders(self):
         out = self._render(None, None)
         assert 'id="geofence-map"' in out
+
+
+class TestTriggersPagination:
+    def test_pagination_controls_render(self):
+        import types
+        from app.routes_triggers import templates
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/triggers"), query_params={})
+        out = templates.env.get_template("triggers.html").render(
+            request=req, user=types.SimpleNamespace(username="a", is_admin=False),
+            triggers=[], status="all", counts={"all": 66, "active": 66, "paused": 0},
+            flash=None, page=2, per_page=20, per_page_options=(20, 50, 100),
+            total=66, total_pages=4, start=21, end=40)
+        # Per-page chooser
+        assert 'href="/triggers?status=all&per_page=50"' in out
+        assert 'href="/triggers?status=all&per_page=100"' in out
+        # Count line
+        assert "21–40 of 66" in out
+        # Numbered page index with current page marked, prev/next present
+        assert "pg-current" in out
+        assert ">3</a>" in out
+        assert "Prev" in out and "Next" in out
+
+    def test_no_pagination_when_single_page(self):
+        import types
+        from app.routes_triggers import templates
+        req = types.SimpleNamespace(url=types.SimpleNamespace(path="/triggers"), query_params={})
+        out = templates.env.get_template("triggers.html").render(
+            request=req, user=types.SimpleNamespace(username="a", is_admin=False),
+            triggers=[], status="all", counts={"all": 3, "active": 3, "paused": 0},
+            flash=None, page=1, per_page=20, per_page_options=(20, 50, 100),
+            total=3, total_pages=1, start=1, end=3)
+        assert '<div class="pagination">' not in out

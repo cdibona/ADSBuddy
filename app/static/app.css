@@ -268,6 +268,11 @@ td.col-conditions code { overflow-wrap: anywhere; word-break: break-word; }
   background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
   color: var(--muted); cursor: default;
 }
+.pagination .pg-current {
+  padding: 0.3rem 0.65rem;
+  background: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius);
+  color: var(--btn-ink); font-weight: 600;
+}
 .pg-info { color: var(--muted); }
 
 /* ── Focus-visible ─────────────────────────────────────────────────────── */
