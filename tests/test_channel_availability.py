@@ -120,3 +120,11 @@ def test_trmnl_missing_uuid_is_caught(monkeypatch):
     with pytest.raises(notifications.ChannelNotConfigured):
         asyncio.run(notifications._send_trmnl(None, client, None, trig, None))
     client.post.assert_not_called()  # never even attempted the bad URL
+
+
+def test_sample_firing_is_realistic():
+    from app import notifications
+    f = notifications._sample_firing()
+    assert f.registration == "N628TS" and f.type_code == "GLF6" and f.altitude_baro == 38000
+    text = notifications._compact_text(notifications._sample_trigger(), f)
+    assert "N628TS" in text and "GLF6" in text  # test renders like a real firing

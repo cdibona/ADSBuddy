@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import html
 import logging
+from datetime import datetime, timezone
 from email.message import EmailMessage
 from typing import Any
 
@@ -456,21 +457,43 @@ async def _send_trmnl(
     resp.raise_for_status()
 
 
+def _sample_trigger() -> Trigger:
+    return Trigger(id=0, owner_id=0, name="ADSBuddy test", is_active=True, cooldown_seconds=0)
+
+
+def _sample_firing() -> TriggerFiring:
+    """A fully-populated, realistic firing so test sends render like the real thing."""
+    return TriggerFiring(
+        id=0,
+        trigger_id=0,
+        icao_hex="a835af",
+        registration="N628TS",
+        callsign="N628TS",
+        type_code="GLF6",
+        year=2015,
+        altitude_baro=38000,
+        lat=47.4502,
+        lon=-122.3088,
+        origin_icao="KSJC",
+        destination_icao="KPDX",
+        fired_at=datetime.now(timezone.utc),
+    )
+
+
 async def send_transport_test(
     session: AsyncSession, client: httpx.AsyncClient, kind: str
 ) -> tuple[bool, str]:
-    """Send a test straight to an admin-configured transport (vestaboard/trmnl).
+    """Send a realistic sample firing to an admin-configured transport (vestaboard/trmnl).
 
     Returns (ok, message) for the admin UI — does not record a delivery row.
     """
-    import types as _types
-
-    trigger = _types.SimpleNamespace(name="ADSBuddy admin test")
+    trigger = _sample_trigger()
+    firing = _sample_firing()
     try:
         if kind == "vestaboard":
-            await _send_vestaboard(session, client, None, trigger, None)
+            await _send_vestaboard(session, client, None, trigger, firing)
         elif kind == "trmnl":
-            await _send_trmnl(session, client, None, trigger, None)
+            await _send_trmnl(session, client, None, trigger, firing)
         else:
             return False, f"Unknown transport: {kind}"
         return True, "Test sent."
@@ -592,11 +615,9 @@ async def send_test(
     client: httpx.AsyncClient,
     channel: NotificationChannel,
 ) -> bool:
-    """Send a synthetic message through one channel. Used by the profile UI."""
-    # We need a Trigger row to format the message; use a stand-in so we don't
-    # require the user to have an existing trigger before testing the channel.
-    fake_trigger = Trigger(
-        id=0, owner_id=channel.user_id, name="(channel test)",
-        is_active=True, cooldown_seconds=0,
-    )
-    return await _dispatch_one(session, client, channel, fake_trigger, None, is_test=True)
+    """Send a realistic sample firing through one channel. Used by the profile UI."""
+    # Use a stand-in trigger + a fully-populated sample firing so the test looks
+    # like a real alert (rather than a bare "this is a test" line).
+    fake_trigger = _sample_trigger()
+    fake_trigger.owner_id = channel.user_id
+    return await _dispatch_one(session, client, channel, fake_trigger, _sample_firing(), is_test=True)
