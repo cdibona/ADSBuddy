@@ -6,6 +6,7 @@
 </div>
 <p class="muted">Transport config for outgoing alerts. Saved to Postgres; takes effect on next read.</p>
 {% include "_admin_nav.html" %}
+{% set qp = request.query_params if request.query_params else {} %}
 
 <div class="detail-card">
   <h2 class="detail-card-title">Master switch</h2>
@@ -42,6 +43,17 @@
   <p class="muted">Powers the <strong>Vestaboard</strong> channel kind — posts a compact firing to a
   split-flap board via its Read-Write API. One key = one board.</p>
   {% with settings = vestaboard_settings %}{% include "_settings_list.html" %}{% endwith %}
+  <form method="post" action="/admin/notifications/test/vestaboard" class="purge-bar">
+    <button type="submit" class="btn-small">Send test</button>
+    <span class="muted">Pushes a sample message to the board now.</span>
+  </form>
+  {% if qp.get("tested") == "vestaboard" %}
+    {% if qp.get("ok") == "1" %}
+    <div class="flash flash-success" role="alert">Vestaboard test sent.</div>
+    {% else %}
+    <div class="flash flash-error" role="alert">Vestaboard test failed: {{ qp.get("msg") }}</div>
+    {% endif %}
+  {% endif %}
 </div>
 
 <div class="detail-card">
@@ -52,6 +64,17 @@
   <p class="muted">Powers the <strong>TRMNL</strong> channel kind — POSTs firing details to a TRMNL
   webhook (Private Plugin → Webhook strategy) as <code>merge_variables</code>.</p>
   {% with settings = trmnl_settings %}{% include "_settings_list.html" %}{% endwith %}
+  <form method="post" action="/admin/notifications/test/trmnl" class="purge-bar">
+    <button type="submit" class="btn-small">Send test</button>
+    <span class="muted">POSTs a sample payload to the webhook now.</span>
+  </form>
+  {% if qp.get("tested") == "trmnl" %}
+    {% if qp.get("ok") == "1" %}
+    <div class="flash flash-success" role="alert">TRMNL test sent.</div>
+    {% else %}
+    <div class="flash flash-error" role="alert">TRMNL test failed: {{ qp.get("msg") }}</div>
+    {% endif %}
+  {% endif %}
 </div>
 
 <div class="detail-card">

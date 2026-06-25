@@ -448,6 +448,30 @@ async def _send_trmnl(
     resp.raise_for_status()
 
 
+async def send_transport_test(
+    session: AsyncSession, client: httpx.AsyncClient, kind: str
+) -> tuple[bool, str]:
+    """Send a test straight to an admin-configured transport (vestaboard/trmnl).
+
+    Returns (ok, message) for the admin UI — does not record a delivery row.
+    """
+    import types as _types
+
+    trigger = _types.SimpleNamespace(name="ADSBuddy admin test")
+    try:
+        if kind == "vestaboard":
+            await _send_vestaboard(session, client, None, trigger, None)
+        elif kind == "trmnl":
+            await _send_trmnl(session, client, None, trigger, None)
+        else:
+            return False, f"Unknown transport: {kind}"
+        return True, "Test sent."
+    except ChannelNotConfigured as e:
+        return False, str(e)
+    except Exception as e:  # noqa: BLE001
+        return False, f"Failed: {e}"
+
+
 async def _dispatch_one(
     session: AsyncSession,
     client: httpx.AsyncClient,

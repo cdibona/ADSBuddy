@@ -66,3 +66,41 @@ def test_compact_text_truncates():
                                    type_code="B738", altitude_baro=35000)
     out = notifications._compact_text(trig, firing)
     assert len(out) <= 132
+
+
+def test_transport_test_route_registered():
+    from app.routes_admin import router
+    paths = {r.path for r in router.routes if hasattr(r, "path")}
+    assert "/admin/notifications/test/{kind}" in paths
+
+
+def test_send_transport_test_ok_and_unconfigured(monkeypatch):
+    from app import notifications
+    from unittest.mock import AsyncMock
+
+    # configured -> _send_vestaboard succeeds -> (True, ...)
+    monkeypatch.setattr(notifications, "_send_vestaboard", AsyncMock(return_value=None))
+    ok, msg = asyncio.run(notifications.send_transport_test(None, None, "vestaboard"))
+    assert ok and "sent" in msg.lower()
+
+    # not configured -> ChannelNotConfigured -> (False, reason)
+    async def raiser(*a, **k):
+        raise notifications.ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
+    monkeypatch.setattr(notifications, "_send_trmnl", raiser)
+    ok, msg = asyncio.run(notifications.send_transport_test(None, None, "trmnl"))
+    assert not ok and "not configured" in msg
+
+
+def test_admin_notifications_has_test_buttons():
+    import types
+    from app.routes_admin import templates
+    from app.models import Setting
+    req = types.SimpleNamespace(url=types.SimpleNamespace(path="/admin/notifications"))
+    def s(k): return Setting(key=k, value="", description="d", secret=False)
+    out = templates.env.get_template("admin_notifications.html").render(
+        request=req, user=types.SimpleNamespace(username="a", is_admin=True),
+        master_settings=[s("notifications_enabled")], smtp_settings=[], twilio_settings=[],
+        vestaboard_settings=[s("vestaboard_api_key")], trmnl_settings=[s("trmnl_webhook_url")],
+        smtp_ok=False, twilio_ok=False, vestaboard_ok=True, trmnl_ok=False)
+    assert 'action="/admin/notifications/test/vestaboard"' in out
+    assert 'action="/admin/notifications/test/trmnl"' in out

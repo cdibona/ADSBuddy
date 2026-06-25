@@ -577,6 +577,26 @@ async def admin_notifications(
     )
 
 
+@router.post("/notifications/test/{kind}")
+async def admin_notifications_test(
+    kind: str,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Send a test message to an admin-configured transport (Vestaboard / TRMNL)."""
+    if kind not in ("vestaboard", "trmnl"):
+        raise HTTPException(status_code=404)
+    import httpx
+    from urllib.parse import quote
+
+    async with httpx.AsyncClient() as client:
+        ok, msg = await notifications.send_transport_test(db, client, kind)
+    return RedirectResponse(
+        url=f"/admin/notifications?tested={kind}&ok={1 if ok else 0}&msg={quote(msg)}",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @router.get("/sources", response_class=HTMLResponse)
 async def admin_sources(
     request: Request,
