@@ -180,3 +180,12 @@ def test_summary_trmnl_mv_has_breakdown_and_last_alert():
     assert mv["count"] == "88" and mv["helicopters"] == "4" and mv["seaplanes"] == "2"
     assert mv["jets"] == "13" and mv["airliners"] == "45"
     assert mv["last_alert"].startswith("Last Alert (5d4h6m old)")
+
+
+def test_is_emergency_excludes_none_string():
+    import types
+    from app.notifications import _is_emergency
+    assert not _is_emergency(types.SimpleNamespace(squawk="1200", emergency="none"))  # normal
+    assert not _is_emergency(types.SimpleNamespace(squawk="1200", emergency=""))
+    assert _is_emergency(types.SimpleNamespace(squawk="1200", emergency="lifeguard"))
+    assert _is_emergency(types.SimpleNamespace(squawk="7700", emergency="none"))

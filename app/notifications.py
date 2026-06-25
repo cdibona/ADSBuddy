@@ -17,7 +17,7 @@ from typing import Any
 
 import aiosmtplib
 import httpx
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aircraft_helpers import (
@@ -105,7 +105,10 @@ _EMERGENCY_SQUAWKS = {"7500", "7600", "7700"}
 
 
 def _is_emergency(firing: TriggerFiring) -> bool:
-    return bool((getattr(firing, "squawk", None) in _EMERGENCY_SQUAWKS) or getattr(firing, "emergency", None))
+    sq = getattr(firing, "squawk", None)
+    em = getattr(firing, "emergency", None)
+    # ADS-B sends emergency='none' for normal flights — that's not an emergency.
+    return bool(sq in _EMERGENCY_SQUAWKS or (em and str(em).strip().lower() not in ("", "none")))
 
 
 def _firing_color(trigger: Trigger, firing: TriggerFiring) -> int:
@@ -884,16 +887,25 @@ async def build_summary(session: AsyncSession) -> dict:
     # there's never been one (no "no emergencies" filler — there isn't room).
     last_emerg = (
         await session.execute(
-            select(TriggerFiring.registration, TriggerFiring.icao_hex, TriggerFiring.squawk, TriggerFiring.fired_at)
-            .where(or_(TriggerFiring.squawk.in_(list(_EMERGENCY_SQUAWKS)), TriggerFiring.emergency.isnot(None)))
+            select(TriggerFiring.registration, TriggerFiring.icao_hex, TriggerFiring.squawk,
+                   TriggerFiring.emergency, TriggerFiring.fired_at)
+            .where(or_(
+                TriggerFiring.squawk.in_(list(_EMERGENCY_SQUAWKS)),
+                and_(TriggerFiring.emergency.isnot(None), func.lower(TriggerFiring.emergency).notin_(["none", ""])),
+            ))
             .order_by(TriggerFiring.fired_at.desc())
             .limit(1)
         )
     ).first()
     if last_emerg is not None:
-        ident = (last_emerg[0] or last_emerg[1] or "").strip()
-        sq = last_emerg[2] or "EMG"
-        last_alert = f"Last Alert ({_human_age(now, last_emerg[3])} old): {ident} {sq}".strip()
+        reg, hexid, squawk, emer, fired = last_emerg
+        ident = (reg or hexid or "").strip()
+        # Label by the emergency squawk when it's one; else the emergency reason.
+        if squawk in _EMERGENCY_SQUAWKS:
+            tag = squawk
+        else:
+            tag = (str(emer).strip().upper()[:12] if emer and str(emer).strip().lower() != "none" else "EMG")
+        last_alert = f"Last Alert ({_human_age(now, fired)} old): {ident} {tag}".strip()
     else:
         last_alert = ""
 
