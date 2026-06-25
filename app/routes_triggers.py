@@ -187,6 +187,10 @@ def trigger_condition_items(t: Trigger) -> list[tuple[str, str]]:
         items.append(("owner", t.owner_patterns))
     if t.squawk_patterns:
         items.append(("squawk", t.squawk_patterns))
+    if t.categories:
+        items.append(("category", t.categories))
+    if t.min_altitude_ft is not None or t.max_altitude_ft is not None:
+        items.append(("altitude", _range_str(t.min_altitude_ft, t.max_altitude_ft, suffix="ft")))
     if t.min_year is not None or t.max_year is not None:
         items.append(("year", _range_str(t.min_year, t.max_year)))
     if t.min_age_years is not None or t.max_age_years is not None:
@@ -379,6 +383,7 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.type_codes = _strip_or_empty(form.get("type_codes"))
     trigger.owner_patterns = _strip_or_empty(form.get("owner_patterns"))
     trigger.squawk_patterns = _strip_or_empty(form.get("squawk_patterns"))
+    trigger.categories = _strip_or_empty(form.get("categories"))
     trigger.exclude_tail_patterns = _strip_or_empty(form.get("exclude_tail_patterns"))
     trigger.exclude_flight_patterns = _strip_or_empty(form.get("exclude_flight_patterns"))
     trigger.exclude_type_codes = _strip_or_empty(form.get("exclude_type_codes"))
@@ -389,6 +394,8 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.max_year = _int_or_none(form.get("max_year"))
     trigger.min_age_years = _int_or_none(form.get("min_age_years"))
     trigger.max_age_years = _int_or_none(form.get("max_age_years"))
+    trigger.min_altitude_ft = _int_or_none(form.get("min_altitude_ft"))
+    trigger.max_altitude_ft = _int_or_none(form.get("max_altitude_ft"))
     cooldown = _int_or_none(form.get("cooldown_seconds"))
     trigger.cooldown_seconds = cooldown if cooldown is not None else 3600
 

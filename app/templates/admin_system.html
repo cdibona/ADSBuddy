@@ -89,6 +89,23 @@
 </div>
 
 <div class="detail-card">
+  <h2 class="detail-card-title">Firings with failed delivery</h2>
+  <p class="muted">Firings whose notification delivery failed (the "failed" status in the
+  firings list). Purge them to declutter tracking. Irreversible; the delivery log is kept.</p>
+  {% if q.get("failed_purged") is not none %}
+  <div class="flash flash-success" role="alert">Purged {{ "{:,}".format(q.get("failed_purged")|int) }} firing(s) with a failed delivery.</div>
+  {% endif %}
+  {% if failed_firings %}
+  <form method="post" action="/admin/system/purge-failed-firings"
+        onsubmit="return confirm('Permanently delete {{ failed_firings }} firing(s) with a failed delivery?');">
+    <button type="submit" class="btn-small danger">Purge {{ "{:,}".format(failed_firings) }} firing{{ "s" if failed_firings != 1 else "" }} with failed delivery</button>
+  </form>
+  {% else %}
+  <p class="muted">No firings with a failed delivery — nothing to purge.</p>
+  {% endif %}
+</div>
+
+<div class="detail-card">
   <h2 class="detail-card-title">System settings</h2>
   <p class="muted">Runtime config (radio, ingest, storage, retention, site). Saved to Postgres; takes effect on next read.</p>
   {% include "_settings_list.html" %}

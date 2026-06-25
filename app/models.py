@@ -237,6 +237,8 @@ class Trigger(Base):
     type_codes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     owner_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     squawk_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # ADS-B emitter categories (e.g. A7 = rotorcraft/helicopter), CSV.
+    categories: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # Exclusions (NOT): a match also requires NONE of these to match. Same
     # syntax/semantics as the positive fields of the same name.
     exclude_tail_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -250,6 +252,10 @@ class Trigger(Base):
     max_year: Mapped[int | None] = mapped_column(Integer)
     min_age_years: Mapped[int | None] = mapped_column(Integer)
     max_age_years: Mapped[int | None] = mapped_column(Integer)
+
+    # Altitude band (feet, barometric). Aircraft with no altitude don't match.
+    min_altitude_ft: Mapped[int | None] = mapped_column(Integer)
+    max_altitude_ft: Mapped[int | None] = mapped_column(Integer)
 
     # Geofence: fire only when the aircraft is within radius_miles of the center.
     # geofence_center is the raw user input (lat,lon / US ZIP / ICAO airport),

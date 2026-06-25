@@ -40,6 +40,7 @@ def _make_trigger(**kw) -> SimpleNamespace:
         type_codes="",
         owner_patterns="",
         squawk_patterns="",
+        categories="",
         exclude_tail_patterns="",
         exclude_flight_patterns="",
         exclude_type_codes="",
@@ -50,6 +51,8 @@ def _make_trigger(**kw) -> SimpleNamespace:
         max_year=None,
         min_age_years=None,
         max_age_years=None,
+        min_altitude_ft=None,
+        max_altitude_ft=None,
         geofence_center="",
         center_lat=None,
         center_lon=None,
@@ -549,3 +552,37 @@ class TestExclusions:
         # An aircraft with no type can't be excluded by a type exclusion.
         t = _make_trigger(exclude_type_codes="DHC2")
         assert matches(t, _make_facts(type_code=None), NOW_YEAR)
+
+
+class TestCategoryAndAltitude:
+    def test_category_match_helicopter(self):
+        t = _make_trigger(categories="A7")
+        assert matches(t, _make_facts(category="A7"), NOW_YEAR)          # rotorcraft
+        assert not matches(t, _make_facts(category="A3"), NOW_YEAR)      # large fixed-wing
+        assert not matches(t, _make_facts(category=None), NOW_YEAR)      # unknown category
+
+    def test_max_altitude_under_1000(self):
+        t = _make_trigger(max_altitude_ft=1000)
+        assert matches(t, _make_facts(altitude_baro=500), NOW_YEAR)
+        assert matches(t, _make_facts(altitude_baro=1000), NOW_YEAR)     # boundary inclusive
+        assert not matches(t, _make_facts(altitude_baro=1500), NOW_YEAR)
+        assert not matches(t, _make_facts(altitude_baro=None), NOW_YEAR) # no alt -> no match
+
+    def test_min_altitude(self):
+        t = _make_trigger(min_altitude_ft=10000)
+        assert matches(t, _make_facts(altitude_baro=35000), NOW_YEAR)
+        assert not matches(t, _make_facts(altitude_baro=5000), NOW_YEAR)
+
+    def test_helicopter_low_over_geofence(self):
+        # The real "helicopters under 1000ft near 98110" combination.
+        t = _make_trigger(categories="A7", max_altitude_ft=1000,
+                          center_lat=47.6262, center_lon=-122.5215, radius_miles=5,
+                          geofence_center="98110")
+        near = _make_facts(category="A7", altitude_baro=600, lat=47.63, lon=-122.52)
+        far = _make_facts(category="A7", altitude_baro=600, lat=47.0, lon=-122.0)
+        high = _make_facts(category="A7", altitude_baro=4000, lat=47.63, lon=-122.52)
+        plane = _make_facts(category="A3", altitude_baro=600, lat=47.63, lon=-122.52)
+        assert matches(t, near, NOW_YEAR)
+        assert not matches(t, far, NOW_YEAR)     # outside radius
+        assert not matches(t, high, NOW_YEAR)    # too high
+        assert not matches(t, plane, NOW_YEAR)   # not a helicopter

@@ -283,6 +283,11 @@ class TestExternalLinkLabels:
             request=req, user=types.SimpleNamespace(username="a", is_admin=True),
             aircraft=[ac], type_active=None, common_types=[])
         assert "↗" not in out          # the weird arrow is gone
-        assert ">FAA</a>" in out             # provider-labeled registry link
-        assert ">Wikipedia</a>" in out
-        assert ">OpenSky</a>" in out
+        # Registration text itself links to the FAA registry (no separate chip).
+        assert "registry.faa.gov" in out
+        assert ">N424LF</a>" in out
+        # Type code text itself links to Wikipedia (no separate chip).
+        assert "wikipedia.org" in out
+        assert ">B407</a>" in out
+        # OpenSky moved to the detail page only — not on the recent list.
+        assert "opensky" not in out.lower()

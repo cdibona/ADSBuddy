@@ -232,7 +232,9 @@ def opensky_url(icao_hex: str | None) -> str | None:
     """
     if not icao_hex:
         return None
-    icao_hex = icao_hex.strip().lower()
+    # TIS-B / ADS-R targets carry a synthetic '~'-prefixed address with no real
+    # ICAO 24-bit registration, so OpenSky has no profile for them.
+    icao_hex = icao_hex.strip().lower().lstrip("~")
     if not icao_hex:
         return None
     return f"https://opensky-network.org/aircraft-profile?icao24={icao_hex}"

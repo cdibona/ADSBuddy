@@ -38,6 +38,7 @@ class AircraftFacts:
     altitude_baro: int | None
     origin_icao: str | None
     destination_icao: str | None
+    category: str | None = None  # ADS-B emitter category, e.g. A7 = rotorcraft
 
 
 def _csv(field: str | None) -> list[str]:
@@ -134,6 +135,15 @@ def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
     if not _any_exact(_csv(trigger.origin_icaos), facts.origin_icao):
         return False
     if not _any_exact(_csv(trigger.destination_icaos), facts.destination_icao):
+        return False
+    if not _any_exact(_csv(trigger.categories), facts.category):
+        return False
+
+    # Altitude band (feet). Aircraft with no altitude can't satisfy a band.
+    alt = facts.altitude_baro
+    if trigger.min_altitude_ft is not None and (alt is None or alt < trigger.min_altitude_ft):
+        return False
+    if trigger.max_altitude_ft is not None and (alt is None or alt > trigger.max_altitude_ft):
         return False
 
     year = facts.year

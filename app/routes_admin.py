@@ -307,6 +307,14 @@ async def admin_system(
             .where(Trigger.is_active.is_(False))
         )
     ).scalar_one()
+    failed_firings = (
+        await db.execute(
+            select(func.count(func.distinct(TriggerFiring.id)))
+            .select_from(TriggerFiring)
+            .join(NotificationDelivery, NotificationDelivery.firing_id == TriggerFiring.id)
+            .where(NotificationDelivery.status == "failed")
+        )
+    ).scalar_one()
     db_revision = (
         await db.execute(text("SELECT version_num FROM alembic_version"))
     ).scalar_one_or_none()
@@ -331,6 +339,7 @@ async def admin_system(
             "last_sighting": last_sighting,
             "last_firing": last_firing,
             "paused_firings": paused_firings,
+            "failed_firings": failed_firings,
             "settings": system_settings,
         },
     )
@@ -382,6 +391,33 @@ async def admin_purge_paused_firings(
         await db.commit()
     return RedirectResponse(
         url=f"/admin/system?firings_purged={total}", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
+@router.post("/system/purge-failed-firings")
+async def admin_purge_failed_firings(
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Delete firings whose notification delivery failed (admin-only). Batched.
+    Deliveries detach via ON DELETE SET NULL; the delivery log itself is kept."""
+    id_stmt = (
+        select(TriggerFiring.id)
+        .join(NotificationDelivery, NotificationDelivery.firing_id == TriggerFiring.id)
+        .where(NotificationDelivery.status == "failed")
+        .distinct()
+        .limit(5000)
+    )
+    total = 0
+    while True:
+        ids = (await db.execute(id_stmt)).scalars().all()
+        if not ids:
+            break
+        res = await db.execute(delete(TriggerFiring).where(TriggerFiring.id.in_(ids)))
+        total += res.rowcount
+        await db.commit()
+    return RedirectResponse(
+        url=f"/admin/system?failed_purged={total}", status_code=status.HTTP_303_SEE_OTHER
     )
 
 

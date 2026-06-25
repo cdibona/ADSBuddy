@@ -448,6 +448,7 @@ async def process_entries(
                 altitude_baro=_coerce_int(entry.get("alt_baro")),
                 origin_icao=origin,
                 destination_icao=destination,
+                category=_strip(entry.get("category"), 4),
             )
             firings, blocked = await trigger_engine.evaluate_and_record(
                 session, active_triggers, facts

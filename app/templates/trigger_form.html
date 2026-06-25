@@ -61,6 +61,11 @@
              value="{{ trigger.squawk_patterns if trigger else '' }}">
       <small class="muted">Transponder codes, comma-separated. <code>*</code> wildcard supported. Emergencies: 7500 hijack, 7600 radio-fail, 7700 general.</small>
     </label>
+    <label>Emitter category
+      <input name="categories" placeholder="e.g. A7 for helicopters"
+             value="{{ trigger.categories if trigger else '' }}">
+      <small class="muted">ADS-B emitter category, comma-separated. <code>A7</code> = rotorcraft/helicopter, <code>A1</code> light, <code>A5</code> heavy.</small>
+    </label>
   </fieldset>
 
   <fieldset>
@@ -84,6 +89,21 @@
       </label>
     </div>
     <small class="muted">Use min/max age for relative ("older than 50 years"); min/max year for absolute.</small>
+  </fieldset>
+
+  <fieldset>
+    <legend>Altitude (feet, barometric)</legend>
+    <div class="grid-2">
+      <label>Min altitude
+        <input type="number" name="min_altitude_ft" placeholder="e.g. 0"
+               value="{{ trigger.min_altitude_ft if (trigger and trigger.min_altitude_ft is not none) else '' }}">
+      </label>
+      <label>Max altitude
+        <input type="number" name="max_altitude_ft" placeholder="e.g. 1000 for under 1,000 ft"
+               value="{{ trigger.max_altitude_ft if (trigger and trigger.max_altitude_ft is not none) else '' }}">
+      </label>
+    </div>
+    <small class="muted">Aircraft reporting no altitude won't match an altitude band.</small>
   </fieldset>
 
   {% if not route_lookup_enabled %}
