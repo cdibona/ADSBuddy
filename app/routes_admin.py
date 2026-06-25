@@ -11,7 +11,7 @@ from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import timefmt, version
+from app import notifications, timefmt, version
 from app.database import get_session
 from app.deps import require_admin
 from app.models import (
@@ -24,8 +24,10 @@ from app.models import (
     Sighting,
     Trigger,
     TriggerFiring,
+    TypeLink,
     User,
 )
+from app.type_links import normalize_code, sync_type_links
 from app.security import hash_password
 from app.settings_store import get as get_setting
 from app.settings_store import set_value, setting_category
@@ -421,21 +423,106 @@ async def admin_purge_failed_firings(
     )
 
 
+@router.get("/types", response_class=HTMLResponse)
+async def admin_types(
+    request: Request,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    links = (await db.execute(select(TypeLink).order_by(TypeLink.code))).scalars().all()
+    # How many seen-on-aircraft type codes aren't registered yet.
+    seen = set(
+        (
+            await db.execute(
+                select(Aircraft.type_code)
+                .where(Aircraft.type_code.isnot(None), Aircraft.type_code != "")
+                .distinct()
+            )
+        ).scalars()
+    )
+    known = {l.code for l in links}
+    unsynced = len({normalize_code(c) for c in seen} - known)
+    return templates.TemplateResponse(
+        request,
+        "admin_types.html",
+        {"user": user, "links": links, "unsynced": unsynced},
+    )
+
+
+@router.post("/types/sync")
+async def admin_types_sync(
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    added = await sync_type_links(db)
+    return RedirectResponse(url=f"/admin/types?synced={added}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/types")
+async def admin_types_save(
+    code: str = Form(...),
+    description: str = Form(""),
+    url: str = Form(""),
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    norm = normalize_code(code)
+    if norm is None:
+        raise HTTPException(status_code=400, detail="Type code required")
+    link = await db.get(TypeLink, norm)
+    if link is None:
+        link = TypeLink(code=norm)
+        db.add(link)
+    link.description = description.strip() or None
+    link.url = url.strip() or None
+    link.updated_at = datetime.now(timezone.utc)
+    await db.commit()
+    return RedirectResponse(url="/admin/types", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/types/{code}/delete")
+async def admin_types_delete(
+    code: str,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    link = await db.get(TypeLink, normalize_code(code) or "")
+    if link is not None:
+        await db.delete(link)
+        await db.commit()
+    return RedirectResponse(url="/admin/types", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.get("/notifications", response_class=HTMLResponse)
 async def admin_notifications(
     request: Request,
     user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_session),
 ):
-    """Notification transport config (SMTP / Twilio / master switch)."""
-    all_settings = (
-        (await db.execute(select(Setting).order_by(Setting.key))).scalars().all()
-    )
-    notif_settings = [s for s in all_settings if setting_category(s.key) == "notifications"]
+    """Notification transport config, grouped into master / SMTP / Twilio."""
+    by_key = {
+        s.key: s
+        for s in (await db.execute(select(Setting).order_by(Setting.key))).scalars().all()
+    }
+
+    def pick(keys: list[str]) -> list:
+        return [by_key[k] for k in keys if k in by_key]
+
     return templates.TemplateResponse(
         request,
         "admin_notifications.html",
-        {"user": user, "settings": notif_settings},
+        {
+            "user": user,
+            "master_settings": pick(["notifications_enabled"]),
+            "smtp_settings": pick(
+                ["smtp_host", "smtp_port", "smtp_username", "smtp_password", "smtp_from", "smtp_use_tls"]
+            ),
+            "twilio_settings": pick(
+                ["twilio_account_sid", "twilio_auth_token", "twilio_from_number"]
+            ),
+            "smtp_ok": await notifications.smtp_configured(db),
+            "twilio_ok": await notifications.twilio_configured(db),
+        },
     )
 
 

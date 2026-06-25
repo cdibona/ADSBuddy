@@ -44,6 +44,35 @@ class ChannelNotConfigured(Exception):
     """
 
 
+async def smtp_configured(session: AsyncSession) -> bool:
+    return bool((await get_setting(session, "smtp_host") or "").strip())
+
+
+async def twilio_configured(session: AsyncSession) -> bool:
+    sid = (await get_setting(session, "twilio_account_sid") or "").strip()
+    token = (await get_setting(session, "twilio_auth_token") or "").strip()
+    from_num = (await get_setting(session, "twilio_from_number") or "").strip()
+    return bool(sid and token and from_num)
+
+
+async def available_channel_kinds(session: AsyncSession) -> list[str]:
+    """Channel kinds a user can actually use right now.
+
+    Discord and generic webhooks need no admin setup, so they're always offered.
+    Email and Twilio SMS depend on admin transport config, so they appear only
+    once SMTP / Twilio are set up.
+    """
+    avail: list[str] = []
+    for kind in CHANNEL_KINDS:
+        if kind in ("discord", "webhook"):
+            avail.append(kind)
+        elif kind == "email" and await smtp_configured(session):
+            avail.append(kind)
+        elif kind == "sms_twilio" and await twilio_configured(session):
+            avail.append(kind)
+    return avail
+
+
 # ---------- Discord embed --------------------------------------------------
 
 _EMERGENCY_SQUAWKS = {"7500", "7600", "7700"}

@@ -113,7 +113,7 @@ async def profile(
         {
             "user": user,
             "channels": chans,
-            "kinds": [(k, CHANNEL_KIND_LABELS[k]) for k in CHANNEL_KINDS],
+            "kinds": [(k, CHANNEL_KIND_LABELS[k]) for k in await notifications.available_channel_kinds(db)],
             "kind_label": CHANNEL_KIND_LABELS,
             "last_by_channel": last_by_channel,
         },
@@ -139,9 +139,12 @@ async def channel_new_form(
     request: Request,
     kind: str,
     user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_session),
 ):
     if kind not in CHANNEL_KINDS:
         raise HTTPException(status_code=404)
+    if kind not in await notifications.available_channel_kinds(db):
+        raise HTTPException(status_code=404, detail=f"{kind} is not available until an admin configures it.")
     return templates.TemplateResponse(
         request,
         "channel_form.html",
@@ -165,6 +168,8 @@ async def channel_new_submit(
 ):
     if kind not in CHANNEL_KINDS:
         raise HTTPException(status_code=404)
+    if kind not in await notifications.available_channel_kinds(db):
+        raise HTTPException(status_code=404, detail=f"{kind} is not available until an admin configures it.")
     form = dict(await request.form())
     name = _strip(form.get("name")) or CHANNEL_KIND_LABELS[kind]
     channel = NotificationChannel(

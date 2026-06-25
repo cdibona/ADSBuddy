@@ -125,6 +125,24 @@ class RadioSource(Base):
     )
 
 
+class TypeLink(Base):
+    """Admin-editable destination link per aircraft type code.
+
+    Auto-populated from type codes seen on aircraft (default URL from the
+    curated Wikipedia map); admins can override the URL/description or add
+    free-form entries. The aircraft pages prefer this URL when present.
+    """
+
+    __tablename__ = "type_links"
+
+    code: Mapped[str] = mapped_column(String(16), primary_key=True)
+    description: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+
 class Aircraft(Base):
     """One row per ICAO hex ever seen. Slowly-changing facts only."""
 

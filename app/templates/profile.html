@@ -40,6 +40,9 @@
       <a class="btn-secondary" href="/profile/channels/new?kind={{ kind }}">+ {{ label }}</a>
     {% endfor %}
   </div>
+  <p class="muted">Email and SMS appear here only once SMTP / Twilio are configured
+  {% if user.is_admin %}in <a href="/admin/notifications">admin notifications</a>{% else %}by an admin{% endif %}.
+  Discord and generic webhooks need no setup.</p>
 
   <table class="grid">
     <thead><tr>

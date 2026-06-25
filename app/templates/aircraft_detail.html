@@ -42,8 +42,8 @@
     <dd>
       {% if aircraft.type_code %}
         <code>{{ aircraft.type_code }}</code>
-        {% set turl = type_url(aircraft.type_code, aircraft.description) %}
-        {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Look up on Wikipedia">Wikipedia</a>{% endif %}
+        {% set turl = (type_links|default({})).get(aircraft.type_code|upper) or type_url(aircraft.type_code, aircraft.description) %}
+        {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" class="ext-link" title="Type info">Wikipedia</a>{% endif %}
       {% else %}
         <span class="muted">—</span>
       {% endif %}

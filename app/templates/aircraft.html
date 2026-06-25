@@ -46,8 +46,8 @@
       </td>
       <td data-label="Type">
         {% if a.type_code %}
-          {% set turl = type_url(a.type_code, a.description) %}
-          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" title="Wikipedia: {{ a.description or a.type_code }}">{{ a.type_code }}</a>{% else %}{{ a.type_code }}{% endif %}
+          {% set turl = (type_links|default({})).get(a.type_code|upper) or type_url(a.type_code, a.description) %}
+          {% if turl %}<a href="{{ turl }}" target="_blank" rel="noopener" title="{{ a.description or a.type_code }}">{{ a.type_code }}</a>{% else %}{{ a.type_code }}{% endif %}
         {% endif %}
       </td>
       <td data-label="Description">{{ a.description or "" }}</td>

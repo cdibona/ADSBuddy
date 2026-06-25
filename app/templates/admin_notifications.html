@@ -8,14 +8,30 @@
 {% include "_admin_nav.html" %}
 
 <div class="detail-card">
-  <h2 class="detail-card-title">Transports</h2>
-  <p class="muted">
-    <code>notifications_enabled</code> is the master switch. SMTP powers the
-    <strong>email</strong> channel kind; Twilio powers <strong>SMS</strong>.
-    <strong>Discord</strong> and generic <strong>webhook</strong> channels need no
-    server config — each user adds their own destination URL.
-  </p>
-  {% include "_settings_list.html" %}
+  <h2 class="detail-card-title">Master switch</h2>
+  <p class="muted"><code>notifications_enabled</code> turns all dispatch on or off. When off,
+  firings are still recorded but nothing is delivered.</p>
+  {% with settings = master_settings %}{% include "_settings_list.html" %}{% endwith %}
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">
+    SMTP (email)
+    {% if smtp_ok %}<span class="badge-active">configured</span>{% else %}<span class="badge-paused">not set up</span>{% endif %}
+  </h2>
+  <p class="muted">Powers the <strong>email</strong> channel kind. Until <code>smtp_host</code> is
+  set, users aren't offered email channels.</p>
+  {% with settings = smtp_settings %}{% include "_settings_list.html" %}{% endwith %}
+</div>
+
+<div class="detail-card">
+  <h2 class="detail-card-title">
+    Twilio (SMS)
+    {% if twilio_ok %}<span class="badge-active">configured</span>{% else %}<span class="badge-paused">not set up</span>{% endif %}
+  </h2>
+  <p class="muted">Powers the <strong>SMS</strong> channel kind. Needs account SID, auth token,
+  and a from-number; until all three are set, users aren't offered SMS channels.</p>
+  {% with settings = twilio_settings %}{% include "_settings_list.html" %}{% endwith %}
 </div>
 
 <div class="detail-card">
@@ -23,8 +39,8 @@
   <p class="muted">
     Individual destinations (a Discord webhook, an email address, a phone number,
     a generic webhook) are added by each user under their
-    <a href="/profile">Profile → notification channels</a>. A channel only
-    delivers when it's marked Active and its transport above is configured.
+    <a href="/profile">Profile → notification channels</a>. <strong>Discord</strong> and generic
+    <strong>webhook</strong> channels need no server config and are always available.
   </p>
 </div>
 {% endblock %}

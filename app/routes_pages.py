@@ -24,6 +24,7 @@ from app.aircraft_helpers import (
 from app.database import get_session
 from app.deps import current_user_optional, require_user
 from app.models import Aircraft, RadioSource, Sighting, Trigger, TriggerFiring, User
+from app.type_links import type_link_map
 from app.settings_store import get_required
 
 # ---------------------------------------------------------------------------
@@ -122,6 +123,7 @@ async def recent_aircraft(
         )
     ).all()
     common_types = [t for t, _n in common]
+    type_links = await type_link_map(db, [a.type_code for a in aircraft])
 
     return templates.TemplateResponse(
         request,
@@ -131,6 +133,7 @@ async def recent_aircraft(
             "aircraft": aircraft,
             "type_active": type_q or None,
             "common_types": common_types,
+            "type_links": type_links,
         },
     )
 
@@ -232,6 +235,7 @@ async def aircraft_detail(
             "map_points": map_points,
             "map_sources": map_sources,
             "receivers": receivers,
+            "type_links": await type_link_map(db, [aircraft.type_code]),
         },
     )
 

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Types — ADSBuddy admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Admin — Types</h1>
+</div>
+<p class="muted">Destination links per aircraft type code. Seen types are registered automatically
+with a default Wikipedia link; edit the URL/description, or add your own. The aircraft pages
+use the link set here.</p>
+{% include "_admin_nav.html" %}
+
+{% set q = request.query_params if request.query_params else {} %}
+{% if q.get("synced") is not none %}
+<div class="flash flash-success" role="alert">Registered {{ q.get("synced") }} new type(s).</div>
+{% endif %}
+
+<div class="detail-card">
+  <h2 class="detail-card-title">Add / update a type</h2>
+  <p class="muted">Free-form: enter any code (e.g. <code>B738</code>) and the link to point it at.
+  Saving an existing code updates it.</p>
+  <form method="post" action="/admin/types" style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">
+    <input name="code" placeholder="Type code" required style="width:7rem">
+    <input name="description" placeholder="Description (optional)" style="width:14rem">
+    <input name="url" placeholder="https://… destination link" style="width:20rem">
+    <button type="submit">Save</button>
+  </form>
+  <form method="post" action="/admin/types/sync" class="purge-bar">
+    <button type="submit" class="btn-small">Sync from seen aircraft{% if unsynced %} ({{ unsynced }} new){% endif %}</button>
+    <span class="muted">Registers type codes seen on aircraft that aren't listed yet.</span>
+  </form>
+</div>
+
+<div class="table-scroll">
+<table class="grid">
+  <thead><tr><th>Code</th><th>Description</th><th>Destination link</th><th>Updated</th><th>Actions</th></tr></thead>
+  <tbody>
+    {% for l in links %}
+    <tr>
+      <td data-label="Code"><strong>{{ l.code }}</strong></td>
+      <td data-label="Link" colspan="2">
+        <form method="post" action="/admin/types" style="display:flex;gap:0.3rem;flex-wrap:wrap;align-items:center">
+          <input type="hidden" name="code" value="{{ l.code }}">
+          <input name="description" value="{{ l.description or '' }}" placeholder="Description" style="width:13rem">
+          <input name="url" value="{{ l.url or '' }}" placeholder="https://…" style="width:22rem">
+          <button type="submit" class="btn-small">Save</button>
+          {% if l.url %}<a href="{{ l.url }}" target="_blank" rel="noopener" class="ext-link">open</a>{% endif %}
+        </form>
+      </td>
+      <td data-label="Updated">{{ l.updated_at | localdt("%Y-%m-%d") }}</td>
+      <td data-label="" class="row-actions">
+        <form method="post" action="/admin/types/{{ l.code }}/delete" class="inline"
+              onsubmit="return confirm('Delete type link {{ l.code }}?');">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">No types registered yet. Click “Sync from seen aircraft”.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

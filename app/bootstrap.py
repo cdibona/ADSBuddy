@@ -84,3 +84,6 @@ async def run(session: AsyncSession) -> None:
     await seed_defaults(session)
     await seed_default_source(session)
     await ensure_admin(session)
+    from app.type_links import sync_type_links
+
+    await sync_type_links(session)
