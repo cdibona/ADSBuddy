@@ -315,7 +315,7 @@ async def triggers_list(
     stmt = (
         select(Trigger)
         .options(selectinload(Trigger.owner))
-        .order_by(Trigger.created_at.desc())
+        .order_by(Trigger.created_at.asc())  # in the order they were added
     )
     if not user.is_admin:
         stmt = stmt.where(Trigger.owner_id == user.id)

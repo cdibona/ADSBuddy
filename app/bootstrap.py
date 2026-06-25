@@ -80,10 +80,39 @@ async def seed_default_source(session: AsyncSession) -> None:
     log.info("Seeded default radio source 'Local radio' from radio_base_url=%r.", url)
 
 
+async def seed_baseload_triggers(session: AsyncSession) -> None:
+    """Seed the default 'baseload' triggers into the first admin account.
+
+    Idempotent by name: only inserts triggers whose name doesn't already exist,
+    so renames, edits, and deletions are never clobbered.
+    """
+    from app.baseload_triggers import BASELOAD_TRIGGERS
+    from app.models import Trigger
+
+    owner = (
+        await session.execute(
+            select(User).where(User.is_admin.is_(True)).order_by(User.id).limit(1)
+        )
+    ).scalar_one_or_none()
+    if owner is None:
+        return
+    existing = {n for (n,) in (await session.execute(select(Trigger.name))).all()}
+    added = 0
+    for spec in BASELOAD_TRIGGERS:
+        if spec["name"] in existing:
+            continue
+        session.add(Trigger(owner_id=owner.id, **spec))
+        added += 1
+    if added:
+        await session.commit()
+        log.info("Seeded %d baseload trigger(s).", added)
+
+
 async def run(session: AsyncSession) -> None:
     await seed_defaults(session)
     await seed_default_source(session)
     await ensure_admin(session)
+    await seed_baseload_triggers(session)
     from app.type_links import sync_type_links
 
     await sync_type_links(session)
