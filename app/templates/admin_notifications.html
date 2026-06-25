@@ -91,18 +91,46 @@
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
         </div>
 <pre id="trmnl-markup" class="code-block">{% raw %}<div class="view view--full">
-  <div class="layout">
+  <div class="layout layout--col gap--large">
+
     <div class="columns">
       <div class="column">
-        <span class="title">{{ trigger }}</span>
-        <span class="value value--large">{{ aircraft }}</span>
-        <span class="label">{{ type }}{% if callsign != "" %} · {{ callsign }}{% endif %}{% if altitude != "" %} · {{ altitude }} ft{% endif %}</span>
-        <span class="description">{{ text }}</span>
+        <span class="label label--small">{{ trigger }}</span>
+        <span class="value value--xxlarge value--tnums">{{ aircraft }}</span>
+        <span class="label">{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if year != "" %} · {{ year }}{% endif %}</span>
       </div>
     </div>
+
+    <div class="columns">
+      <div class="column">
+        <div class="item">
+          <div class="content">
+            <span class="value value--small">{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}</span>
+            <span class="label">Altitude</span>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="item">
+          <div class="content">
+            <span class="value value--small">{% if route != "" %}{{ route }}{% else %}—{% endif %}</span>
+            <span class="label">Route</span>
+          </div>
+        </div>
+      </div>
+      <div class="column">
+        <div class="item">
+          <div class="content">
+            <span class="value value--small">{% if callsign != "" %}{{ callsign }}{% else %}—{% endif %}</span>
+            <span class="label">Callsign</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
   <div class="title_bar">
-    <span class="title">ADSBuddy</span>
+    <span class="title">ADSBuddy · {{ kind_label }}</span>
     <span class="instance">{{ time }}</span>
   </div>
 </div>{% endraw %}</pre>

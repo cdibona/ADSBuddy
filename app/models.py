@@ -331,6 +331,7 @@ class TriggerFiring(Base):
     type_code: Mapped[str | None] = mapped_column(String(8))
     squawk: Mapped[str | None] = mapped_column(String(8))
     emergency: Mapped[str | None] = mapped_column(String(16))
+    category: Mapped[str | None] = mapped_column(String(4))  # ADS-B emitter category (A7=heli)
     year: Mapped[int | None] = mapped_column(Integer)
     lat: Mapped[float | None] = mapped_column(Float)
     lon: Mapped[float | None] = mapped_column(Float)

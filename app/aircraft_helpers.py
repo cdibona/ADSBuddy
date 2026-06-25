@@ -8,6 +8,51 @@ from __future__ import annotations
 
 import urllib.parse
 
+# Coarse aircraft kinds for iconography. ADS-B emitter category is the primary
+# signal (A7 = rotorcraft, A1 = light); a small type-code set is the fallback
+# when no category was received. Unknown falls back to a generic plane.
+_KIND_ICON = {"helicopter": "🚁", "light": "🛩️", "jet": "✈️", "plane": "✈️"}
+_KIND_LABEL = {"helicopter": "Helicopter", "light": "Light plane", "jet": "Jet", "plane": "Aircraft"}
+
+_HELI_TYPES = frozenset({
+    "R22", "R44", "R66", "B06", "B407", "B412", "B429", "EC20", "EC25", "EC30",
+    "EC35", "EC45", "AS50", "AS55", "A109", "A119", "A139", "A169", "AW09",
+    "AW139", "AW169", "S76", "S92", "H500", "H60", "UH60", "EXPL", "GAZL", "B505",
+})
+_LIGHT_TYPES = frozenset({
+    "C150", "C152", "C162", "C170", "C172", "C175", "C177", "C182", "C185",
+    "C206", "C210", "P28A", "P28B", "P28R", "P32R", "PA18", "PA24", "PA28",
+    "PA32", "PA46", "SR20", "SR22", "DA40", "DA42", "DA20", "BE33", "BE35",
+    "BE36", "M20P", "M20T", "RV6", "RV7", "RV8", "RV10", "GLID",
+})
+
+
+def aircraft_kind(type_code: str | None, category: str | None = None) -> str:
+    """Coarse kind for iconography: 'helicopter' | 'light' | 'jet' | 'plane'."""
+    cat = (category or "").strip().upper()
+    if cat == "A7":
+        return "helicopter"
+    if cat == "A1":
+        return "light"
+    if cat in ("A2", "A3", "A4", "A5", "A6"):
+        return "jet"
+    tc = (type_code or "").strip().upper()
+    if tc in _HELI_TYPES:
+        return "helicopter"
+    if tc in _LIGHT_TYPES:
+        return "light"
+    return "plane"
+
+
+def kind_icon(type_code: str | None, category: str | None = None) -> str:
+    """Emoji for the aircraft's coarse kind (✈️ / 🚁 / 🛩️)."""
+    return _KIND_ICON[aircraft_kind(type_code, category)]
+
+
+def kind_label(type_code: str | None, category: str | None = None) -> str:
+    """Human label for the aircraft's coarse kind (Helicopter / Light plane / Jet)."""
+    return _KIND_LABEL[aircraft_kind(type_code, category)]
+
 
 def registration_url(reg: str | None) -> str | None:
     """Return an external registry lookup URL for an aircraft registration.

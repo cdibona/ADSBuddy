@@ -241,6 +241,7 @@ async def evaluate_and_record(
             type_code=facts.type_code,
             squawk=facts.squawk,
             emergency=facts.emergency,
+            category=facts.category,
             year=facts.year,
             lat=facts.lat,
             lon=facts.lon,

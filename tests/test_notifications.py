@@ -39,6 +39,7 @@ def _firing(trigger_id: int, icao_hex: str = "a1b2c3", **kw) -> SimpleNamespace:
         registration="N12345",
         callsign="UAL123",
         type_code="B738",
+        category=None,
         year=2010,
         lat=None,
         lon=None,

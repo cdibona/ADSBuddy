@@ -20,6 +20,15 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.aircraft_helpers import (
+    aircraft_kind,
+    kind_icon,
+    kind_label,
+    opensky_url,
+    registration_provider,
+    registration_url,
+    type_url,
+)
 from app.models import (
     CHANNEL_KINDS,
     NotificationChannel,
@@ -100,9 +109,29 @@ def _firing_color(trigger: Trigger, firing: TriggerFiring) -> int:
     return 0x3BA55D      # green: normal
 
 
+def _firing_links(firing: TriggerFiring, base_url: str) -> list[str]:
+    """Markdown links for the embed/email: detail, registry, type, OpenSky, map."""
+    links: list[str] = []
+    if base_url:
+        links.append(f"[Detail]({base_url.rstrip('/')}/aircraft/{firing.icao_hex})")
+    reg_url = registration_url(firing.registration)
+    if reg_url:
+        links.append(f"[{registration_provider(firing.registration)}]({reg_url})")
+    t_url = type_url(firing.type_code)
+    if t_url:
+        links.append(f"[Type]({t_url})")
+    os_url = opensky_url(firing.icao_hex)
+    if os_url:
+        links.append(f"[OpenSky]({os_url})")
+    if firing.lat is not None and firing.lon is not None:
+        links.append(f"[Map](https://www.google.com/maps?q={firing.lat:.5f},{firing.lon:.5f})")
+    return links
+
+
 def build_discord_embed(trigger: Trigger, firing: TriggerFiring, base_url: str) -> dict:
     ident = firing.registration or firing.icao_hex
-    title = f"✈ {ident}" + (f" — {firing.type_code}" if firing.type_code else "")
+    icon = kind_icon(firing.type_code, firing.category)
+    title = f"{icon} {ident}" + (f" — {firing.type_code}" if firing.type_code else "")
     fields: list[dict] = []
     if firing.callsign:
         fields.append({"name": "Callsign", "value": firing.callsign, "inline": True})
@@ -116,6 +145,9 @@ def build_discord_embed(trigger: Trigger, firing: TriggerFiring, base_url: str) 
             "value": f"{firing.origin_icao or '?'} → {firing.destination_icao or '?'}",
             "inline": True,
         })
+    links = _firing_links(firing, base_url)
+    if links:
+        fields.append({"name": "Links", "value": " · ".join(links), "inline": False})
     desc_bits = []
     if firing.squawk in _EMERGENCY_SQUAWKS:
         desc_bits.append(f"**EMERGENCY** squawk {firing.squawk}")
@@ -125,7 +157,7 @@ def build_discord_embed(trigger: Trigger, firing: TriggerFiring, base_url: str) 
         "description": " · ".join(desc_bits),
         "color": _firing_color(trigger, firing),
         "fields": fields,
-        "footer": {"text": "ADSBuddy"},
+        "footer": {"text": f"ADSBuddy · {kind_label(firing.type_code, firing.category)}"},
     }
     if base_url:
         base = base_url.rstrip("/")
@@ -150,6 +182,7 @@ def build_email_html(trigger: Trigger, firing: TriggerFiring, base_url: str) -> 
     rows: list[str] = []
     rows.append(f"<tr><td><b>Trigger</b></td><td>{esc(trigger.name)}</td></tr>")
     rows.append(f"<tr><td><b>Aircraft</b></td><td>{ident}</td></tr>")
+    rows.append(f"<tr><td><b>Kind</b></td><td>{esc(kind_label(firing.type_code, firing.category))}</td></tr>")
     if firing.type_code:
         type_val = esc(firing.type_code)
         if firing.year:
@@ -166,9 +199,21 @@ def build_email_html(trigger: Trigger, firing: TriggerFiring, base_url: str) -> 
         rows.append(
             f"<tr><td><b>At</b></td><td>{firing.fired_at.strftime('%Y-%m-%d %H:%M:%S UTC')}</td></tr>"
         )
+    link_bits: list[str] = []
+
+    def _a(url: str | None, label: str) -> None:
+        if url:
+            link_bits.append(f'<a href="{esc(url, quote=True)}">{esc(label)}</a>')
+
     if base_url:
-        link = esc(f"{base_url.rstrip('/')}/aircraft/{firing.icao_hex}", quote=True)
-        rows.append(f"<tr><td><b>Details</b></td><td><a href=\"{link}\">{link}</a></td></tr>")
+        _a(f"{base_url.rstrip('/')}/aircraft/{firing.icao_hex}", "Detail")
+    _a(registration_url(firing.registration), registration_provider(firing.registration) or "Registry")
+    _a(type_url(firing.type_code), "Type")
+    _a(opensky_url(firing.icao_hex), "OpenSky")
+    if firing.lat is not None and firing.lon is not None:
+        _a(f"https://www.google.com/maps?q={firing.lat:.5f},{firing.lon:.5f}", "Map")
+    if link_bits:
+        rows.append(f"<tr><td><b>Links</b></td><td>{' · '.join(link_bits)}</td></tr>")
 
     table = "<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\">{}</table>".format(
         "".join(rows)
@@ -222,7 +267,8 @@ def _format_message(
 
 
 def _webhook_payload(
-    trigger: Trigger, firing: TriggerFiring | None, channel: NotificationChannel
+    trigger: Trigger, firing: TriggerFiring | None, channel: NotificationChannel,
+    base_url: str = "",
 ) -> dict[str, Any]:
     if firing is None:
         return {
@@ -237,6 +283,8 @@ def _webhook_payload(
             "callsign": firing.callsign,
             "registration": firing.registration,
             "type_code": firing.type_code,
+            "category": firing.category,
+            "kind": aircraft_kind(firing.type_code, firing.category),
             "year": firing.year,
             "lat": firing.lat,
             "lon": firing.lon,
@@ -244,6 +292,14 @@ def _webhook_payload(
             "origin_icao": firing.origin_icao,
             "destination_icao": firing.destination_icao,
             "fired_at": firing.fired_at.isoformat() if firing.fired_at else None,
+        },
+        "links": {
+            "detail": f"{base_url.rstrip('/')}/aircraft/{firing.icao_hex}" if base_url else None,
+            "registry": registration_url(firing.registration),
+            "type": type_url(firing.type_code),
+            "opensky": opensky_url(firing.icao_hex),
+            "map": (f"https://www.google.com/maps?q={firing.lat:.5f},{firing.lon:.5f}"
+                    if firing.lat is not None and firing.lon is not None else None),
         },
     }
 
@@ -439,18 +495,28 @@ async def _send_trmnl(
             "from the plugin's settings (e.g. https://trmnl.com/api/custom_plugins/<uuid>)."
         )
     # Stable, all-string key set so the plugin's Liquid markup can rely on it
-    # whether this is a real firing or a test (no nulls/missing keys).
+    # (no nulls/missing keys). Includes kind/route for the richer layout.
     if firing is None:
-        mv = {"trigger": trigger.name, "aircraft": "(test)", "callsign": "", "type": "",
-              "altitude": "", "time": "", "text": _compact_text(trigger, None)}
+        mv = {
+            "trigger": trigger.name, "aircraft": "(test)", "callsign": "", "type": "",
+            "altitude": "", "route": "", "year": "", "time": "",
+            "kind": "plane", "kind_label": "Aircraft", "text": _compact_text(trigger, None),
+        }
     else:
+        route = ""
+        if firing.origin_icao or firing.destination_icao:
+            route = f"{firing.origin_icao or '?'} → {firing.destination_icao or '?'}"
         mv = {
             "trigger": trigger.name,
             "aircraft": firing.registration or firing.icao_hex or "",
             "callsign": firing.callsign or "",
             "type": firing.type_code or "",
             "altitude": str(firing.altitude_baro) if firing.altitude_baro is not None else "",
-            "time": firing.fired_at.strftime("%Y-%m-%d %H:%M:%S UTC") if firing.fired_at else "",
+            "route": route,
+            "year": str(firing.year) if firing.year else "",
+            "time": firing.fired_at.strftime("%Y-%m-%d %H:%M UTC") if firing.fired_at else "",
+            "kind": aircraft_kind(firing.type_code, firing.category),
+            "kind_label": kind_label(firing.type_code, firing.category),
             "text": _compact_text(trigger, firing),
         }
     resp = await client.post(url, json={"merge_variables": mv}, timeout=15.0)
@@ -462,14 +528,17 @@ def _sample_trigger() -> Trigger:
 
 
 def _sample_firing() -> TriggerFiring:
-    """A fully-populated, realistic firing so test sends render like the real thing."""
+    """A fully-populated, realistic firing so test sends render like the real thing.
+
+    No id/trigger_id — it's transient (never persisted), so a test delivery row
+    records firing_id=None rather than referencing a non-existent firing.
+    """
     return TriggerFiring(
-        id=0,
-        trigger_id=0,
         icao_hex="a835af",
         registration="N628TS",
         callsign="N628TS",
         type_code="GLF6",
+        category="A2",  # small jet -> ✈️ / "Jet"
         year=2015,
         altitude_baro=38000,
         lat=47.4502,
@@ -523,8 +592,9 @@ async def _dispatch_one(
             await _send_email(session, channel, _format_message(trigger, firing, channel),
                               trigger=trigger, firing=firing)
         elif channel.kind == "webhook":
+            base = await get_setting(session, "site_base_url") or ""
             await _send_generic_webhook(
-                client, channel, _webhook_payload(trigger, firing, channel)
+                client, channel, _webhook_payload(trigger, firing, channel, base)
             )
         elif channel.kind == "sms_twilio":
             await _send_sms_twilio(
