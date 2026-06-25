@@ -461,6 +461,47 @@ def _compact_text(trigger: Trigger, firing: TriggerFiring | None) -> str:
     return " ".join(parts)[:132]
 
 
+# ---- Vestaboard 6x22 layout -----------------------------------------------
+
+_VB_ROWS, _VB_COLS = 6, 22
+_VB_RED, _VB_GREEN, _VB_BLUE = 63, 66, 67
+_VB_CODES = {" ": 0}
+for _i, _c in enumerate("ABCDEFGHIJKLMNOPQRSTUVWXYZ", start=1):
+    _VB_CODES[_c] = _i
+for _i, _c in enumerate("123456789", start=27):
+    _VB_CODES[_c] = _i
+_VB_CODES["0"] = 36
+_VB_CODES.update({"!": 37, "@": 38, "#": 39, "$": 40, "(": 41, ")": 42, "-": 44,
+                  "+": 46, "&": 47, "=": 48, ";": 49, ":": 50, "'": 52, '"': 53,
+                  "%": 54, ",": 55, ".": 56, "/": 59, "?": 60, "°": 62})
+
+
+def _vb_center(text: str) -> list[int]:
+    """A 22-cell row with the text (uppercased, mapped to codes) centered."""
+    text = (text or "").upper().replace("→", "-").replace("·", " ")
+    codes = [_VB_CODES.get(ch, 0) for ch in text][:_VB_COLS]
+    pad = _VB_COLS - len(codes)
+    left = pad // 2
+    return [0] * left + codes + [0] * (pad - left)
+
+
+def _vestaboard_matrix(trigger: Trigger, firing: TriggerFiring | None) -> list[list[int]]:
+    """A framed 6x22 board: a status-color bar top & bottom, 3-4 centered lines."""
+    emergency = bool(firing and (firing.squawk in _EMERGENCY_SQUAWKS or firing.emergency))
+    bar = [_VB_RED if emergency else _VB_BLUE] * _VB_COLS
+    if firing is None:
+        lines = [trigger.name, "(TEST)", "", ""]
+    else:
+        type_alt = firing.type_code or ""
+        if firing.altitude_baro is not None:
+            type_alt = f"{type_alt} {firing.altitude_baro}FT".strip()
+        route = ""
+        if firing.origin_icao or firing.destination_icao:
+            route = f"{firing.origin_icao or '?'}-{firing.destination_icao or '?'}"
+        lines = [trigger.name, firing.registration or firing.icao_hex or "", type_alt, route]
+    return [bar, *(_vb_center(line) for line in lines), bar]
+
+
 async def _send_vestaboard(
     session: AsyncSession,
     client: httpx.AsyncClient,
@@ -471,14 +512,23 @@ async def _send_vestaboard(
     key = (await get_setting(session, "vestaboard_api_key") or "").strip()
     if not key:
         raise ChannelNotConfigured("Vestaboard not configured (vestaboard_api_key is empty).")
-    resp = await client.post(
-        "https://rw.vestaboard.com/",
-        headers={"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"},
-        json={"text": _compact_text(trigger, firing)},
-        timeout=15.0,
-    )
-    resp.raise_for_status()
-    return resp.status_code
+    headers = {"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"}
+    # Preferred: a laid-out character matrix; fall back to plain text if the
+    # board/API rejects the matrix form.
+    try:
+        resp = await client.post(
+            "https://rw.vestaboard.com/", headers=headers,
+            json={"characters": _vestaboard_matrix(trigger, firing)}, timeout=15.0,
+        )
+        resp.raise_for_status()
+        return resp.status_code
+    except Exception:
+        resp = await client.post(
+            "https://rw.vestaboard.com/", headers=headers,
+            json={"text": _compact_text(trigger, firing)}, timeout=15.0,
+        )
+        resp.raise_for_status()
+        return resp.status_code
 
 
 async def _send_trmnl(
