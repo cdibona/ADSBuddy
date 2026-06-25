@@ -104,3 +104,19 @@ def test_admin_notifications_has_test_buttons():
         smtp_ok=False, twilio_ok=False, vestaboard_ok=True, trmnl_ok=False)
     assert 'action="/admin/notifications/test/vestaboard"' in out
     assert 'action="/admin/notifications/test/trmnl"' in out
+
+
+def test_trmnl_missing_uuid_is_caught(monkeypatch):
+    import types
+    from unittest.mock import AsyncMock
+    from app import notifications
+
+    async def fake_get(session, key):
+        return "https://trmnl.com/api/custom_plugins/" if key == "trmnl_webhook_url" else ""
+    monkeypatch.setattr(notifications, "get_setting", fake_get)
+    client = AsyncMock()
+    trig = types.SimpleNamespace(name="t")
+    import pytest
+    with pytest.raises(notifications.ChannelNotConfigured):
+        asyncio.run(notifications._send_trmnl(None, client, None, trig, None))
+    client.post.assert_not_called()  # never even attempted the bad URL

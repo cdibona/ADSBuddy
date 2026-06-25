@@ -432,15 +432,23 @@ async def _send_trmnl(
     url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
     if not url:
         raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
+    if "/api/custom_plugins/" in url and url.rstrip("/").endswith("custom_plugins"):
+        raise ChannelNotConfigured(
+            "TRMNL webhook URL is missing its plugin UUID — copy the full Webhook URL "
+            "from the plugin's settings (e.g. https://usetrmnl.com/api/custom_plugins/<uuid>)."
+        )
+    # Stable, all-string key set so the plugin's Liquid markup can rely on it
+    # whether this is a real firing or a test (no nulls/missing keys).
     if firing is None:
-        mv = {"trigger": trigger.name, "aircraft": "(test)", "text": _compact_text(trigger, None)}
+        mv = {"trigger": trigger.name, "aircraft": "(test)", "callsign": "", "type": "",
+              "altitude": "", "time": "", "text": _compact_text(trigger, None)}
     else:
         mv = {
             "trigger": trigger.name,
-            "aircraft": firing.registration or firing.icao_hex,
+            "aircraft": firing.registration or firing.icao_hex or "",
             "callsign": firing.callsign or "",
             "type": firing.type_code or "",
-            "altitude": firing.altitude_baro,
+            "altitude": str(firing.altitude_baro) if firing.altitude_baro is not None else "",
             "time": firing.fired_at.strftime("%Y-%m-%d %H:%M:%S UTC") if firing.fired_at else "",
             "text": _compact_text(trigger, firing),
         }
