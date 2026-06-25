@@ -86,27 +86,29 @@
         Plugins → Private Plugin (Webhook strategy); paste its Webhook URL (ends in the plugin UUID) into
         <code>trmnl_webhook_url</code> above. ✓ You've done this.</li>
       <li><strong>Display template</strong> — in that <em>same plugin's settings</em> click <strong>Edit Markup</strong>,
-        paste the block below into the <strong>Full</strong> layout, and Save. This is just
-        <code>layout</code> + <code>title_bar</code> with <em>no</em> <code>&lt;div class="view"&gt;</code> wrapper —
-        TRMNL adds that itself; wrapping it yourself double-nests the view and bloats the spacing.
-        The editor's <strong>Preview</strong> pane re-renders on Save, so use it to confirm the look
-        without waiting on the device.
+        paste the block below into the <strong>Full</strong> layout, and Save. It uses plain inline styles
+        (not TRMNL's framework classes) so it renders as a styled card regardless of framework version —
+        big aircraft ID, kind/type/year, and an alt/route/callsign grid. The editor <strong>Preview</strong>
+        re-renders on Save.
         <div style="margin:0.4rem 0">
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
         </div>
-<pre id="trmnl-markup" class="code-block">{% raw %}<div class="layout">
-  <div class="columns">
-    <div class="column">
-      <span class="label label--small">{{ trigger }}</span>
-      <span class="value value--large">{{ aircraft }}</span>
-      <span class="label">{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if year != "" %} · {{ year }}{% endif %}</span>
-      <span class="description">{% if altitude != "" %}{{ altitude }} ft{% endif %}{% if route != "" %} · {{ route }}{% endif %}{% if callsign != "" %} · {{ callsign }}{% endif %}</span>
-    </div>
-  </div>
-</div>
-<div class="title_bar">
-  <span class="title">ADSBuddy · {{ kind_label }}</span>
-  <span class="instance">{{ time }}</span>
+<pre id="trmnl-markup" class="code-block">{% raw %}<div style="font-family:Helvetica,Arial,sans-serif;color:#000;padding:26px 34px;height:100%;box-sizing:border-box;">
+  <div style="font-size:22px;letter-spacing:.5px;">{{ trigger }}</div>
+  <div style="font-size:80px;font-weight:800;line-height:1;margin:2px 0;">{{ aircraft }}</div>
+  <div style="font-size:28px;">{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if year != "" %} · {{ year }}{% endif %}</div>
+  <hr style="border:none;border-top:2px solid #000;margin:22px 0;">
+  <table style="width:100%;font-size:26px;border-collapse:collapse;">
+    <tr>
+      <td style="padding:4px 0;"><b>Alt</b> {% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}</td>
+      <td style="padding:4px 0;"><b>Route</b> {% if route != "" %}{{ route }}{% else %}—{% endif %}</td>
+    </tr>
+    <tr>
+      <td style="padding:4px 0;"><b>Callsign</b> {% if callsign != "" %}{{ callsign }}{% else %}—{% endif %}</td>
+      <td style="padding:4px 0;"><b>Seen</b> {{ time }}</td>
+    </tr>
+  </table>
+  <div style="margin-top:24px;font-size:18px;">ADSBuddy · {{ kind_label }}</div>
 </div>{% endraw %}</pre>
       </li>
       <li><strong>Make the preview render</strong> — the Edit-Markup preview is blank until TRMNL has
