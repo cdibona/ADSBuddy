@@ -93,49 +93,49 @@
         <div style="margin:0.4rem 0">
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
         </div>
-<pre id="trmnl-markup" class="code-block">{% raw %}<div class="layout layout--col gap--space-between">
-  <div class="grid">
-    <div class="item">
-      <div class="meta"></div>
-      <div class="content">
-        <span class="value value--xxxlarge value--tnums">{{ aircraft }}</span>
-        <span class="label">{{ trigger }}{% if kind_label != "" %} · {{ kind_label }}{% endif %}</span>
-      </div>
-    </div>
-  </div>
+<pre id="trmnl-markup" class="code-block">{% raw %}&lt;div class="layout layout--col gap--space-between"&gt;
+  &lt;div class="grid"&gt;
+    &lt;div class="item"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--xxxlarge value--tnums"&gt;{{ aircraft }}&lt;/span&gt;
+        &lt;span class="label"&gt;{{ trigger }}{% if kind_label != "" %} · {{ kind_label }}{% endif %}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
 
-  <div class="divider"></div>
+  &lt;div class="divider"&gt;&lt;/div&gt;
 
-  <div class="grid">
-    <div class="item col--span-3">
-      <div class="meta"></div>
-      <div class="content">
-        <span class="value value--large value--tnums">{% if type != "" %}{{ type }}{% else %}—{% endif %}</span>
-        <span class="label">Type{% if year != "" %} · {{ year }}{% endif %}</span>
-      </div>
-    </div>
-    <div class="item col--span-3">
-      <div class="meta"></div>
-      <div class="content">
-        <span class="value value--large value--tnums">{% if altitude != "" %}{{ altitude }}{% else %}—{% endif %}</span>
-        <span class="label">Altitude (ft)</span>
-      </div>
-    </div>
-    <div class="item col--span-6">
-      <div class="meta"></div>
-      <div class="content">
-        <span class="value value--large">{% if route != "" %}{{ route }}{% else %}—{% endif %}</span>
-        <span class="label">Route{% if callsign != "" %} · {{ callsign }}{% endif %}</span>
-      </div>
-    </div>
-  </div>
-</div>
+  &lt;div class="grid"&gt;
+    &lt;div class="item col--span-3"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--large value--tnums"&gt;{% if type != "" %}{{ type }}{% else %}—{% endif %}&lt;/span&gt;
+        &lt;span class="label"&gt;Type{% if year != "" %} · {{ year }}{% endif %}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class="item col--span-3"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--large value--tnums"&gt;{% if altitude != "" %}{{ altitude }}{% else %}—{% endif %}&lt;/span&gt;
+        &lt;span class="label"&gt;Altitude (ft)&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class="item col--span-6"&gt;
+      &lt;div class="meta"&gt;&lt;/div&gt;
+      &lt;div class="content"&gt;
+        &lt;span class="value value--large"&gt;{% if route != "" %}{{ route }}{% else %}—{% endif %}&lt;/span&gt;
+        &lt;span class="label"&gt;Route{% if callsign != "" %} · {{ callsign }}{% endif %}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
 
-<div class="title_bar">
-  <img class="image" src="https://trmnl.com/images/plugins/trmnl--render.svg">
-  <span class="title">ADSBuddy</span>
-  <span class="instance">{{ time }}</span>
-</div>{% endraw %}</pre>
+&lt;div class="title_bar"&gt;
+  &lt;img class="image" src="https://trmnl.com/images/plugins/trmnl--render.svg"&gt;
+  &lt;span class="title"&gt;ADSBuddy&lt;/span&gt;
+  &lt;span class="instance"&gt;{{ time }}&lt;/span&gt;
+&lt;/div&gt;{% endraw %}</pre>
       </li>
       <li><strong>Make the preview render</strong> — the Edit-Markup preview is blank until TRMNL has
         data to merge (the <code>{{ "{{ trigger }}" }}</code> fields are empty otherwise). Either click
