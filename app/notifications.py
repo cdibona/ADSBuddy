@@ -435,7 +435,7 @@ async def _send_trmnl(
     if "/api/custom_plugins/" in url and url.rstrip("/").endswith("custom_plugins"):
         raise ChannelNotConfigured(
             "TRMNL webhook URL is missing its plugin UUID — copy the full Webhook URL "
-            "from the plugin's settings (e.g. https://usetrmnl.com/api/custom_plugins/<uuid>)."
+            "from the plugin's settings (e.g. https://trmnl.com/api/custom_plugins/<uuid>)."
         )
     # Stable, all-string key set so the plugin's Liquid markup can rely on it
     # whether this is a real firing or a test (no nulls/missing keys).

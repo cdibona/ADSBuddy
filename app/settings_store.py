@@ -175,7 +175,7 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         default="",
         description=(
             "TRMNL webhook URL (Private Plugin → Webhook, e.g. "
-            "https://usetrmnl.com/api/custom_plugins/<uuid>). Powers the 'TRMNL' "
+            "https://trmnl.com/api/custom_plugins/<uuid>). Powers the 'TRMNL' "
             "channel kind; blank = unavailable. We POST {\"merge_variables\": {...}}."
         ),
         secret=True,
