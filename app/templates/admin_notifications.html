@@ -86,53 +86,37 @@
         Plugins → Private Plugin (Webhook strategy); paste its Webhook URL (ends in the plugin UUID) into
         <code>trmnl_webhook_url</code> above. ✓ You've done this.</li>
       <li><strong>Display template</strong> — in that <em>same plugin's settings</em> click <strong>Edit Markup</strong>,
-        paste the block below into the <strong>Full</strong> layout, and Save:
+        paste the block below into the <strong>Full</strong> layout, and Save. This is just
+        <code>layout</code> + <code>title_bar</code> with <em>no</em> <code>&lt;div class="view"&gt;</code> wrapper —
+        TRMNL adds that itself; wrapping it yourself double-nests the view and bloats the spacing.
+        The editor's <strong>Preview</strong> pane re-renders on Save, so use it to confirm the look
+        without waiting on the device.
         <div style="margin:0.4rem 0">
           <button type="button" class="btn-small" onclick="(function(b){navigator.clipboard.writeText(document.getElementById('trmnl-markup').textContent);b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy markup';},1500);})(this)">Copy markup</button>
         </div>
-<pre id="trmnl-markup" class="code-block">{% raw %}<div class="view view--full">
-  <div class="layout layout--col gap--large">
-
-    <div class="columns">
-      <div class="column">
-        <span class="label label--small">{{ trigger }}</span>
-        <span class="value value--xxlarge value--tnums">{{ aircraft }}</span>
-        <span class="label">{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if year != "" %} · {{ year }}{% endif %}</span>
-      </div>
+<pre id="trmnl-markup" class="code-block">{% raw %}<div class="layout layout--col gap--large">
+  <div class="columns">
+    <div class="column">
+      <span class="label label--small">{{ trigger }}</span>
+      <span class="value value--xxlarge value--tnums">{{ aircraft }}</span>
+      <span class="label">{{ kind_label }}{% if type != "" %} · {{ type }}{% endif %}{% if year != "" %} · {{ year }}{% endif %}</span>
     </div>
-
-    <div class="columns">
-      <div class="column">
-        <div class="item">
-          <div class="content">
-            <span class="value value--small">{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}</span>
-            <span class="label">Altitude</span>
-          </div>
-        </div>
-      </div>
-      <div class="column">
-        <div class="item">
-          <div class="content">
-            <span class="value value--small">{% if route != "" %}{{ route }}{% else %}—{% endif %}</span>
-            <span class="label">Route</span>
-          </div>
-        </div>
-      </div>
-      <div class="column">
-        <div class="item">
-          <div class="content">
-            <span class="value value--small">{% if callsign != "" %}{{ callsign }}{% else %}—{% endif %}</span>
-            <span class="label">Callsign</span>
-          </div>
-        </div>
-      </div>
+  </div>
+  <div class="columns">
+    <div class="column">
+      <div class="item"><div class="content"><span class="value value--small">{% if altitude != "" %}{{ altitude }} ft{% else %}—{% endif %}</span><span class="label">Altitude</span></div></div>
     </div>
-
+    <div class="column">
+      <div class="item"><div class="content"><span class="value value--small">{% if route != "" %}{{ route }}{% else %}—{% endif %}</span><span class="label">Route</span></div></div>
+    </div>
+    <div class="column">
+      <div class="item"><div class="content"><span class="value value--small">{% if callsign != "" %}{{ callsign }}{% else %}—{% endif %}</span><span class="label">Callsign</span></div></div>
+    </div>
   </div>
-  <div class="title_bar">
-    <span class="title">ADSBuddy · {{ kind_label }}</span>
-    <span class="instance">{{ time }}</span>
-  </div>
+</div>
+<div class="title_bar">
+  <span class="title">ADSBuddy · {{ kind_label }}</span>
+  <span class="instance">{{ time }}</span>
 </div>{% endraw %}</pre>
       </li>
       <li><strong>Test</strong> — click <em>Send test</em> below, then the e-ink screen updates on its next
