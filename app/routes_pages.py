@@ -36,10 +36,6 @@ _HISTORY_PER_PAGE = 50
 # How many recent position-bearing sightings to plot as the detail-page path.
 _MAP_POSITION_LIMIT = 250
 
-# A–Z quick-jump letters for the recent-aircraft registration filter.
-_REG_LETTERS = tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-
 # Marker colors assigned per sighting source on the detail map.
 _SOURCE_PALETTE = ("#4ea4ff", "#3fb950", "#ff6b6b", "#d2a8ff", "#f0883e")
 
@@ -65,18 +61,6 @@ def _parse_trigger_choice(raw: str | None) -> str | int | None:
     except ValueError:
         return None
 
-
-def _normalize_reg_letter(raw: str | None) -> str | None:
-    """Validate the recent-aircraft registration filter.
-
-    Returns a single uppercase A–Z letter, or None for 'all'/invalid input.
-    """
-    if not raw:
-        return None
-    val = raw.strip().upper()
-    if len(val) == 1 and val in _REG_LETTERS:
-        return val
-    return None
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -116,24 +100,37 @@ async def home(
 @router.get("/aircraft", response_class=HTMLResponse)
 async def recent_aircraft(
     request: Request,
-    reg: str | None = Query(None),
+    type: str | None = Query(None),
     user: User = Depends(require_user),
     db: AsyncSession = Depends(get_session),
 ):
-    letter = _normalize_reg_letter(reg)
+    type_q = (type or "").strip()
     stmt = select(Aircraft).order_by(Aircraft.last_seen.desc())
-    if letter is not None:
-        stmt = stmt.where(Aircraft.registration.ilike(f"{letter}%"))
+    if type_q:
+        stmt = stmt.where(Aircraft.type_code.ilike(f"%{type_q}%"))
     rows = await db.execute(stmt.limit(200))
     aircraft = rows.scalars().all()
+
+    # Most common type codes seen, as quick-filter chips.
+    common = (
+        await db.execute(
+            select(Aircraft.type_code, func.count())
+            .where(Aircraft.type_code.isnot(None), Aircraft.type_code != "")
+            .group_by(Aircraft.type_code)
+            .order_by(func.count().desc())
+            .limit(14)
+        )
+    ).all()
+    common_types = [t for t, _n in common]
+
     return templates.TemplateResponse(
         request,
         "aircraft.html",
         {
             "user": user,
             "aircraft": aircraft,
-            "reg_letters": _REG_LETTERS,
-            "reg_active": letter,
+            "type_active": type_q or None,
+            "common_types": common_types,
         },
     )
 

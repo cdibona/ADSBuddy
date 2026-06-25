@@ -755,3 +755,8 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 .oauth-sep span { background: var(--panel); padding: 0 0.5rem; position: relative; z-index: 1; }
 .oauth-sep::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--border); }
 .oauth-btn { text-align: center; }
+
+/* Recent-aircraft type filter (replaces the old A–Z reg jump). */
+.type-filter { gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+.type-filter-form { display: inline-flex; gap: 0.4rem; align-items: center; }
+.type-filter-form input { width: 9rem; }

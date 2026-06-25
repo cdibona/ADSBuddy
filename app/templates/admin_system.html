@@ -71,6 +71,24 @@
 </div>
 
 <div class="detail-card">
+  <h2 class="detail-card-title">Firings from paused triggers</h2>
+  <p class="muted">Pausing a trigger stops new firings but keeps the ones it already logged.
+  Purge those leftovers so the firings list reflects only active triggers. Irreversible
+  (the notification-delivery log is preserved).</p>
+  {% if q.get("firings_purged") is not none %}
+  <div class="flash flash-success" role="alert">Purged {{ "{:,}".format(q.get("firings_purged")|int) }} firing(s) from paused triggers.</div>
+  {% endif %}
+  {% if paused_firings %}
+  <form method="post" action="/admin/system/purge-paused-firings"
+        onsubmit="return confirm('Permanently delete {{ paused_firings }} firing(s) from paused triggers?');">
+    <button type="submit" class="btn-small danger">Purge {{ "{:,}".format(paused_firings) }} firing{{ "s" if paused_firings != 1 else "" }} from paused triggers</button>
+  </form>
+  {% else %}
+  <p class="muted">No firings from paused triggers — nothing to purge.</p>
+  {% endif %}
+</div>
+
+<div class="detail-card">
   <h2 class="detail-card-title">System settings</h2>
   <p class="muted">Runtime config (radio, ingest, storage, retention, site). Saved to Postgres; takes effect on next read.</p>
   {% include "_settings_list.html" %}

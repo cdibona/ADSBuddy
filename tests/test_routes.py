@@ -281,7 +281,7 @@ class TestExternalLinkLabels:
                       last_seen=datetime(2026, 6, 24, 16, tzinfo=timezone.utc))
         out = templates.env.get_template("aircraft.html").render(
             request=req, user=types.SimpleNamespace(username="a", is_admin=True),
-            aircraft=[ac], reg_letters=tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), reg_active=None)
+            aircraft=[ac], type_active=None, common_types=[])
         assert "↗" not in out          # the weird arrow is gone
         assert ">FAA</a>" in out             # provider-labeled registry link
         assert ">Wikipedia</a>" in out

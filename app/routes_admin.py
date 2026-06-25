@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -299,6 +299,14 @@ async def admin_system(
     }
     last_sighting = (await db.execute(select(func.max(Sighting.seen_at)))).scalar_one()
     last_firing = (await db.execute(select(func.max(TriggerFiring.fired_at)))).scalar_one()
+    paused_firings = (
+        await db.execute(
+            select(func.count(TriggerFiring.id))
+            .select_from(TriggerFiring)
+            .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .where(Trigger.is_active.is_(False))
+        )
+    ).scalar_one()
     db_revision = (
         await db.execute(text("SELECT version_num FROM alembic_version"))
     ).scalar_one_or_none()
@@ -322,6 +330,7 @@ async def admin_system(
             "counts": counts,
             "last_sighting": last_sighting,
             "last_firing": last_firing,
+            "paused_firings": paused_firings,
             "settings": system_settings,
         },
     )
@@ -347,6 +356,32 @@ async def admin_system_downsample(
     return RedirectResponse(
         url=f"/admin/system?est_total={total}&est_del={would}&iv={interval}",
         status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
+@router.post("/system/purge-paused-firings")
+async def admin_purge_paused_firings(
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Delete leftover firings whose trigger is currently paused (admin-only,
+    all owners). Batched. Deliveries detach via ON DELETE SET NULL."""
+    id_stmt = (
+        select(TriggerFiring.id)
+        .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+        .where(Trigger.is_active.is_(False))
+        .limit(5000)
+    )
+    total = 0
+    while True:
+        ids = (await db.execute(id_stmt)).scalars().all()
+        if not ids:
+            break
+        res = await db.execute(delete(TriggerFiring).where(TriggerFiring.id.in_(ids)))
+        total += res.rowcount
+        await db.commit()
+    return RedirectResponse(
+        url=f"/admin/system?firings_purged={total}", status_code=status.HTTP_303_SEE_OTHER
     )
 
 

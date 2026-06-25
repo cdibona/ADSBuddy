@@ -5,18 +5,22 @@
   <h1>Recent aircraft</h1>
 </div>
 <p class="muted">
-  {% if reg_active %}
-    Most recent 200 aircraft with a registration starting <strong>{{ reg_active }}</strong>, newest first.
+  {% if type_active %}
+    Most recent 200 aircraft of type <strong>{{ type_active }}</strong>, newest first.
   {% else %}
     Most recently seen 200 aircraft, newest first.
   {% endif %}
 </p>
 
-<div class="filter-bar reg-jump">
-  <span class="filter-bar-label">Reg</span>
-  <a href="/aircraft" class="chip{% if not reg_active %} chip-on{% endif %}">All</a>
-  {% for L in reg_letters %}
-  <a href="/aircraft?reg={{ L }}" class="chip{% if reg_active == L %} chip-on{% endif %}">{{ L }}</a>
+<div class="filter-bar type-filter">
+  <form method="get" action="/aircraft" class="type-filter-form">
+    <span class="filter-bar-label">Type</span>
+    <input name="type" value="{{ type_active or '' }}" placeholder="e.g. B738, PC12" aria-label="Filter by type code">
+    <button type="submit" class="btn-small">Filter</button>
+  </form>
+  <a href="/aircraft" class="chip{% if not type_active %} chip-on{% endif %}">All</a>
+  {% for t in common_types %}
+  <a href="/aircraft?type={{ t }}" class="chip{% if type_active == t %} chip-on{% endif %}">{{ t }}</a>
   {% endfor %}
 </div>
 

@@ -83,25 +83,8 @@ class TestFiringsBucket:
 
 
 # ---------------------------------------------------------------------------
-# Aircraft A–Z registration filter
+# Aircraft type filter (replaced the A–Z registration jump)
 # ---------------------------------------------------------------------------
-
-class TestRegLetterFilter:
-    def test_single_letter_uppercased(self):
-        from app.routes_pages import _normalize_reg_letter
-
-        assert _normalize_reg_letter("n") == "N"
-        assert _normalize_reg_letter("A") == "A"
-        assert _normalize_reg_letter(" z ") == "Z"
-
-    def test_non_letter_or_multichar_is_none(self):
-        from app.routes_pages import _normalize_reg_letter
-
-        assert _normalize_reg_letter(None) is None
-        assert _normalize_reg_letter("") is None
-        assert _normalize_reg_letter("5") is None
-        assert _normalize_reg_letter("NA") is None
-        assert _normalize_reg_letter("%") is None
 
 
 # ---------------------------------------------------------------------------
@@ -307,14 +290,15 @@ class TestFilterBarRendering:
             request=fake_request,
             user=admin_user,
             aircraft=[ac],
-            reg_letters=tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-            reg_active="N",
+            type_active="B738",
+            common_types=["B738", "A320", "PC12"],
         )
-        assert 'href="/aircraft?reg=A"' in out
-        assert 'href="/aircraft?reg=Z"' in out
+        # Type filter input + common-type quick chips.
+        assert 'name="type"' in out
+        assert 'href="/aircraft?type=A320"' in out
         # "All" reset link.
         assert 'href="/aircraft"' in out
-        # Active letter chip marked.
+        # Active type chip marked.
         assert "chip-on" in out
 
 

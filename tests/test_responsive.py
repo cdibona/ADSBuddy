@@ -63,8 +63,8 @@ def test_aircraft_cells_have_data_labels():
     out = templates.env.get_template("aircraft.html").render(
         request=_req("/aircraft"), user=_admin(),
         aircraft=[ac],
-        reg_letters=tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-        reg_active=None,
+        type_active=None,
+        common_types=["B738", "PC12"],
     )
     assert 'data-label="Hex"' in out
     assert 'data-label="Reg"' in out

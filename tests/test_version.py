@@ -71,8 +71,8 @@ class TestFooterRendering:
             request=req,
             user=types.SimpleNamespace(username="admin", is_admin=True),
             aircraft=[],
-            reg_letters=tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-            reg_active=None,
+            type_active=None,
+        common_types=["B738", "PC12"],
         )
         assert 'class="site-footer"' in out
         assert "uptime" in out

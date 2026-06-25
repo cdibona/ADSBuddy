@@ -59,8 +59,8 @@ def test_aircraft_has_page_head_and_description():
     out = templates.env.get_template("aircraft.html").render(
         request=_req("/aircraft"), user=_admin(),
         aircraft=[],
-        reg_letters=tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZ"),
-        reg_active=None,
+        type_active=None,
+        common_types=["B738", "PC12"],
     )
     assert 'class="page-head"' in out
     assert 'class="muted"' in out
