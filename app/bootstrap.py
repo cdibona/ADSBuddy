@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.models import RadioSource, User
 from app.security import hash_password
 from app.settings_store import get as get_setting
-from app.settings_store import seed_defaults
+from app.settings_store import seed_defaults, set_value
 
 log = logging.getLogger(__name__)
 
@@ -53,20 +53,25 @@ def _coerce_float(raw: str | None) -> float | None:
 
 
 async def seed_default_source(session: AsyncSession) -> None:
-    """Migrate the legacy single radio (radio_base_url) into a RadioSource.
+    """Seed the first "Local radio" source on initial setup.
 
-    Runs only when no sources exist yet, so it's a one-time migration. The old
-    settings keys (radio_base_url, receiver_lat/lon) are left in place as a
-    deprecated alias; the ingester reads from radio_sources going forward.
+    Runs only when no sources exist yet (one-time). The URL comes from the
+    ADSBUDDY_RADIO_URL env var (set in docker-compose) if provided, otherwise
+    the radio_base_url setting. Admins manage sources from Admin → Sources after
+    this; changing the env later has no effect (it's pre-configuration only).
     """
     existing = (await session.execute(select(RadioSource.id).limit(1))).first()
     if existing:
         return
-    url = (await get_setting(session, "radio_base_url")) or ""
+    env_url = get_settings().radio_url.strip()
+    url = env_url or (await get_setting(session, "radio_base_url")) or ""
     if not url.strip():
-        # Fresh install with no configured radio — nothing to migrate. Leave the
+        # Fresh install with no configured radio — nothing to seed. Leave the
         # sources table empty so admins add their own; don't seed a dead stub.
         return
+    if env_url:
+        # Keep the deprecated alias setting consistent with what we seeded.
+        await set_value(session, "radio_base_url", env_url)
     source = RadioSource(
         name="Local radio",
         kind="poll",
@@ -77,7 +82,8 @@ async def seed_default_source(session: AsyncSession) -> None:
     )
     session.add(source)
     await session.commit()
-    log.info("Seeded default radio source 'Local radio' from radio_base_url=%r.", url)
+    log.info("Seeded default radio source 'Local radio' from %s: %r.",
+             "ADSBUDDY_RADIO_URL" if env_url else "radio_base_url", url)
 
 
 async def seed_baseload_triggers(session: AsyncSession) -> None:

@@ -64,3 +64,12 @@ def test_nav_hides_triggers_for_guest():
     assert ">Sign in<" in out          # guest gets a Sign in link
     assert "Viewing as guest" in out   # banner
     assert "/stats" in out             # Stats link present
+
+
+def test_radio_url_env_is_read(monkeypatch):
+    monkeypatch.setenv("ADSBUDDY_RADIO_URL", "http://adsb.local:8080")
+    monkeypatch.setenv("POSTGRES_USER", "x"); monkeypatch.setenv("POSTGRES_PASSWORD", "x")
+    monkeypatch.setenv("POSTGRES_DB", "x"); monkeypatch.setenv("ADSBUDDY_SECRET_KEY", "x")
+    monkeypatch.setenv("ADSBUDDY_ADMIN_USERNAME", "x"); monkeypatch.setenv("ADSBUDDY_ADMIN_PASSWORD", "x")
+    from app.config import Settings
+    assert Settings().radio_url == "http://adsb.local:8080"

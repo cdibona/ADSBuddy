@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Set by the Pi/tmpfs compose: the database lives in RAM and is wiped on
     # reboot. Drives a warning banner in the UI.
     ephemeral_db: bool = Field(default=False, alias="ADSBUDDY_EPHEMERAL_DB")
+    # Optional: pre-configure the adsb-im radio URL from docker-compose. Used
+    # only on first boot to seed the "Local radio" source; admins manage it from
+    # Admin → Sources afterward. Blank = configure it in the admin UI.
+    radio_url: str = Field(default="", alias="ADSBUDDY_RADIO_URL")
 
     @property
     def database_url(self) -> str:
