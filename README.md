@@ -10,41 +10,22 @@ This is **v1**: a web frontend on the local tailnet, backed by Postgres,
 embedding the radio's tar1090 map for now while we build the database and
 alerting parts underneath.
 
-## Quick install (released image)
-
-Run the published release straight from GitHub Container Registry — **no clone,
-no build, no login.** The image is public; you only need Docker and ~2 minutes.
+## Quick install
 
 ```bash
-# 1. Make a directory and grab the two files you need
-mkdir adsbuddy && cd adsbuddy
-curl -fsSLO https://raw.githubusercontent.com/cdibona/ADSBuddy/main/docker-compose.ghcr.yml
-curl -fsSL  https://raw.githubusercontent.com/cdibona/ADSBuddy/main/.env.template -o .env
-
-# 2. Fill in the handful of required values
-#    - ADSBUDDY_SECRET_KEY : python3 -c "import secrets; print(secrets.token_urlsafe(48))"
-#    - ADSBUDDY_TAILNET_IP : tailscale ip -4
-#    - ADSBUDDY_ADMIN_PASSWORD / POSTGRES_PASSWORD : pick your own
-#    - ADSBUDDY_RADIO_URL : your adsb-im radio, e.g. http://adsb.local:8080 (optional)
-$EDITOR .env
-
-# 3. Pull + run a pinned release (omit the var to track :latest)
-ADSBUDDY_IMAGE_TAG=1.1.1 docker compose -f docker-compose.ghcr.yml up -d
+curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/install.sh | sh
 ```
 
-That pulls `ghcr.io/cdibona/adsbuddy:1.1.1`, starts Postgres, runs
-`alembic upgrade head`, and serves the app. Watch it come up with
-`docker compose -f docker-compose.ghcr.yml logs -f app`, then visit:
+That installs the **latest release** and starts it in **open mode** (no login —
+for a trusted appliance like an adsb-im Pi). It generates the session secret,
+binds to all interfaces, asks which radio to poll (default
+`http://127.0.0.1:8080`), and brings up the stack. Then open
+**http://localhost:8000** — it's already ingesting; configure everything in the app.
 
-- `http://localhost:${ADSBUDDY_PORT}`  (from this host)
-- `http://${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}`  (from any tailnet device)
-
-Log in with the `ADSBUDDY_ADMIN_USERNAME` / `ADSBUDDY_ADMIN_PASSWORD` you set.
-If you set `ADSBUDDY_RADIO_URL` it's already ingesting; otherwise point it at
-your radio under **Admin → Sources**.
-
-The app binds **only** to `127.0.0.1` and your tailnet IP — never to a public
-interface. To upgrade later, bump `ADSBUDDY_IMAGE_TAG` and re-run step 3.
+Want logins (guest / user / admin)? Set `ADSBUDDY_MODE=MultiUser` in
+`adsbuddy/.env`, re-run `docker compose -f docker-compose.ghcr.yml up -d`, and
+sign in as `admin` / `AdminChangeMe`. For external Postgres, systemd, Raspberry
+Pi notes, and other options, see **[`deploy/README.md`](deploy/README.md)**.
 
 ## Build from source (development)
 
@@ -52,7 +33,7 @@ To build the image locally from a checkout instead of pulling a release:
 
 ```bash
 cp .env.template .env
-$EDITOR .env                          # set secret, passwords, tailnet IP
+$EDITOR .env                          # set secret, passwords, bind address
 ADSBUDDY_GIT_SHA=$(git rev-parse --short HEAD) docker compose up --build
 ```
 
@@ -69,7 +50,7 @@ SD card), and co-locating with adsb-im — see **[`deploy/README.md`](deploy/REA
 ## Configuration
 
 - `.env` (gitignored) holds **only** the handful of values the app needs to
-  boot: the web port, the tailnet IP to bind to, Postgres credentials, a
+  boot: the web port, the bind address, Postgres credentials, a
   session-signing secret, the first-run admin username/password, and optionally
   `ADSBUDDY_RADIO_URL` to pre-seed your adsb-im radio on first boot. See
   `.env.template` for the full list with comments.

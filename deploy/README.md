@@ -16,7 +16,7 @@ ADSBuddy is a Docker Compose stack of (normally) two containers:
 
 - **`app`** — the ADSBuddy image. On start it runs `alembic upgrade head` then
   serves on container port `8000`. The Compose port map binds it to
-  `127.0.0.1` and your tailnet IP only — never a public interface.
+  `ADSBUDDY_BIND` (default `127.0.0.1` — localhost only).
 - **`db`** — `postgres:16`, with data in the named volume `adsbuddy_pgdata`
   (survives restarts and image upgrades; `docker compose down -v` wipes it).
 
@@ -194,7 +194,7 @@ ADSBUDDY_IMAGE_TAG=1.1.1 docker compose -f docker-compose.pi.yml up -d
 
 ## TLS / remote access
 
-ADSBuddy binds to localhost + the tailnet IP only and speaks plain HTTP. For
+ADSBuddy binds to `ADSBUDDY_BIND` (default `127.0.0.1`) and speaks plain HTTP. For
 HTTPS across the tailnet, front it with **Tailscale Serve** (terminates TLS and
 proxies to the app port), e.g. `tailscale serve --bg <ADSBUDDY_PORT>` mapping
 your `<host>.ts.net` name to the local app. Set `site_base_url` (Admin → System)
@@ -235,14 +235,9 @@ ADSBuddy matches it to a user the same way OAuth does.
 client that can hit the app directly can forge those headers. So:
 
 1. **Bind localhost-only.** In your `.env`-driven compose, the app publishes on
-   `127.0.0.1` **and** the tailnet IP. For header auth, drop the tailnet-IP
-   port line so the only way in is `tailscale serve → 127.0.0.1:<port>`:
-
-   ```yaml
-   ports:
-     - "127.0.0.1:${ADSBUDDY_PORT}:8000"
-     # remove the "${ADSBUDDY_TAILNET_IP}:..." line
-   ```
+   whatever `ADSBUDDY_BIND` is set to. For header auth keep it at the default
+   `127.0.0.1` so the only way in is `tailscale serve → 127.0.0.1:<port>` (do not
+   set `ADSBUDDY_BIND=0.0.0.0`).
 
 2. **Set the trusted proxy.** ADSBuddy refuses the header unless the request's
    peer is in `tailscale_trusted_proxies` (fail-closed). Behind Serve→Docker the

@@ -52,5 +52,7 @@ services:
       ADSBUDDY_RADIO_URL: ${ADSBUDDY_RADIO_URL:-}
       ADSBUDDY_EPHEMERAL_DB: "1"     # drives the in-memory warning banner
     ports:
-      - "127.0.0.1:${ADSBUDDY_PORT}:8000"
-      - "${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}:8000"
+      # Where to bind the web port. Default 127.0.0.1 (localhost only; reach the
+      # tailnet via Tailscale Serve). Set ADSBUDDY_BIND=0.0.0.0 for a LAN/tailnet
+      # appliance, or a specific IP. Don't expose open mode on an untrusted network.
+      - "${ADSBUDDY_BIND:-127.0.0.1}:${ADSBUDDY_PORT}:8000"
