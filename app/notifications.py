@@ -69,32 +69,21 @@ async def twilio_configured(session: AsyncSession) -> bool:
     return bool(sid and token and from_num)
 
 
-async def vestaboard_configured(session: AsyncSession) -> bool:
-    return bool((await get_setting(session, "vestaboard_api_key") or "").strip())
-
-
-async def trmnl_configured(session: AsyncSession) -> bool:
-    return bool((await get_setting(session, "trmnl_webhook_url") or "").strip())
-
-
 async def available_channel_kinds(session: AsyncSession) -> list[str]:
-    """Channel kinds a user can actually use right now.
+    """Channel kinds a user can use right now.
 
-    Discord and generic webhooks need no admin setup, so they're always offered.
-    Email, Twilio SMS, Vestaboard, and TRMNL depend on admin transport config,
-    so they appear only once their transport is set up.
+    Discord, generic webhook, Vestaboard, and TRMNL carry their own per-channel
+    destination (webhook URL / API key), so they're always offered. Email and
+    Twilio SMS depend on admin-configured transports, so they appear only once
+    SMTP / Twilio is set up.
     """
     avail: list[str] = []
     for kind in CHANNEL_KINDS:
-        if kind in ("discord", "webhook"):
+        if kind in ("discord", "webhook", "vestaboard", "trmnl"):
             avail.append(kind)
         elif kind == "email" and await smtp_configured(session):
             avail.append(kind)
         elif kind == "sms_twilio" and await twilio_configured(session):
-            avail.append(kind)
-        elif kind == "vestaboard" and await vestaboard_configured(session):
-            avail.append(kind)
-        elif kind == "trmnl" and await trmnl_configured(session):
             avail.append(kind)
     return avail
 
@@ -518,9 +507,9 @@ async def _send_vestaboard(
     trigger: Trigger,
     firing: TriggerFiring | None,
 ) -> None:
-    key = (await get_setting(session, "vestaboard_api_key") or "").strip()
+    key = ((channel.config or {}).get("api_key") or "").strip()
     if not key:
-        raise ChannelNotConfigured("Vestaboard not configured (vestaboard_api_key is empty).")
+        raise ChannelNotConfigured("Vestaboard channel is missing its Read-Write API key.")
     headers = {"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"}
     # Preferred: a laid-out character matrix; fall back to plain text if the
     # board/API rejects the matrix form.
@@ -547,9 +536,9 @@ async def _send_trmnl(
     trigger: Trigger,
     firing: TriggerFiring | None,
 ) -> None:
-    url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
+    url = ((channel.config or {}).get("webhook_url") or "").strip()
     if not url:
-        raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
+        raise ChannelNotConfigured("TRMNL channel is missing its webhook URL.")
     if "/api/custom_plugins/" in url and url.rstrip("/").endswith("custom_plugins"):
         raise ChannelNotConfigured(
             "TRMNL webhook URL is missing its plugin UUID — copy the full Webhook URL "
@@ -627,42 +616,6 @@ async def latest_firing_and_trigger(session: AsyncSession):
         firing, trigger = row
         return trigger, firing
     return _sample_trigger(), _sample_firing()
-
-
-async def send_transport_test(
-    session: AsyncSession, client: httpx.AsyncClient, kind: str
-) -> tuple[bool, str]:
-    """Send the most recent real firing to an admin transport (vestaboard/trmnl);
-    falls back to a synthetic sample if nothing has fired yet.
-
-    Returns (ok, message) for the admin UI — does not record a delivery row.
-    """
-    try:
-        if kind == "vestaboard":
-            trigger, firing = await latest_firing_and_trigger(session)
-            code = await _send_vestaboard(session, client, None, trigger, firing)
-            return True, f"Test sent (HTTP {code}) — check the board."
-        elif kind == "trmnl":
-            # TRMNL is the summary device, so its test shows the current summary.
-            url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
-            if not url:
-                raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
-            if "/api/custom_plugins/" in url and url.rstrip("/").endswith("custom_plugins"):
-                raise ChannelNotConfigured(
-                    "TRMNL webhook URL is missing its plugin UUID — copy the full Webhook URL "
-                    "from the plugin's settings (e.g. https://trmnl.com/api/custom_plugins/<uuid>)."
-                )
-            summary = await build_summary(session)
-            resp = await client.post(url, json={"merge_variables": _summary_trmnl_mv(summary)}, timeout=15.0)
-            resp.raise_for_status()
-            return True, (f"Summary sent (HTTP {resp.status_code}) — {summary['count']} aircraft. "
-                          "Reload the TRMNL Edit-Markup page; its preview renders from this push.")
-        else:
-            return False, f"Unknown transport: {kind}"
-    except ChannelNotConfigured as e:
-        return False, str(e)
-    except Exception as e:  # noqa: BLE001
-        return False, f"Failed: {e}"
 
 
 async def _dispatch_one(
@@ -971,15 +924,15 @@ async def send_summary_to_channel(
     """Render + push the summary to one channel via its own transport."""
     kind = channel.kind
     if kind == "trmnl":
-        url = (await get_setting(session, "trmnl_webhook_url") or "").strip()
+        url = ((channel.config or {}).get("webhook_url") or "").strip()
         if not url:
-            raise ChannelNotConfigured("TRMNL not configured (trmnl_webhook_url is empty).")
+            raise ChannelNotConfigured("TRMNL channel is missing its webhook URL.")
         resp = await client.post(url, json={"merge_variables": _summary_trmnl_mv(summary)}, timeout=15.0)
         resp.raise_for_status()
     elif kind == "vestaboard":
-        key = (await get_setting(session, "vestaboard_api_key") or "").strip()
+        key = ((channel.config or {}).get("api_key") or "").strip()
         if not key:
-            raise ChannelNotConfigured("Vestaboard not configured (vestaboard_api_key is empty).")
+            raise ChannelNotConfigured("Vestaboard channel is missing its Read-Write API key.")
         resp = await client.post(
             "https://rw.vestaboard.com/",
             headers={"X-Vestaboard-Read-Write-Key": key, "Content-Type": "application/json"},

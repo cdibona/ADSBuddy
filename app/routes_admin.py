@@ -572,13 +572,9 @@ async def admin_notifications(
             "twilio_settings": pick(
                 ["twilio_account_sid", "twilio_auth_token", "twilio_from_number"]
             ),
-            "vestaboard_settings": pick(["vestaboard_api_key"]),
-            "trmnl_settings": pick(["trmnl_webhook_url"]),
             "summary_settings": pick(["summary_window_minutes", "summary_news_lookback_hours"]),
             "smtp_ok": await notifications.smtp_configured(db),
             "twilio_ok": await notifications.twilio_configured(db),
-            "vestaboard_ok": await notifications.vestaboard_configured(db),
-            "trmnl_ok": await notifications.trmnl_configured(db),
         },
     )
 
@@ -601,26 +597,6 @@ async def admin_summary_now(
         msg = f"Summary failed: {e}"
     return RedirectResponse(
         url=f"/admin/notifications?summary_msg={quote(msg)}", status_code=status.HTTP_303_SEE_OTHER
-    )
-
-
-@router.post("/notifications/test/{kind}")
-async def admin_notifications_test(
-    kind: str,
-    actor: User = Depends(require_admin),
-    db: AsyncSession = Depends(get_session),
-):
-    """Send a test message to an admin-configured transport (Vestaboard / TRMNL)."""
-    if kind not in ("vestaboard", "trmnl"):
-        raise HTTPException(status_code=404)
-    import httpx
-    from urllib.parse import quote
-
-    async with httpx.AsyncClient() as client:
-        ok, msg = await notifications.send_transport_test(db, client, kind)
-    return RedirectResponse(
-        url=f"/admin/notifications?tested={kind}&ok={1 if ok else 0}&msg={quote(msg)}",
-        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

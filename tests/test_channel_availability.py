@@ -12,10 +12,12 @@ def _patch_settings(monkeypatch, values):
     monkeypatch.setattr(notifications, "get_setting", fake_get)
 
 
-def test_only_webhooks_when_nothing_configured(monkeypatch):
+def test_self_configured_kinds_always_available(monkeypatch):
     from app import notifications
     _patch_settings(monkeypatch, {})
-    assert asyncio.run(notifications.available_channel_kinds(None)) == ["discord", "webhook"]
+    # Discord, webhook, Vestaboard, TRMNL carry their own per-channel config.
+    assert asyncio.run(notifications.available_channel_kinds(None)) == [
+        "discord", "webhook", "vestaboard", "trmnl"]
 
 
 def test_email_appears_with_smtp(monkeypatch):
@@ -48,12 +50,9 @@ def test_admin_notifications_groups_render():
     assert "configured" in out and "not set up" in out
 
 
-def test_vestaboard_and_trmnl_gated(monkeypatch):
+def test_vestaboard_and_trmnl_always_available(monkeypatch):
     from app import notifications
-    _patch_settings(monkeypatch, {})
-    kinds = asyncio.run(notifications.available_channel_kinds(None))
-    assert "vestaboard" not in kinds and "trmnl" not in kinds
-    _patch_settings(monkeypatch, {"vestaboard_api_key": "key", "trmnl_webhook_url": "https://x"})
+    _patch_settings(monkeypatch, {})  # per-user config, no admin gating
     kinds = asyncio.run(notifications.available_channel_kinds(None))
     assert "vestaboard" in kinds and "trmnl" in kinds
 
@@ -68,60 +67,36 @@ def test_compact_text_truncates():
     assert len(out) <= 132
 
 
-def test_transport_test_route_registered():
-    from app.routes_admin import router
-    paths = {r.path for r in router.routes if hasattr(r, "path")}
-    assert "/admin/notifications/test/{kind}" in paths
+def test_trmnl_vestaboard_config_built_per_channel():
+    from app.routes_profile import _build_config
+    assert _build_config("trmnl", {"webhook_url": " https://trmnl.com/api/custom_plugins/x "}) == \
+        {"webhook_url": "https://trmnl.com/api/custom_plugins/x"}
+    assert _build_config("vestaboard", {"api_key": " key123 "}) == {"api_key": "key123"}
 
 
-def test_send_transport_test_ok_and_unconfigured(monkeypatch):
-    from app import notifications
-    from unittest.mock import AsyncMock
-
-    # Vestaboard test = latest firing; don't hit the DB.
-    monkeypatch.setattr(notifications, "latest_firing_and_trigger",
-                        AsyncMock(return_value=(notifications._sample_trigger(), notifications._sample_firing())))
-    monkeypatch.setattr(notifications, "_send_vestaboard", AsyncMock(return_value=200))
-    ok, msg = asyncio.run(notifications.send_transport_test(None, None, "vestaboard"))
-    assert ok and "sent" in msg.lower()
-
-    # TRMNL test = summary; unconfigured webhook URL -> ChannelNotConfigured.
-    async def empty_get(s, key):
-        return ""
-    monkeypatch.setattr(notifications, "get_setting", empty_get)
-    ok, msg = asyncio.run(notifications.send_transport_test(None, None, "trmnl"))
-    assert not ok and "not configured" in msg
-
-
-def test_admin_notifications_has_test_buttons():
-    import types
-    from app.routes_admin import templates
-    from app.models import Setting
-    req = types.SimpleNamespace(url=types.SimpleNamespace(path="/admin/notifications"))
-    def s(k): return Setting(key=k, value="", description="d", secret=False)
-    out = templates.env.get_template("admin_notifications.html").render(
-        request=req, user=types.SimpleNamespace(username="a", is_admin=True),
-        master_settings=[s("notifications_enabled")], smtp_settings=[], twilio_settings=[],
-        vestaboard_settings=[s("vestaboard_api_key")], trmnl_settings=[s("trmnl_webhook_url")],
-        smtp_ok=False, twilio_ok=False, vestaboard_ok=True, trmnl_ok=False)
-    assert 'action="/admin/notifications/test/vestaboard"' in out
-    assert 'action="/admin/notifications/test/trmnl"' in out
-
-
-def test_trmnl_missing_uuid_is_caught(monkeypatch):
+def test_trmnl_missing_uuid_is_caught():
     import types
     from unittest.mock import AsyncMock
     from app import notifications
 
-    async def fake_get(session, key):
-        return "https://trmnl.com/api/custom_plugins/" if key == "trmnl_webhook_url" else ""
-    monkeypatch.setattr(notifications, "get_setting", fake_get)
+    # Per-channel webhook URL missing the UUID -> ChannelNotConfigured, no POST.
+    channel = types.SimpleNamespace(config={"webhook_url": "https://trmnl.com/api/custom_plugins/"})
     client = AsyncMock()
     trig = types.SimpleNamespace(name="t")
     import pytest
     with pytest.raises(notifications.ChannelNotConfigured):
-        asyncio.run(notifications._send_trmnl(None, client, None, trig, None))
-    client.post.assert_not_called()  # never even attempted the bad URL
+        asyncio.run(notifications._send_trmnl(None, client, channel, trig, None))
+    client.post.assert_not_called()
+
+
+def test_trmnl_missing_webhook_is_caught():
+    import types
+    from unittest.mock import AsyncMock
+    from app import notifications
+    channel = types.SimpleNamespace(config={})  # no webhook_url
+    import pytest
+    with pytest.raises(notifications.ChannelNotConfigured):
+        asyncio.run(notifications._send_trmnl(None, AsyncMock(), channel, types.SimpleNamespace(name="t"), None))
 
 
 def test_sample_firing_is_realistic():

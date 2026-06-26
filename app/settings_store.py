@@ -29,7 +29,6 @@ _NOTIFICATION_KEYS = frozenset({
     "smtp_host", "smtp_port", "smtp_username", "smtp_password",
     "smtp_from", "smtp_use_tls",
     "twilio_account_sid", "twilio_auth_token", "twilio_from_number",
-    "vestaboard_api_key", "trmnl_webhook_url",
 })
 _AUTH_KEYS = frozenset({
     "oauth_google_client_id", "oauth_google_client_secret",
@@ -161,25 +160,6 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         key="twilio_from_number",
         default="",
         description="Twilio sender phone number in E.164 (e.g. +15551234567).",
-    ),
-    SettingSpec(
-        key="vestaboard_api_key",
-        default="",
-        description=(
-            "Vestaboard Read-Write API key. Powers the 'Vestaboard' channel kind; "
-            "blank = unavailable. One key targets one board."
-        ),
-        secret=True,
-    ),
-    SettingSpec(
-        key="trmnl_webhook_url",
-        default="",
-        description=(
-            "TRMNL webhook URL (Private Plugin → Webhook, e.g. "
-            "https://trmnl.com/api/custom_plugins/<uuid>). Powers the 'TRMNL' "
-            "channel kind; blank = unavailable. We POST {\"merge_variables\": {...}}."
-        ),
-        secret=True,
     ),
     # ---- Receiver / station location (for the aircraft-detail map) ---------
     SettingSpec(
