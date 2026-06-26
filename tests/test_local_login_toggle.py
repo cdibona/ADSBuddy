@@ -7,10 +7,11 @@ from unittest.mock import AsyncMock
 
 
 def _patch(monkeypatch, values):
-    from app import oauth
+    from app import oauth, tailscale_auth
     async def fake_get(db, key):
         return values.get(key, "")
     monkeypatch.setattr(oauth, "get_setting", fake_get)
+    monkeypatch.setattr(tailscale_auth, "get_setting", fake_get)
 
 
 def test_local_login_on_by_default(monkeypatch):

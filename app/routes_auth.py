@@ -49,6 +49,8 @@ async def _start_session(
 _OAUTH_ERRORS = {
     "oauth": "Sign-in failed. Please try again.",
     "noaccount": "No ADSBuddy account is linked to that login. Ask an admin to add you.",
+    "ts_noaccount": "No ADSBuddy account matches your Tailscale identity. Ask an admin to add you.",
+    "ts_unavailable": "Tailscale sign-in isn't available from here.",
 }
 
 
@@ -57,6 +59,14 @@ async def login_form(
     request: Request, db: AsyncSession = Depends(get_session)
 ) -> HTMLResponse:
     from app.oauth import configured_providers, local_login_allowed
+    from app.tailscale_auth import tailscale_identity
+
+    ident = await tailscale_identity(request, db)
+    ts_login = ident[0] if ident else None
+    # Seamless: if a trusted Tailscale identity is present and we're not already
+    # bouncing back from it (?manual / ?error), go straight to the sign-in route.
+    if ts_login and not request.query_params.get("manual") and not request.query_params.get("error"):
+        return RedirectResponse(url="/auth/tailscale/login", status_code=status.HTTP_303_SEE_OTHER)
 
     error = _OAUTH_ERRORS.get(request.query_params.get("error"))
     return templates.TemplateResponse(
@@ -66,6 +76,7 @@ async def login_form(
             "error": error,
             "oauth_providers": await configured_providers(db),
             "local_login": await local_login_allowed(db),
+            "ts_login": ts_login,
         },
     )
 

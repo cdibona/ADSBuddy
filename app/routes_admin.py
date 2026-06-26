@@ -51,7 +51,12 @@ async def admin_home(
     auth_settings = [s for s in all_settings if setting_category(s.key) == "auth"]
     return templates.TemplateResponse(
         request, "admin_users.html",
-        {"user": user, "users": users, "auth_settings": auth_settings},
+        {
+            "user": user,
+            "users": users,
+            "auth_settings": auth_settings,
+            "client_host": request.client.host if request.client else "?",
+        },
     )
 
 

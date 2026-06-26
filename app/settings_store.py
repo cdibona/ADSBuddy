@@ -35,6 +35,7 @@ _AUTH_KEYS = frozenset({
     "oauth_google_client_id", "oauth_google_client_secret",
     "oauth_github_client_id", "oauth_github_client_secret",
     "oauth_auto_provision", "local_login_enabled",
+    "tailscale_auth_enabled", "tailscale_trusted_proxies",
 })
 _SUMMARY_KEYS = frozenset({
     "summary_enabled", "summary_interval_minutes", "summary_window_minutes",
@@ -319,10 +320,30 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         key="local_login_enabled",
         default="true",
         description=(
-            "When false, the username/password form is hidden and only OAuth sign-in "
-            "is offered. As a safety net this only takes effect once an OAuth provider "
-            "is configured, so turning it off can't lock everyone out. Test your OAuth "
-            "login before disabling local login. 'true'/'false'."
+            "When false, the username/password form is hidden and only OAuth / Tailscale "
+            "sign-in is offered. As a safety net this only takes effect once an alternative "
+            "(OAuth provider or Tailscale auth) is configured, so turning it off can't lock "
+            "everyone out. Test your SSO login before disabling local login. 'true'/'false'."
+        ),
+    ),
+    SettingSpec(
+        key="tailscale_auth_enabled",
+        default="false",
+        description=(
+            "Trust Tailscale Serve identity headers (Tailscale-User-Login) to sign users "
+            "in by their tailnet identity. REQUIRES the app to be reachable ONLY via "
+            "Tailscale Serve on localhost (drop the tailnet-IP port bind), and "
+            "tailscale_trusted_proxies set — otherwise the header is spoofable. 'true'/'false'."
+        ),
+    ),
+    SettingSpec(
+        key="tailscale_trusted_proxies",
+        default="",
+        description=(
+            "Comma-separated IPs/CIDRs that ADSBuddy will trust the Tailscale-User-Login "
+            "header from — the address it sees Tailscale Serve connecting from (often the "
+            "Docker bridge gateway, e.g. 172.17.0.1/32; see the detected client IP on this "
+            "page). BLANK = header auth is refused (fail-closed)."
         ),
     ),
 )

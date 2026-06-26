@@ -55,7 +55,10 @@ async def local_login_allowed(db: AsyncSession) -> bool:
     enabled = ((await get_setting(db, "local_login_enabled")) or "true").lower() == "true"
     if enabled:
         return True
-    return not await configured_providers(db)
+    from app.tailscale_auth import tailscale_enabled
+
+    has_alt = bool(await configured_providers(db)) or await tailscale_enabled(db)
+    return not has_alt  # no usable SSO -> keep password login (fail-safe)
 
 
 def build_client(provider: str, client_id: str, client_secret: str):

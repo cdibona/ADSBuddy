@@ -42,11 +42,17 @@
 
 <div class="detail-card">
   <h2 class="detail-card-title">Authentication (OAuth / SSO)</h2>
-  <p class="muted">Optional sign-in via Google/GitHub alongside local login. Set a provider's
-  client id + secret to enable it; redirect/callback URL is
+  <p class="muted">Optional sign-in alongside local login. <strong>Google/GitHub OAuth:</strong> set a
+  provider's client id + secret; callback URL is
   <code>&lt;site_base_url&gt;/auth/oauth/&lt;provider&gt;/callback</code>. With
-  <code>oauth_auto_provision</code> off, OAuth only logs in users whose email matches an
-  existing account.</p>
+  <code>oauth_auto_provision</code> off, SSO only logs in users whose email matches an existing
+  account. Set <code>local_login_enabled=false</code> to hide the password form once SSO works.</p>
+  <p class="help-note">🔒 <strong>Tailscale sign-in:</strong> set <code>tailscale_auth_enabled=true</code> to
+  trust Tailscale&nbsp;Serve identity headers. This is only safe when the app is reachable
+  <em>only</em> via Serve on localhost (drop the tailnet-IP port bind), and you list the proxy address in
+  <code>tailscale_trusted_proxies</code>. ADSBuddy currently sees your connection coming from
+  <strong><code>{{ client_host }}</code></strong> — if you're connected via Serve, that's the value to add
+  (e.g. <code>{{ client_host }}/32</code>). Blank = Tailscale header auth is refused.</p>
   {% with settings = auth_settings %}{% include "_settings_list.html" %}{% endwith %}
 </div>
 {% endblock %}

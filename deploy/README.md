@@ -180,6 +180,40 @@ proxies to the app port), e.g. `tailscale serve --bg <ADSBUDDY_PORT>` mapping
 your `<host>.ts.net` name to the local app. Set `site_base_url` (Admin → System)
 to that HTTPS URL so notification links and OAuth redirect URIs are absolute.
 
+## Tailscale identity sign-in (Admin → Users)
+
+ADSBuddy can sign users in from **Tailscale Serve identity headers**
+(`Tailscale-User-Login`) — set `tailscale_auth_enabled=true`. Serve injects the
+requester's tailnet identity (usually their email) on each proxied request, and
+ADSBuddy matches it to a user the same way OAuth does.
+
+**This is only safe if the app is reachable *exclusively* through Serve.** Any
+client that can hit the app directly can forge those headers. So:
+
+1. **Bind localhost-only.** In your `.env`-driven compose, the app publishes on
+   `127.0.0.1` **and** the tailnet IP. For header auth, drop the tailnet-IP
+   port line so the only way in is `tailscale serve → 127.0.0.1:<port>`:
+
+   ```yaml
+   ports:
+     - "127.0.0.1:${ADSBUDDY_PORT}:8000"
+     # remove the "${ADSBUDDY_TAILNET_IP}:..." line
+   ```
+
+2. **Set the trusted proxy.** ADSBuddy refuses the header unless the request's
+   peer is in `tailscale_trusted_proxies` (fail-closed). Behind Serve→Docker the
+   peer is the Docker bridge gateway; the Admin → Users page shows the exact IP
+   it currently sees — add it (e.g. `172.17.0.1/32`).
+
+3. **Verify, then optionally disable passwords.** Confirm you can sign in via
+   the "Continue as …" button, then set `local_login_enabled=false`. Recovery if
+   you lock yourself out:
+   `docker compose exec db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c
+   "UPDATE settings SET value='true' WHERE key='local_login_enabled';"`
+
+Note: for a **GitHub-backed** tailnet the login is `user@github`, not a real
+email — set that as the user's email in ADSBuddy for the match to work.
+
 ## Notes
 
 - Configuration the app needs to boot lives in `.env` (gitignored); everything

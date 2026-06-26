@@ -19,6 +19,7 @@ from app import (
     routes_oauth,
     routes_pages,
     routes_profile,
+    routes_tailscale,
     routes_triggers,
 )
 from app.config import get_settings
@@ -62,6 +63,7 @@ app.include_router(routes_profile.router)
 app.include_router(routes_admin.router)
 app.include_router(routes_ingest.router)
 app.include_router(routes_oauth.router)
+app.include_router(routes_tailscale.router)
 
 
 @app.get("/healthz")

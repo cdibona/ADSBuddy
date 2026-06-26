@@ -13,15 +13,18 @@
     <button type="submit">Sign in</button>
   </form>
   {% endif %}
-  {% if oauth_providers %}
+  {% if oauth_providers or ts_login %}
   <div class="oauth-row">
     {% if local_login %}<div class="oauth-sep"><span>or</span></div>{% endif %}
+    {% if ts_login %}
+    <a class="btn-secondary oauth-btn" href="/auth/tailscale/login">Continue as {{ ts_login }} (Tailscale)</a>
+    {% endif %}
     {% for p in oauth_providers %}
     <a class="btn-secondary oauth-btn" href="/auth/oauth/{{ p }}/login">Sign in with {{ p|capitalize }}</a>
     {% endfor %}
   </div>
   {% endif %}
-  {% if not local_login and not oauth_providers %}
+  {% if not local_login and not oauth_providers and not ts_login %}
   <p class="muted">No sign-in method is currently available. Contact an administrator.</p>
   {% endif %}
 </div>
