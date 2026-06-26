@@ -8,28 +8,25 @@ deployment picks them up automatically on its next image update — see
 [How baseload triggers reach users](#how-baseload-triggers-reach-users). If you
 build a trigger others would enjoy, please send it in.
 
-There are two ways, easiest first.
+Submissions are **pull requests** — one JSON file per trigger under
+[`app/community_triggers/`](app/community_triggers/) — so they're easy to review
+and merge, and they ship to everyone on the next release.
 
-### 1. From the app (recommended)
+### From the app (recommended)
 
 1. Open the trigger under **Triggers → edit**.
-2. In the **Contribute this trigger** card, click **Submit to GitHub ↗**. This
-   opens a new issue pre-filled with your trigger as a JSON snippet and a
-   `trigger-submission` label. Add a line on *who/what it tracks* and your
-   *source*, then submit.
+2. In the **Contribute this trigger** card, click **Open a pull request ↗**.
+   This opens GitHub's new-file editor pre-filled with your trigger as
+   `app/community_triggers/<name>.json`. Click **Propose new file** → **Create
+   pull request**. Add a line on *who/what it tracks* and your *source* in the PR
+   description.
 
-That's it — a maintainer reviews it and, if it's a good general-interest
-trigger, adds it to the next release's baseload.
+That's it — a maintainer reviews and merges. (Prefer to do it by hand? Add a
+JSON file under `app/community_triggers/` yourself; use **View JSON** in the
+Contribute card to get the exact content.) Example file:
 
-### 2. Open a pull request
-
-Add an entry to [`app/baseload_triggers.py`](app/baseload_triggers.py) in the
-`BASELOAD_TRIGGERS` list. Each entry is a dict carrying only the fields it needs;
-use **View JSON** in the Contribute card to get the exact snippet for your
-trigger, e.g.:
-
-```python
-{'name': 'Jane Doe', 'is_active': False, 'cooldown_seconds': 3600, 'tail_patterns': 'N12345'},
+```json
+{"name": "Jane Doe", "is_active": false, "cooldown_seconds": 3600, "tail_patterns": "N12345"}
 ```
 
 Guidelines:

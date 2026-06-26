@@ -487,25 +487,27 @@ async def trigger_new_submit(
     return resp
 
 
+def _trigger_slug(name: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", (name or "trigger").lower()).strip("-")
+    return s or "trigger"
+
+
 def _contribute_url(trigger) -> str:
-    """A pre-filled 'submit this trigger' GitHub issue URL."""
+    """A pre-filled GitHub 'create new file' URL that opens a one-trigger PR.
+
+    GitHub's /new/<branch>?filename=&value= opens the new-file editor with the
+    path + content filled in; the user clicks 'Propose new file' to open a PR.
+    """
     import json
 
     from app.baseload_triggers import trigger_to_spec
 
     spec = trigger_to_spec(trigger)
-    body = (
-        "I'd like to contribute this trigger to ADSBuddy's baseload.\n\n"
-        "```json\n" + json.dumps(spec, indent=2, ensure_ascii=False) + "\n```\n\n"
-        "**Who/what it tracks:** \n"
-        "**Source for the tail number(s) / criteria:** \n"
-    )
     q = urllib.parse.urlencode({
-        "labels": "trigger-submission",
-        "title": f"Trigger submission: {trigger.name}",
-        "body": body,
+        "filename": f"app/community_triggers/{_trigger_slug(trigger.name)}.json",
+        "value": json.dumps(spec, indent=2, ensure_ascii=False),
     })
-    return f"{version.GITHUB_REPO}/issues/new?{q}"
+    return f"{version.GITHUB_REPO}/new/main?{q}"
 
 
 @router.get("/triggers/{trigger_id}/export")

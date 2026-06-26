@@ -99,8 +99,10 @@ async def seed_baseload_triggers(session: AsyncSession) -> None:
     """
     import json
 
-    from app.baseload_triggers import BASELOAD_TRIGGERS
+    from app.baseload_triggers import all_baseload_triggers
     from app.models import Trigger
+
+    baseload = all_baseload_triggers()
 
     owner = (
         await session.execute(
@@ -117,7 +119,7 @@ async def seed_baseload_triggers(session: AsyncSession) -> None:
     existing = {n for (n,) in (await session.execute(select(Trigger.name))).all()}
 
     added = 0
-    for spec in BASELOAD_TRIGGERS:
+    for spec in baseload:
         name = spec["name"]
         if name in applied:
             continue  # already offered once — respect the user's keep/delete choice

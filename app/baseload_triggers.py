@@ -93,6 +93,9 @@ SPEC_NUM_FIELDS = (
 )
 
 
+_ALLOWED_SPEC_KEYS = frozenset(("name", "is_active", "cooldown_seconds", *SPEC_STR_FIELDS, *SPEC_NUM_FIELDS))
+
+
 def trigger_to_spec(trigger) -> dict:
     """Serialize a Trigger into the baseload-dict format (only its set fields),
     so a user can submit it to the project. Ownership/timestamps are dropped."""
@@ -110,3 +113,42 @@ def trigger_to_spec(trigger) -> dict:
         if v is not None:
             spec[f] = v
     return spec
+
+
+def _load_community_triggers() -> list[dict]:
+    """Load community-contributed trigger specs from JSON files in
+    ``community_triggers/`` (one per file). Only known fields are kept, so a
+    malformed file can't inject bad kwargs; bad files are skipped."""
+    import json
+    import logging
+    from pathlib import Path
+
+    log = logging.getLogger(__name__)
+    out: list[dict] = []
+    d = Path(__file__).parent / "community_triggers"
+    for path in sorted(d.glob("*.json")):
+        try:
+            raw = json.loads(path.read_text())
+        except (ValueError, OSError) as e:
+            log.warning("Skipping community trigger %s: %s", path.name, e)
+            continue
+        if not isinstance(raw, dict) or not str(raw.get("name", "")).strip():
+            log.warning("Skipping community trigger %s: not a dict with a name.", path.name)
+            continue
+        spec = {k: v for k, v in raw.items() if k in _ALLOWED_SPEC_KEYS}
+        spec.setdefault("is_active", False)        # community triggers default paused
+        spec.setdefault("cooldown_seconds", 3600)
+        out.append(spec)
+    return out
+
+
+def all_baseload_triggers() -> list[dict]:
+    """Curated baseload + community-contributed triggers (deduped by name,
+    curated wins)."""
+    seen = {t["name"] for t in BASELOAD_TRIGGERS}
+    merged = list(BASELOAD_TRIGGERS)
+    for spec in _load_community_triggers():
+        if spec["name"] not in seen:
+            merged.append(spec)
+            seen.add(spec["name"])
+    return merged

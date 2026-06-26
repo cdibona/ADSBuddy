@@ -55,12 +55,11 @@ def test_export_and_contribute_routes_registered():
     assert "/triggers/{trigger_id}/export" in paths
 
 
-def test_contribute_url_prefills_github_issue():
+def test_contribute_url_opens_new_file_pr():
     import types, urllib.parse
     from app.routes_triggers import _contribute_url
     t = types.SimpleNamespace(name="Jane Doe", is_active=False, cooldown_seconds=3600,
                               tail_patterns="N12345")
-    # fill the rest of the spec fields as empty/None
     for f in ("flight_patterns","type_codes","owner_patterns","squawk_patterns","categories",
               "exclude_tail_patterns","exclude_flight_patterns","exclude_type_codes",
               "exclude_owner_patterns","origin_icaos","destination_icaos","geofence_center","notes"):
@@ -69,9 +68,26 @@ def test_contribute_url_prefills_github_issue():
               "max_altitude_ft","center_lat","center_lon","radius_miles"):
         setattr(t, f, None)
     url = _contribute_url(t)
-    assert url.startswith("https://github.com/cdibona/ADSBuddy/issues/new?")
-    assert "trigger-submission" in url
+    assert url.startswith("https://github.com/cdibona/ADSBuddy/new/main?")  # opens a PR, not an issue
+    assert "app/community_triggers/jane-doe.json" in urllib.parse.unquote(url)
     assert "N12345" in urllib.parse.unquote(url)
+
+
+def test_community_triggers_loaded_and_merged(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+    import app.baseload_triggers as bl
+    d = tmp_path / "community_triggers"; d.mkdir()
+    (d / "good.json").write_text(json.dumps({"name": "Cool Jet", "tail_patterns": "N7CJ"}))
+    (d / "bad.json").write_text("{not json")
+    (d / "nameless.json").write_text(json.dumps({"tail_patterns": "N0"}))
+    # point the loader at the temp dir
+    monkeypatch.setattr(bl, "__file__", str(tmp_path / "baseload_triggers.py"))
+    community = bl._load_community_triggers()
+    names = {c["name"] for c in community}
+    assert names == {"Cool Jet"}                       # bad + nameless skipped
+    c = next(x for x in community if x["name"] == "Cool Jet")
+    assert c["is_active"] is False and c["cooldown_seconds"] == 3600   # defaults applied
 
 
 def test_baseload_internal_key_hidden():
