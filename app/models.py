@@ -27,6 +27,10 @@ def _utcnow() -> datetime:
 class User(Base):
     __tablename__ = "users"
 
+    # Plain class attribute (not a column): real users are never guests. A guest
+    # viewer is a transient User with is_guest set True on the instance.
+    is_guest = False
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)

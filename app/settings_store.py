@@ -36,6 +36,7 @@ _AUTH_KEYS = frozenset({
     "oauth_github_client_id", "oauth_github_client_secret",
     "oauth_auto_provision", "local_login_enabled",
     "tailscale_auth_enabled", "tailscale_trusted_proxies",
+    "guest_access_enabled",
 })
 _SUMMARY_KEYS = frozenset({
     "summary_enabled", "summary_interval_minutes", "summary_window_minutes",
@@ -344,6 +345,16 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
             "header from — the address it sees Tailscale Serve connecting from (often the "
             "Docker bridge gateway, e.g. 172.17.0.1/32; see the detected client IP on this "
             "page). BLANK = header auth is refused (fail-closed)."
+        ),
+    ),
+    SettingSpec(
+        key="guest_access_enabled",
+        default="false",
+        description=(
+            "When true, visitors without an account get read-only access to the aircraft "
+            "list, aircraft detail, history search, the live map, and the airspace stats "
+            "page — no triggers, notifications, profile, or admin. Intended for tailnet "
+            "viewers. 'true'/'false'."
         ),
     ),
 )

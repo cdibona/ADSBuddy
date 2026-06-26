@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Airspace stats — ADSBuddy{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Airspace stats</h1>
+</div>
+
+<div class="filter-bar">
+  <span class="filter-bar-label">Window</span>
+  <a href="/stats?window=15m" class="chip{% if window == '15m' %} chip-on{% endif %}">Last 15 min</a>
+  <a href="/stats?window=1h" class="chip{% if window == '1h' %} chip-on{% endif %}">Last hour</a>
+  <a href="/stats?window=today" class="chip{% if window == 'today' %} chip-on{% endif %}">Today (UTC)</a>
+</div>
+
+<div class="stat-hero">
+  <span class="stat-count">{{ "{:,}".format(stats.count) }}</span>
+  <span class="stat-label">distinct aircraft seen</span>
+</div>
+
+{% set b = stats.breakdown %}
+<div class="stat-grid">
+  <div class="stat-cell"><span class="stat-num">{{ b.helicopter }}</span><span class="stat-cell-label">🚁 Helicopters</span></div>
+  <div class="stat-cell"><span class="stat-num">{{ b.light }}</span><span class="stat-cell-label">🛩️ Light planes</span></div>
+  <div class="stat-cell"><span class="stat-num">{{ b.private_jet }}</span><span class="stat-cell-label">✈️ Private jets</span></div>
+  <div class="stat-cell"><span class="stat-num">{{ b.airliner }}</span><span class="stat-cell-label">🛫 Airliners</span></div>
+  <div class="stat-cell"><span class="stat-num">{{ b.cargo }}</span><span class="stat-cell-label">📦 Cargo</span></div>
+  <div class="stat-cell"><span class="stat-num">{{ b.seaplane }}</span><span class="stat-cell-label">🌊 Seaplanes</span></div>
+  <div class="stat-cell"><span class="stat-num">{{ b.other }}</span><span class="stat-cell-label">Other</span></div>
+</div>
+
+<p class="muted">Classified best-effort from ADS-B emitter category, type code, and operator.
+Updated {{ stats.generated_at | localdt("%H:%M:%S %Z") }}.</p>
+{% endblock %}

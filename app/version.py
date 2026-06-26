@@ -53,9 +53,12 @@ def register(templates: Jinja2Templates) -> None:
     extending base.html (i.e. all of them), or base.html's footer would raise
     an undefined-global error.
     """
+    from app.config import get_settings
+
     templates.env.globals.update(
         app_git_sha=GIT_SHA,
         app_commit_url=github_commit_url(),
         app_uptime=uptime_str,
         app_started_at=STARTED_AT,
+        ephemeral_db=get_settings().ephemeral_db,
     )

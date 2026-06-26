@@ -27,6 +27,7 @@ Three Compose files are provided — pick one:
 | `docker-compose.ghcr.yml` | bundled `db` container | pulled from GHCR | **Most deployments.** No build. |
 | `docker-compose.yml` | bundled `db` container | built from source | Development / local changes. |
 | `docker-compose.external-db.yml` | **external** (you run it) | pulled from GHCR | Low-write hosts (Raspberry Pi / SD card). |
+| `docker-compose.pi.yml` | bundled, **in RAM (tmpfs)** | pulled from GHCR | Single Pi, no SD wear — **but volatile** (see below). |
 
 All three read the same `.env`. To avoid typing `-f <file>` every time, set
 `COMPOSE_FILE` in `.env` (see below) and just run `docker compose ...`.
@@ -169,6 +170,24 @@ the same Docker Compose stack; the Pi-specific considerations:
 
 This section is a sketch, not yet a tested runbook — it'll firm up once the Pi
 co-install is exercised.
+
+### In-memory (tmpfs) mode — `docker-compose.pi.yml`
+
+If you want everything on the Pi with **zero database writes to the SD card**,
+`docker-compose.pi.yml` runs Postgres entirely in RAM (`tmpfs`):
+
+```bash
+ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.pi.yml up -d
+```
+
+> ⚠ **The database is volatile.** Every reboot (or `docker compose down`) wipes
+> *everything* — triggers, settings, channels, users, and history all reset to
+> defaults. The app shows a permanent in-memory warning banner in this mode.
+>
+> **If you want to keep any of that, don't use this file — use
+> `docker-compose.external-db.yml` with Postgres on another host.** tmpfs mode
+> is for a demo / "just show me the live airspace" box, or a Pi where you're
+> happy to re-bootstrap config on each boot.
 
 ---
 

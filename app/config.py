@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     admin_password: str = Field(alias="ADSBUDDY_ADMIN_PASSWORD")
 
     test_mode: bool = Field(default=False, alias="ADSBUDDY_TEST_MODE")
+    # Set by the Pi/tmpfs compose: the database lives in RAM and is wiped on
+    # reboot. Drives a warning banner in the UI.
+    ephemeral_db: bool = Field(default=False, alias="ADSBUDDY_EPHEMERAL_DB")
 
     @property
     def database_url(self) -> str:

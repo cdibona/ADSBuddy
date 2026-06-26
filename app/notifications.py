@@ -838,26 +838,15 @@ def _human_ago(now: datetime, then: datetime | None) -> str:
 async def build_summary(session: AsyncSession) -> dict:
     """Aggregate the airspace for the periodic summary: aircraft count in the
     window + a 'special news' line from qualifying (summary_priority) triggers."""
+    from app.stats import airspace_breakdown
+
     now = datetime.now(timezone.utc)
     window = _int_setting(await get_setting(session, "summary_window_minutes"), 15) or 15
     cutoff = now - timedelta(minutes=window)
 
-    # One row per distinct aircraft seen in the window (latest sighting), with the
-    # facts we need to classify it into the fun breakdown buckets.
-    rows = (
-        await session.execute(
-            text(
-                "SELECT DISTINCT ON (s.icao_hex) a.type_code, a.owner_op, s.category "
-                "FROM sightings s JOIN aircraft a ON a.icao_hex = s.icao_hex "
-                "WHERE s.seen_at >= :cut ORDER BY s.icao_hex, s.seen_at DESC"
-            ),
-            {"cut": cutoff},
-        )
-    ).all()
-    count = len(rows)
-    buckets = {k: 0 for k in ("helicopter", "seaplane", "light", "private_jet", "cargo", "airliner", "other")}
-    for type_code, owner_op, category in rows:
-        buckets[summary_kind(type_code, category, owner_op)] += 1
+    bd = await airspace_breakdown(session, window)
+    count = bd["count"]
+    buckets = bd["breakdown"]
 
     lookback_h = _int_setting(await get_setting(session, "summary_news_lookback_hours"), 6) or 6
     recent = (

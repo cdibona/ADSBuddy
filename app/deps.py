@@ -10,6 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_session
 from app.models import User, UserSession
 from app.security import SESSION_COOKIE_NAME
+from app.settings_store import get as get_setting
+
+
+def _guest_user() -> User:
+    """A transient, read-only viewer for guest mode (never persisted)."""
+    g = User(username="guest", is_admin=False, is_active=True, timezone="UTC")
+    g.is_guest = True
+    return g
+
+
+async def guest_access_enabled(session: AsyncSession) -> bool:
+    return ((await get_setting(session, "guest_access_enabled")) or "false").lower() == "true"
 
 
 async def current_user_optional(
@@ -57,3 +69,33 @@ async def require_admin(
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
     return user
+
+
+async def current_viewer(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> User | None:
+    """A logged-in user, or a read-only guest when guest access is enabled.
+
+    Used by the public-safe read-only pages (aircraft, history, map, stats).
+    Returns None only when there's no session AND guest access is off.
+    """
+    user = await current_user_optional(request, session)
+    if user is not None:
+        return user
+    if await guest_access_enabled(session):
+        request.state.user_tz = "UTC"
+        return _guest_user()
+    return None
+
+
+async def require_viewer(
+    viewer: User | None = Depends(current_viewer),
+) -> User:
+    if viewer is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Login required",
+            headers={"Location": "/login"},
+        )
+    return viewer

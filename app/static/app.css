@@ -785,3 +785,27 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   font-size: 0.8em; line-height: 1.4; color: var(--ink); white-space: pre; margin: 0;
 }
 .help-note ol li { margin-bottom: 0.4rem; }
+
+/* Guest mode */
+.guest-banner {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink); font-size: 0.85em; text-align: center; padding: 0.35rem 1rem;
+}
+.stat-hero { text-align: center; margin: 1.5rem 0 0.5rem; }
+.stat-hero .stat-count { display: block; font-size: 4rem; font-weight: var(--fw-bold); line-height: 1; font-family: var(--font-data); }
+.stat-hero .stat-label { color: var(--muted); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.6rem; margin: 1rem 0; }
+.stat-cell {
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.8rem; display: flex; flex-direction: column; gap: 0.2rem; align-items: center;
+}
+.stat-cell .stat-num { font-size: 1.8rem; font-weight: var(--fw-bold); font-family: var(--font-data); }
+.stat-cell .stat-cell-label { color: var(--muted); font-size: 0.85em; }
+
+/* In-memory (tmpfs) database warning — the "big sign". */
+.ephemeral-banner {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  border-bottom: 2px solid var(--danger); color: var(--ink);
+  font-size: 0.85em; text-align: center; padding: 0.5rem 1rem;
+}

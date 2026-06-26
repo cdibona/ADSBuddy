@@ -22,7 +22,7 @@ from app.aircraft_helpers import (
     type_url,
 )
 from app.database import get_session
-from app.deps import current_user_optional, require_user
+from app.deps import current_user_optional, current_viewer, require_user, require_viewer
 from app.models import Aircraft, RadioSource, Sighting, Trigger, TriggerFiring, User
 from app.type_links import type_link_map
 from app.settings_store import get_required
@@ -80,7 +80,7 @@ timefmt.register(templates)
 @router.get("/", response_class=HTMLResponse)
 async def home(
     request: Request,
-    user: User | None = Depends(current_user_optional),
+    user: User | None = Depends(current_viewer),
     db: AsyncSession = Depends(get_session),
 ):
     if user is None:
@@ -102,7 +102,7 @@ async def home(
 async def recent_aircraft(
     request: Request,
     type: str | None = Query(None),
-    user: User = Depends(require_user),
+    user: User = Depends(require_viewer),
     db: AsyncSession = Depends(get_session),
 ):
     type_q = (type or "").strip()
@@ -138,11 +138,39 @@ async def recent_aircraft(
     )
 
 
+_STATS_WINDOWS = {"15m": 15, "1h": 60, "today": None}
+
+
+@router.get("/stats", response_class=HTMLResponse)
+async def airspace_stats(
+    request: Request,
+    window: str = Query("15m"),
+    user: User = Depends(require_viewer),
+    db: AsyncSession = Depends(get_session),
+):
+    from datetime import datetime, timezone
+
+    from app.stats import airspace_breakdown
+
+    window = window if window in _STATS_WINDOWS else "15m"
+    if window == "today":
+        now = datetime.now(timezone.utc)
+        minutes = max(1, int((now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() // 60))
+    else:
+        minutes = _STATS_WINDOWS[window]
+    stats = await airspace_breakdown(db, minutes)
+    return templates.TemplateResponse(
+        request,
+        "stats.html",
+        {"user": user, "stats": stats, "window": window},
+    )
+
+
 @router.get("/aircraft/{icao_hex}", response_class=HTMLResponse)
 async def aircraft_detail(
     icao_hex: str,
     request: Request,
-    user: User = Depends(require_user),
+    user: User = Depends(require_viewer),
     db: AsyncSession = Depends(get_session),
 ):
     hex_lower = icao_hex.strip().lower()
@@ -162,17 +190,21 @@ async def aircraft_detail(
     )
     sightings = sightings_result.scalars().all()
 
-    # Last 10 trigger firings, newest first. Non-admins only see their own.
-    firings_stmt = (
-        select(TriggerFiring, Trigger)
-        .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
-        .where(TriggerFiring.icao_hex == hex_lower)
-        .order_by(TriggerFiring.fired_at.desc())
-        .limit(10)
-    )
-    if not user.is_admin:
-        firings_stmt = firings_stmt.where(Trigger.owner_id == user.id)
-    firings_rows = (await db.execute(firings_stmt)).all()
+    # Last 10 trigger firings, newest first. Non-admins only see their own;
+    # guests see none (firings reveal personal trigger config).
+    if getattr(user, "is_guest", False):
+        firings_rows = []
+    else:
+        firings_stmt = (
+            select(TriggerFiring, Trigger)
+            .join(Trigger, Trigger.id == TriggerFiring.trigger_id)
+            .where(TriggerFiring.icao_hex == hex_lower)
+            .order_by(TriggerFiring.fired_at.desc())
+            .limit(10)
+        )
+        if not user.is_admin:
+            firings_stmt = firings_stmt.where(Trigger.owner_id == user.id)
+        firings_rows = (await db.execute(firings_stmt)).all()
 
     # ---- Map data: pull a deeper, position-bearing slice (independent of the
     # 10-row table above) so the map can draw an actual flight path, not just
@@ -421,7 +453,7 @@ def _build_history_conditions(filters: dict) -> list:
 @router.get("/history", response_class=HTMLResponse)
 async def history_search(
     request: Request,
-    user: User = Depends(require_user),
+    user: User = Depends(require_viewer),
     db: AsyncSession = Depends(get_session),
     tail: str | None = Query(None),
     hex_raw: str | None = Query(None, alias="hex"),
@@ -439,7 +471,9 @@ async def history_search(
         tail, hex_raw, callsign, type_code, owner, year_raw, route,
         start_date, end_date,
     )
-    trigger_choice = _parse_trigger_choice(trigger)
+    # Guests can't use the trigger filter (it's personal config) — ignore it.
+    is_guest = getattr(user, "is_guest", False)
+    trigger_choice = None if is_guest else _parse_trigger_choice(trigger)
 
     # Repopulate the form with raw user inputs.
     form = {
@@ -455,11 +489,14 @@ async def history_search(
         "trigger": trigger or "",
     }
 
-    # Triggers available for the dropdown (own triggers; admins see all).
-    trig_stmt = select(Trigger.id, Trigger.name).order_by(Trigger.name)
-    if not user.is_admin:
-        trig_stmt = trig_stmt.where(Trigger.owner_id == user.id)
-    trigger_options = (await db.execute(trig_stmt)).all()
+    # Triggers available for the dropdown (own triggers; admins see all; guests none).
+    if is_guest:
+        trigger_options = []
+    else:
+        trig_stmt = select(Trigger.id, Trigger.name).order_by(Trigger.name)
+        if not user.is_admin:
+            trig_stmt = trig_stmt.where(Trigger.owner_id == user.id)
+        trigger_options = (await db.execute(trig_stmt)).all()
 
     # Only search if filters were supplied and are valid.
     searched = (bool(filters) or trigger_choice is not None) and not errors

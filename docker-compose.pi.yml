@@ -1,0 +1,54 @@
+# =============================================================================
+# Raspberry Pi / SD-card-sparing stack: Postgres runs ENTIRELY IN RAM (tmpfs).
+#
+#   ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.pi.yml up -d
+#
+# This keeps the constant sighting write-load off the SD card. BUT the database
+# is VOLATILE: every reboot (or `docker compose down`) WIPES everything — your
+# triggers, settings, channels, users, and history all reset to defaults.
+#
+#   >>> If you want to KEEP any of that, do NOT use this file. Use an external <<<
+#   >>> Postgres instead: docker-compose.external-db.yml (see deploy/README.md). <<<
+#
+# Good for: a demo / "just show me the airspace" box, or a Pi where you're happy
+# to re-bootstrap config on each boot. The app shows an in-memory warning banner.
+# =============================================================================
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Data directory on tmpfs (RAM) — nothing is written to the SD card, and the
+    # database is empty again after any restart.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/cdibona/adsbuddy:${ADSBUDDY_IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST:-db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      ADSBUDDY_SECRET_KEY: ${ADSBUDDY_SECRET_KEY}
+      ADSBUDDY_ADMIN_USERNAME: ${ADSBUDDY_ADMIN_USERNAME}
+      ADSBUDDY_ADMIN_PASSWORD: ${ADSBUDDY_ADMIN_PASSWORD}
+      ADSBUDDY_TEST_MODE: ${ADSBUDDY_TEST_MODE:-0}
+      ADSBUDDY_EPHEMERAL_DB: "1"     # drives the in-memory warning banner
+    ports:
+      - "127.0.0.1:${ADSBUDDY_PORT}:8000"
+      - "${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}:8000"
