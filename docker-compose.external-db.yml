@@ -1,0 +1,37 @@
+# Run ONLY the ADSBuddy app, against an EXTERNAL Postgres you manage elsewhere
+# (no bundled `db` container). Good for low-write / SD-card-sparing setups — e.g.
+# a Raspberry Pi already running adsb-im, with the database on a NAS or another
+# host so the SD card isn't taking the write load.
+#
+# In .env, point at your database and (optionally) pin a release:
+#   POSTGRES_HOST=192.168.1.50      # your external Postgres
+#   POSTGRES_PORT=5432
+#   POSTGRES_USER=adsbuddy
+#   POSTGRES_PASSWORD=...
+#   POSTGRES_DB=adsbuddy            # must already exist on that server
+#   ADSBUDDY_IMAGE_TAG=1.0.1
+#
+# Then:
+#   docker compose -f docker-compose.external-db.yml up -d
+#
+# The app runs `alembic upgrade head` on boot, so the POSTGRES_USER needs rights
+# to create/alter tables in POSTGRES_DB.
+services:
+  app:
+    image: ghcr.io/cdibona/adsbuddy:${ADSBUDDY_IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      ADSBUDDY_SECRET_KEY: ${ADSBUDDY_SECRET_KEY}
+      ADSBUDDY_ADMIN_USERNAME: ${ADSBUDDY_ADMIN_USERNAME}
+      ADSBUDDY_ADMIN_PASSWORD: ${ADSBUDDY_ADMIN_PASSWORD}
+      ADSBUDDY_TEST_MODE: ${ADSBUDDY_TEST_MODE:-0}
+    ports:
+      # Bind only to localhost and the tailnet IP — never to 0.0.0.0.
+      - "127.0.0.1:${ADSBUDDY_PORT}:8000"
+      - "${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}:8000"

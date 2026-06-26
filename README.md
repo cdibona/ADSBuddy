@@ -58,6 +58,12 @@ ADSBUDDY_GIT_SHA=$(git rev-parse --short HEAD) docker compose up --build
 shows the deployed version; plain `docker compose up --build` works too and
 just shows `dev`.)
 
+## Deployment
+
+For running ADSBuddy as a long-lived service — systemd unit, choosing a Compose
+file, using an **external Postgres** (recommended on a Raspberry Pi to spare the
+SD card), and co-locating with adsb-im — see **[`deploy/README.md`](deploy/README.md)**.
+
 ## Configuration
 
 - `.env` (gitignored) holds **only** the handful of values the app needs to
