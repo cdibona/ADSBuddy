@@ -31,6 +31,7 @@ services:
       ADSBUDDY_ADMIN_USERNAME: ${ADSBUDDY_ADMIN_USERNAME}
       ADSBUDDY_ADMIN_PASSWORD: ${ADSBUDDY_ADMIN_PASSWORD}
       ADSBUDDY_TEST_MODE: ${ADSBUDDY_TEST_MODE:-0}
+      ADSBUDDY_MODE: ${ADSBUDDY_MODE:-MultiUser}
       ADSBUDDY_RADIO_URL: ${ADSBUDDY_RADIO_URL:-}
     ports:
       # Bind only to localhost and the tailnet IP — never to 0.0.0.0.

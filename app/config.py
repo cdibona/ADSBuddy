@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,19 @@ class Settings(BaseSettings):
     # only on first boot to seed the "Local radio" source; admins manage it from
     # Admin → Sources afterward. Blank = configure it in the admin UI.
     radio_url: str = Field(default="", alias="ADSBUDDY_RADIO_URL")
+
+    # Access model:
+    #   "MultiUser" (default) — guest / user / admin with logins (the full model)
+    #   "open" — NO login; every request is treated as the admin. For a trusted
+    #            single appliance (e.g. an adsb-im Pi on your tailnet only).
+    mode: str = Field(
+        default="MultiUser",
+        validation_alias=AliasChoices("ADSBUDDY_MODE", "ADSBuddyMode"),
+    )
+
+    @property
+    def open_mode(self) -> bool:
+        return self.mode.strip().lower() == "open"
 
     @property
     def database_url(self) -> str:

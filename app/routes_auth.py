@@ -57,9 +57,13 @@ _OAUTH_ERRORS = {
 @router.get("/login", response_class=HTMLResponse)
 async def login_form(
     request: Request, db: AsyncSession = Depends(get_session)
-) -> HTMLResponse:
+):
     from app.oauth import configured_providers, local_login_allowed
     from app.tailscale_auth import tailscale_identity
+
+    if get_settings().open_mode:
+        # No login in open mode — you're already the admin.
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     ident = await tailscale_identity(request, db)
     ts_login = ident[0] if ident else None
@@ -123,6 +127,9 @@ async def login_submit(
 
 @router.post("/logout")
 async def logout(request: Request, db: AsyncSession = Depends(get_session)) -> Response:
+    if get_settings().open_mode:
+        # Nothing to log out of in open mode.
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
     sid = request.cookies.get(SESSION_COOKIE_NAME)
     if sid:
         existing = await db.execute(select(UserSession).where(UserSession.id == sid))

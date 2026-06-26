@@ -61,4 +61,5 @@ def register(templates: Jinja2Templates) -> None:
         app_uptime=uptime_str,
         app_started_at=STARTED_AT,
         ephemeral_db=get_settings().ephemeral_db,
+        open_mode=get_settings().open_mode,
     )

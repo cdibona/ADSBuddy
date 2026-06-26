@@ -28,6 +28,23 @@ async def current_user_optional(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> User | None:
+    from app.config import get_settings
+
+    if get_settings().open_mode:
+        # Open (appliance) mode: no login — act as the first admin on every
+        # request. The bootstrap admin always exists by the time we serve.
+        admin = (
+            await session.execute(
+                select(User)
+                .where(User.is_admin.is_(True), User.is_active.is_(True))
+                .order_by(User.id)
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if admin is not None:
+            request.state.user_tz = admin.timezone or "UTC"
+            return admin
+
     sid = request.cookies.get(SESSION_COOKIE_NAME)
     if not sid:
         return None

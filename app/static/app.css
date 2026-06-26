@@ -809,3 +809,10 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   border-bottom: 2px solid var(--danger); color: var(--ink);
   font-size: 0.85em; text-align: center; padding: 0.5rem 1rem;
 }
+
+/* Open (appliance) mode indicator. */
+.open-banner {
+  background: color-mix(in srgb, var(--info) 16%, transparent);
+  border-bottom: 1px solid var(--info); color: var(--ink);
+  font-size: 0.85em; text-align: center; padding: 0.4rem 1rem;
+}

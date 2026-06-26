@@ -77,6 +77,17 @@ SD card), and co-locating with adsb-im — see **[`deploy/README.md`](deploy/REA
   alert rules — lives in the Postgres `settings`/`radio_sources` tables and is
   editable from the admin UI (Sources, System, …).
 
+### Access mode
+
+`ADSBUDDY_MODE` in `.env` selects the access model:
+
+- **`MultiUser`** (default) — guest / user / admin with logins (local password,
+  OAuth, and/or Tailscale sign-in; optional read-only guest access).
+- **`open`** — **no login at all; every visitor has full admin.** Intended for a
+  trusted single appliance (e.g. an adsb-im Pi) reachable only on your
+  tailnet/LAN. The UI shows a permanent "open mode" banner. Do **not** use it on
+  a shared or public network.
+
 ## Users
 
 - A single admin user is created on first boot from

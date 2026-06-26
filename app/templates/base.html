@@ -76,16 +76,22 @@
                document.querySelectorAll('[data-set-theme]').forEach(function(el){
                  el.setAttribute('aria-pressed', el.getAttribute('data-set-theme')===v);});})();
             </script>
+            {% if not (open_mode is defined and open_mode) %}
             <div class="menu-sep"></div>
             <form method="post" action="/logout">
               <button type="submit" class="menu-logout">Logout</button>
             </form>
+            {% endif %}
           </div>
         </details>
         {% endif %}
       {% endif %}
     </nav>
   </header>
+  {% if open_mode is defined and open_mode %}
+  <div class="open-banner">🔓 <strong>Open mode</strong> — no login required; everyone has full admin.
+    Run this only on a trusted single appliance reachable on your tailnet/LAN.</div>
+  {% endif %}
   {% if ephemeral_db is defined and ephemeral_db %}
   <div class="ephemeral-banner">⚠ <strong>In-memory database</strong> — all data (triggers, settings, history) lives in RAM and is
     <strong>lost on reboot</strong>. For anything you want to keep, move to an external Postgres — see

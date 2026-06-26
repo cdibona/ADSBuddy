@@ -200,6 +200,30 @@ proxies to the app port), e.g. `tailscale serve --bg <ADSBUDDY_PORT>` mapping
 your `<host>.ts.net` name to the local app. Set `site_base_url` (Admin → System)
 to that HTTPS URL so notification links and OAuth redirect URIs are absolute.
 
+## Access mode: open vs. MultiUser (`ADSBUDDY_MODE`)
+
+`ADSBUDDY_MODE` in `.env` chooses the access model:
+
+- **`MultiUser`** (default) — the full guest / user / admin model with logins
+  (local password, OAuth, Tailscale identity; optional read-only guest access).
+- **`open`** — **no login; every request is treated as the admin.** No session,
+  no password, admin settings fully exposed. The UI shows a permanent "open
+  mode" banner.
+
+Open mode is for a **trusted single appliance** — e.g. ADSBuddy running in a
+container on the same adsb-im Pi, reachable only on your tailnet/LAN. Because
+anyone who can reach the app gets full admin, only use it where the network is
+trusted (and keep the tailnet-only / localhost binding). Switching modes needs
+no data changes — just set `ADSBUDDY_MODE` and restart:
+
+```dotenv
+# .env  (on a dedicated radio appliance)
+ADSBUDDY_MODE=open
+```
+
+The bootstrap admin (from `ADSBUDDY_ADMIN_USERNAME`) is still created and is the
+identity open-mode requests act as, so triggers/channels are owned normally.
+
 ## Tailscale identity sign-in (Admin → Users)
 
 ADSBuddy can sign users in from **Tailscale Serve identity headers**
