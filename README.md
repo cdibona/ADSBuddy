@@ -10,7 +10,38 @@ This is **v1**: a web frontend on the local tailnet, backed by Postgres,
 embedding the radio's tar1090 map for now while we build the database and
 alerting parts underneath.
 
-## Quick start
+## Quick install (released image)
+
+Run the published release straight from GitHub Container Registry — no build
+required. You only need Docker, this repo's two files (`.env`,
+`docker-compose.ghcr.yml`), and ~2 minutes.
+
+```bash
+# 1. Configure (the same .env both compose files use)
+cp .env.template .env
+$EDITOR .env                          # set secret, passwords, tailnet IP
+
+# 2. (only if the GHCR package is private) authenticate the pull
+#    Use a GitHub token with read:packages as the password — NOT your password.
+echo "$GHCR_TOKEN" | docker login ghcr.io -u <your-github-user> --password-stdin
+
+# 3. Pull + run a pinned release
+ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.ghcr.yml up -d
+```
+
+This pulls `ghcr.io/cdibona/adsbuddy:<tag>` (omit `ADSBUDDY_IMAGE_TAG` to track
+`:latest`), starts Postgres, runs `alembic upgrade head`, and serves the app.
+Then visit:
+
+- `http://localhost:${ADSBUDDY_PORT}`  (from this host)
+- `http://${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}`  (from any tailnet device)
+
+The app binds **only** to `127.0.0.1` and your tailnet IP — never to a public
+interface.
+
+## Build from source (development)
+
+To build the image locally from a checkout instead of pulling a release:
 
 ```bash
 cp .env.template .env
@@ -21,14 +52,6 @@ ADSBUDDY_GIT_SHA=$(git rev-parse --short HEAD) docker compose up --build
 (The `ADSBUDDY_GIT_SHA` prefix bakes the commit into the image so the footer
 shows the deployed version; plain `docker compose up --build` works too and
 just shows `dev`.)
-
-Then visit:
-
-- `http://localhost:${ADSBUDDY_PORT}`  (from this host)
-- `http://${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}`  (from any tailnet device)
-
-The app binds **only** to `127.0.0.1` and your tailnet IP — never to a public
-interface.
 
 ## Configuration
 
@@ -53,6 +76,20 @@ interface.
 cookie for a named user without driving the login form. Intended for
 Playwright / E2E suites only. Leave it off (`0`) in any deployment you care
 about; the production Docker image defaults it off.
+
+## Releases
+
+Tagged releases publish a container image to GHCR automatically. Pushing a
+`vX.Y.Z` tag runs the `Release image` workflow, which builds and pushes
+`ghcr.io/cdibona/adsbuddy:<version>`, `:<major>.<minor>`, and `:latest`.
+
+```bash
+git tag -a v1.0.2 -m "ADSBuddy v1.0.2"
+git push origin v1.0.2
+gh release create v1.0.2 --generate-notes
+```
+
+Deploy a release with `docker-compose.ghcr.yml` (see **Quick install** above).
 
 ## Architecture (v1)
 
