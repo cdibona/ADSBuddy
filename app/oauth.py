@@ -45,6 +45,19 @@ async def configured_providers(db: AsyncSession) -> list[str]:
     return out
 
 
+async def local_login_allowed(db: AsyncSession) -> bool:
+    """Whether the username/password form is offered.
+
+    Disabling it (local_login_enabled=false) only takes effect once OAuth is
+    actually usable (a provider is configured). If SSO isn't configured we keep
+    local login on regardless, so an admin can't lock everyone out.
+    """
+    enabled = ((await get_setting(db, "local_login_enabled")) or "true").lower() == "true"
+    if enabled:
+        return True
+    return not await configured_providers(db)
+
+
 def build_client(provider: str, client_id: str, client_secret: str):
     """A fresh Authlib client for one provider (config lives in the DB, so we
     build per-request rather than registering at startup)."""

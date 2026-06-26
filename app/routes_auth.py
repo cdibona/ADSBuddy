@@ -56,13 +56,17 @@ _OAUTH_ERRORS = {
 async def login_form(
     request: Request, db: AsyncSession = Depends(get_session)
 ) -> HTMLResponse:
-    from app.oauth import configured_providers
+    from app.oauth import configured_providers, local_login_allowed
 
     error = _OAUTH_ERRORS.get(request.query_params.get("error"))
     return templates.TemplateResponse(
         request,
         "login.html",
-        {"error": error, "oauth_providers": await configured_providers(db)},
+        {
+            "error": error,
+            "oauth_providers": await configured_providers(db),
+            "local_login": await local_login_allowed(db),
+        },
     )
 
 
@@ -73,13 +77,32 @@ async def login_submit(
     password: str = Form(...),
     db: AsyncSession = Depends(get_session),
 ) -> Response:
+    from app.oauth import configured_providers, local_login_allowed
+
+    if not await local_login_allowed(db):
+        # Local login is turned off (and OAuth is configured) — refuse the form
+        # post even if someone crafts it directly.
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {
+                "error": "Password sign-in is disabled. Use single sign-on.",
+                "oauth_providers": await configured_providers(db),
+                "local_login": False,
+            },
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
     row = await db.execute(select(User).where(User.username == username))
     user = row.scalar_one_or_none()
     if user is None or not user.is_active or not verify_password(user.password_hash, password):
         return templates.TemplateResponse(
             request,
             "login.html",
-            {"error": "Invalid username or password."},
+            {
+                "error": "Invalid username or password.",
+                "oauth_providers": await configured_providers(db),
+                "local_login": True,
+            },
             status_code=status.HTTP_401_UNAUTHORIZED,
         )
     response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
