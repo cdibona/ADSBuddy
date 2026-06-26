@@ -25,21 +25,23 @@ curl -fsSL  https://raw.githubusercontent.com/cdibona/ADSBuddy/main/.env.templat
 #    - ADSBUDDY_SECRET_KEY : python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 #    - ADSBUDDY_TAILNET_IP : tailscale ip -4
 #    - ADSBUDDY_ADMIN_PASSWORD / POSTGRES_PASSWORD : pick your own
+#    - ADSBUDDY_RADIO_URL : your adsb-im radio, e.g. http://adsb.local:8080 (optional)
 $EDITOR .env
 
 # 3. Pull + run a pinned release (omit the var to track :latest)
-ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.ghcr.yml up -d
+ADSBUDDY_IMAGE_TAG=1.1.1 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
-That pulls `ghcr.io/cdibona/adsbuddy:1.0.1`, starts Postgres, runs
+That pulls `ghcr.io/cdibona/adsbuddy:1.1.1`, starts Postgres, runs
 `alembic upgrade head`, and serves the app. Watch it come up with
 `docker compose -f docker-compose.ghcr.yml logs -f app`, then visit:
 
 - `http://localhost:${ADSBUDDY_PORT}`  (from this host)
 - `http://${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}`  (from any tailnet device)
 
-Log in with the `ADSBUDDY_ADMIN_USERNAME` / `ADSBUDDY_ADMIN_PASSWORD` you set,
-then point ADSBuddy at your radio under **Admin → System** (`radio_base_url`).
+Log in with the `ADSBUDDY_ADMIN_USERNAME` / `ADSBUDDY_ADMIN_PASSWORD` you set.
+If you set `ADSBUDDY_RADIO_URL` it's already ingesting; otherwise point it at
+your radio under **Admin → Sources**.
 
 The app binds **only** to `127.0.0.1` and your tailnet IP — never to a public
 interface. To upgrade later, bump `ADSBUDDY_IMAGE_TAG` and re-run step 3.
@@ -68,11 +70,12 @@ SD card), and co-locating with adsb-im — see **[`deploy/README.md`](deploy/REA
 
 - `.env` (gitignored) holds **only** the handful of values the app needs to
   boot: the web port, the tailnet IP to bind to, Postgres credentials, a
-  session-signing secret, and the first-run admin username/password. See
+  session-signing secret, the first-run admin username/password, and optionally
+  `ADSBUDDY_RADIO_URL` to pre-seed your adsb-im radio on first boot. See
   `.env.template` for the full list with comments.
-- **Everything else** — the radio URL, the aircraft.json polling interval,
-  alert rules — lives in the Postgres `settings` table and is editable from the
-  admin UI.
+- **Everything else** — the radio source(s), the aircraft.json polling interval,
+  alert rules — lives in the Postgres `settings`/`radio_sources` tables and is
+  editable from the admin UI (Sources, System, …).
 
 ## Users
 

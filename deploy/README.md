@@ -20,7 +20,7 @@ ADSBuddy is a Docker Compose stack of (normally) two containers:
 - **`db`** — `postgres:16`, with data in the named volume `adsbuddy_pgdata`
   (survives restarts and image upgrades; `docker compose down -v` wipes it).
 
-Three Compose files are provided — pick one:
+Four Compose files are provided — pick one:
 
 | File | Postgres | Image | Use when |
 |------|----------|-------|----------|
@@ -29,7 +29,7 @@ Three Compose files are provided — pick one:
 | `docker-compose.external-db.yml` | **external** (you run it) | pulled from GHCR | Low-write hosts (Raspberry Pi / SD card). |
 | `docker-compose.pi.yml` | bundled, **in RAM (tmpfs)** | pulled from GHCR | Single Pi, no SD wear — **but volatile** (see below). |
 
-All three read the same `.env`. To avoid typing `-f <file>` every time, set
+All four read the same `.env`. To avoid typing `-f <file>` every time, set
 `COMPOSE_FILE` in `.env` (see below) and just run `docker compose ...`.
 
 ---
@@ -39,7 +39,7 @@ All three read the same `.env`. To avoid typing `-f <file>` every time, set
 ### Released image (recommended)
 
 ```bash
-ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.ghcr.yml up -d
+ADSBUDDY_IMAGE_TAG=1.1.1 docker compose -f docker-compose.ghcr.yml up -d
 docker compose -f docker-compose.ghcr.yml logs -f app     # watch it come up
 ```
 
@@ -64,7 +64,7 @@ Rather than passing `-f` each time, put the selection in `.env`:
 ```dotenv
 # .env
 COMPOSE_FILE=docker-compose.ghcr.yml
-ADSBUDDY_IMAGE_TAG=1.0.1
+ADSBUDDY_IMAGE_TAG=1.1.1
 ```
 
 Then `docker compose up -d`, `docker compose logs -f app`, etc. all use that
@@ -158,9 +158,10 @@ the same Docker Compose stack; the Pi-specific considerations:
   put `adsbuddy_pgdata` on an SSD / USB-attached disk rather than the SD card,
   and raise `sighting_min_interval_seconds` (Admin → System) to cut write
   volume. The de-dup + retention controls already bound growth.
-- **Point ADSBuddy at the local radio.** adsb-im serves tar1090 on the Pi; set
-  `radio_base_url` (Admin → System) to the local feeder, e.g.
-  `http://127.0.0.1:8080` (or whatever host/port adsb-im exposes).
+- **Point ADSBuddy at the local radio.** adsb-im serves tar1090 on the Pi. Set
+  `ADSBUDDY_RADIO_URL` in `.env` (e.g. `http://127.0.0.1:8080`, or whatever
+  host/port adsb-im exposes) to seed it on first boot, or add it later under
+  **Admin → Sources**.
 - **Mind the ports.** adsb-im already uses common ports (often `8080`); pick a
   free `ADSBUDDY_PORT` in `.env` so the two don't collide.
 - **Architecture.** The image uses the standard `python:3.12-slim` base; if a
@@ -177,7 +178,7 @@ If you want everything on the Pi with **zero database writes to the SD card**,
 `docker-compose.pi.yml` runs Postgres entirely in RAM (`tmpfs`):
 
 ```bash
-ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.pi.yml up -d
+ADSBUDDY_IMAGE_TAG=1.1.1 docker compose -f docker-compose.pi.yml up -d
 ```
 
 > ⚠ **The database is volatile.** Every reboot (or `docker compose down`) wipes
@@ -235,8 +236,9 @@ email — set that as the user's email in ADSBuddy for the match to work.
 
 ## Notes
 
-- Configuration the app needs to boot lives in `.env` (gitignored); everything
-  else (radio URL, ingest cadence, API keys, alert rules) lives in the Postgres
-  `settings` table and is edited from the admin UI.
+- Configuration the app needs to boot lives in `.env` (gitignored) — including
+  the optional `ADSBUDDY_RADIO_URL` that pre-seeds the radio on first boot.
+  Everything else (radio source(s), ingest cadence, alert rules) lives in the
+  Postgres `settings`/`radio_sources` tables and is edited from the admin UI.
 - `ADSBUDDY_TEST_MODE=1` exposes `/test/login` for E2E suites — leave it `0` in
   any real deployment.
