@@ -12,32 +12,37 @@ alerting parts underneath.
 
 ## Quick install (released image)
 
-Run the published release straight from GitHub Container Registry — no build
-required. You only need Docker, this repo's two files (`.env`,
-`docker-compose.ghcr.yml`), and ~2 minutes.
+Run the published release straight from GitHub Container Registry — **no clone,
+no build, no login.** The image is public; you only need Docker and ~2 minutes.
 
 ```bash
-# 1. Configure (the same .env both compose files use)
-cp .env.template .env
-$EDITOR .env                          # set secret, passwords, tailnet IP
+# 1. Make a directory and grab the two files you need
+mkdir adsbuddy && cd adsbuddy
+curl -fsSLO https://raw.githubusercontent.com/cdibona/ADSBuddy/main/docker-compose.ghcr.yml
+curl -fsSL  https://raw.githubusercontent.com/cdibona/ADSBuddy/main/.env.template -o .env
 
-# 2. (only if the GHCR package is private) authenticate the pull
-#    Use a GitHub token with read:packages as the password — NOT your password.
-echo "$GHCR_TOKEN" | docker login ghcr.io -u <your-github-user> --password-stdin
+# 2. Fill in the handful of required values
+#    - ADSBUDDY_SECRET_KEY : python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+#    - ADSBUDDY_TAILNET_IP : tailscale ip -4
+#    - ADSBUDDY_ADMIN_PASSWORD / POSTGRES_PASSWORD : pick your own
+$EDITOR .env
 
-# 3. Pull + run a pinned release
+# 3. Pull + run a pinned release (omit the var to track :latest)
 ADSBUDDY_IMAGE_TAG=1.0.1 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
-This pulls `ghcr.io/cdibona/adsbuddy:<tag>` (omit `ADSBUDDY_IMAGE_TAG` to track
-`:latest`), starts Postgres, runs `alembic upgrade head`, and serves the app.
-Then visit:
+That pulls `ghcr.io/cdibona/adsbuddy:1.0.1`, starts Postgres, runs
+`alembic upgrade head`, and serves the app. Watch it come up with
+`docker compose -f docker-compose.ghcr.yml logs -f app`, then visit:
 
 - `http://localhost:${ADSBUDDY_PORT}`  (from this host)
 - `http://${ADSBUDDY_TAILNET_IP}:${ADSBUDDY_PORT}`  (from any tailnet device)
 
+Log in with the `ADSBUDDY_ADMIN_USERNAME` / `ADSBUDDY_ADMIN_PASSWORD` you set,
+then point ADSBuddy at your radio under **Admin → System** (`radio_base_url`).
+
 The app binds **only** to `127.0.0.1` and your tailnet IP — never to a public
-interface.
+interface. To upgrade later, bump `ADSBUDDY_IMAGE_TAG` and re-run step 3.
 
 ## Build from source (development)
 
