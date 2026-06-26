@@ -71,18 +71,6 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         description="How often the background ingester polls aircraft.json.",
     ),
     SettingSpec(
-        key="adsb_lol_api_key",
-        default="",
-        description="Optional adsb.lol API key (leave blank to skip that source).",
-        secret=True,
-    ),
-    SettingSpec(
-        key="flightaware_api_key",
-        default="",
-        description="Optional FlightAware AeroAPI key (leave blank to skip).",
-        secret=True,
-    ),
-    SettingSpec(
         key="site_title",
         default="ADSBuddy",
         description="Shown in the header / browser tab.",

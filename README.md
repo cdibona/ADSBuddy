@@ -1,10 +1,10 @@
 # ADSBuddy
 
 A personal aggregation and alerting layer over the user's local ADS-B radio
-(running [adsb-feeder-image](https://github.com/dirkhh/adsb-feeder-image)) plus
-cloud sources like adsb.lol and FlightAware. Eventually: AIS for boats, saved
-queries ("notify me when a plane older than 50 years flies overhead"), and
-mobile / smart-glasses clients that label the planes physically overhead.
+(running [adsb-feeder-image](https://github.com/dirkhh/adsb-feeder-image), aka
+adsb.im) — polled directly or fed by it via push. Eventually: AIS for boats,
+saved queries ("notify me when a plane older than 50 years flies overhead"),
+and mobile / smart-glasses clients that label the planes physically overhead.
 
 This is **v1**: a web frontend on the local tailnet, backed by Postgres,
 embedding the radio's tar1090 map for now while we build the database and
@@ -71,8 +71,8 @@ SD card), and co-locating with adsb-im — see **[`deploy/README.md`](deploy/REA
   session-signing secret, and the first-run admin username/password. See
   `.env.template` for the full list with comments.
 - **Everything else** — the radio URL, the aircraft.json polling interval,
-  adsb.lol / FlightAware API keys, alert rules — lives in the Postgres
-  `settings` table and is editable from the admin UI.
+  alert rules — lives in the Postgres `settings` table and is editable from the
+  admin UI.
 
 ## Users
 
