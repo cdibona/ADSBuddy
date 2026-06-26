@@ -487,6 +487,47 @@ async def trigger_new_submit(
     return resp
 
 
+def _contribute_url(trigger) -> str:
+    """A pre-filled 'submit this trigger' GitHub issue URL."""
+    import json
+
+    from app.baseload_triggers import trigger_to_spec
+
+    spec = trigger_to_spec(trigger)
+    body = (
+        "I'd like to contribute this trigger to ADSBuddy's baseload.\n\n"
+        "```json\n" + json.dumps(spec, indent=2, ensure_ascii=False) + "\n```\n\n"
+        "**Who/what it tracks:** \n"
+        "**Source for the tail number(s) / criteria:** \n"
+    )
+    q = urllib.parse.urlencode({
+        "labels": "trigger-submission",
+        "title": f"Trigger submission: {trigger.name}",
+        "body": body,
+    })
+    return f"{version.GITHUB_REPO}/issues/new?{q}"
+
+
+@router.get("/triggers/{trigger_id}/export")
+async def trigger_export(
+    trigger_id: int,
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_session),
+):
+    """The trigger as a baseload-dict JSON snippet (for a PR or issue)."""
+    import json
+
+    from fastapi.responses import PlainTextResponse
+
+    from app.baseload_triggers import trigger_to_spec
+
+    trigger = await _load_trigger(db, trigger_id, user)
+    return PlainTextResponse(
+        json.dumps(trigger_to_spec(trigger), indent=2, ensure_ascii=False),
+        media_type="application/json",
+    )
+
+
 @router.get("/triggers/{trigger_id}/edit", response_class=HTMLResponse)
 async def trigger_edit_form(
     trigger_id: int,
@@ -517,6 +558,8 @@ async def trigger_edit_form(
             "map_center": await _geofence_map_center(db),
             "channels": await _owner_channels(db, user.id),
             "selected_channel_ids": selected,
+            "contribute_url": _contribute_url(trigger),
+            "export_url": f"/triggers/{trigger.id}/export",
         },
     )
 

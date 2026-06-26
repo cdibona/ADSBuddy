@@ -87,11 +87,18 @@ async def seed_default_source(session: AsyncSession) -> None:
 
 
 async def seed_baseload_triggers(session: AsyncSession) -> None:
-    """Seed the default 'baseload' triggers into the first admin account.
+    """Seed the default 'baseload' triggers into the first admin account, and
+    pick up new ones when an image update ships more.
 
-    Idempotent by name: only inserts triggers whose name doesn't already exist,
-    so renames, edits, and deletions are never clobbered.
+    Each baseload trigger is offered exactly once: we track the names we've ever
+    applied in the ``baseload_applied`` setting. A new release that adds triggers
+    introduces names we haven't applied → they get inserted on the next boot.
+    A trigger the user later deleted stays deleted (its name is already in the
+    applied set, so we never re-add it). Existing triggers (same name) are left
+    untouched.
     """
+    import json
+
     from app.baseload_triggers import BASELOAD_TRIGGERS
     from app.models import Trigger
 
@@ -102,16 +109,27 @@ async def seed_baseload_triggers(session: AsyncSession) -> None:
     ).scalar_one_or_none()
     if owner is None:
         return
+
+    try:
+        applied = set(json.loads((await get_setting(session, "baseload_applied")) or "[]"))
+    except (ValueError, TypeError):
+        applied = set()
     existing = {n for (n,) in (await session.execute(select(Trigger.name))).all()}
+
     added = 0
     for spec in BASELOAD_TRIGGERS:
-        if spec["name"] in existing:
-            continue
-        session.add(Trigger(owner_id=owner.id, **spec))
-        added += 1
+        name = spec["name"]
+        if name in applied:
+            continue  # already offered once — respect the user's keep/delete choice
+        if name not in existing:
+            session.add(Trigger(owner_id=owner.id, **spec))
+            added += 1
+        applied.add(name)
+
+    await set_value(session, "baseload_applied", json.dumps(sorted(applied)))
+    await session.commit()
     if added:
-        await session.commit()
-        log.info("Seeded %d baseload trigger(s).", added)
+        log.info("Seeded %d new baseload trigger(s).", added)
 
 
 async def run(session: AsyncSession) -> None:

@@ -77,3 +77,36 @@ BASELOAD_TRIGGERS: list[dict] = [
     {'name': 'Tyler Perry', 'is_active': False, 'cooldown_seconds': 3600, 'tail_patterns': 'N378TP'},
 ]
 """Active out of the box: 'Vintage (75+ years)', 'Emergency squawk'. Rest paused."""
+
+
+# Fields a trigger spec may carry (everything else uses Trigger column defaults).
+# Mirrors the keys above and is used to serialize a user's trigger for sharing.
+SPEC_STR_FIELDS = (
+    "tail_patterns", "flight_patterns", "type_codes", "owner_patterns",
+    "squawk_patterns", "categories", "exclude_tail_patterns",
+    "exclude_flight_patterns", "exclude_type_codes", "exclude_owner_patterns",
+    "origin_icaos", "destination_icaos", "geofence_center", "notes",
+)
+SPEC_NUM_FIELDS = (
+    "min_year", "max_year", "min_age_years", "max_age_years",
+    "min_altitude_ft", "max_altitude_ft", "center_lat", "center_lon", "radius_miles",
+)
+
+
+def trigger_to_spec(trigger) -> dict:
+    """Serialize a Trigger into the baseload-dict format (only its set fields),
+    so a user can submit it to the project. Ownership/timestamps are dropped."""
+    spec: dict = {
+        "name": trigger.name,
+        "is_active": bool(trigger.is_active),
+        "cooldown_seconds": trigger.cooldown_seconds,
+    }
+    for f in SPEC_STR_FIELDS:
+        v = getattr(trigger, f, "") or ""
+        if isinstance(v, str) and v.strip():
+            spec[f] = v
+    for f in SPEC_NUM_FIELDS:
+        v = getattr(trigger, f, None)
+        if v is not None:
+            spec[f] = v
+    return spec

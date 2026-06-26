@@ -42,10 +42,15 @@ _SUMMARY_KEYS = frozenset({
     "summary_enabled", "summary_interval_minutes", "summary_window_minutes",
     "summary_to_trmnl", "summary_to_vestaboard", "summary_news_lookback_hours",
 })
+# App-managed bookkeeping — not shown on any admin tab.
+_INTERNAL_KEYS = frozenset({"baseload_applied", "summary_last_run"})
 
 
 def setting_category(key: str) -> str:
-    """Return the admin tab a setting belongs to: 'notifications', 'auth', 'summary', or 'system'."""
+    """Return the admin tab a setting belongs to: 'notifications', 'auth',
+    'summary', 'internal' (hidden), or 'system'."""
+    if key in _INTERNAL_KEYS:
+        return "internal"
     if key in _NOTIFICATION_KEYS:
         return "notifications"
     if key in _AUTH_KEYS:

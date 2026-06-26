@@ -1,0 +1,49 @@
+name: Trigger submission
+description: Submit a trigger to add to ADSBuddy's baseload
+title: "Trigger submission: <name>"
+labels: ["trigger-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing a trigger! The easiest way to fill this in is from the app:
+        **Triggers → edit → Contribute this trigger → Submit to GitHub**, which pre-fills the JSON below.
+        See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for the guidelines.
+  - type: textarea
+    id: spec
+    attributes:
+      label: Trigger JSON
+      description: The baseload-dict snippet (use "View JSON" in the Contribute card).
+      render: json
+      placeholder: |
+        {
+          "name": "Jane Doe",
+          "is_active": false,
+          "cooldown_seconds": 3600,
+          "tail_patterns": "N12345"
+        }
+    validations:
+      required: true
+  - type: input
+    id: tracks
+    attributes:
+      label: Who / what does it track?
+      placeholder: e.g. a public figure, an aircraft type, an event
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: A public reference for the tail number(s) / criteria.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: This is a public figure / notable / safety-relevant aircraft (not a private individual).
+          required: true
+        - label: It's tail-number / type / squawk based (no personal geofence), or I've noted why a geofence is needed.
+          required: true

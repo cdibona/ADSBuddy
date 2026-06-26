@@ -216,6 +216,21 @@
     <a class="btn-secondary" href="/triggers">Cancel</a>
   </div>
 </form>
+
+{% if trigger and contribute_url %}
+<div class="detail-card" style="margin-top:1rem">
+  <h2 class="detail-card-title">Contribute this trigger</h2>
+  <p class="muted">Think others would want it? Submit it to the ADSBuddy project — a future release can
+  fold it into the baseload so everyone gets it on update. Geofenced triggers are location-specific, so
+  tail-number / type rules travel best.</p>
+  <div class="add-row">
+    <a class="btn-secondary" href="{{ contribute_url }}" target="_blank" rel="noopener">Submit to GitHub ↗</a>
+    <a class="btn-secondary" href="{{ export_url }}" target="_blank" rel="noopener">View JSON</a>
+  </div>
+  <p class="muted">Or open a pull request adding it to <code>app/baseload_triggers.py</code> — see
+  <a href="https://github.com/cdibona/ADSBuddy/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.</p>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
