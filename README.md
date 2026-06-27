@@ -17,7 +17,9 @@ curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/install.sh | 
 ```
 
 That installs the **latest release** and starts it in **open mode** (no login —
-for a trusted appliance like an adsb-im Pi). It generates the session secret,
+for a trusted appliance like an adsb-im Pi). If Docker isn't installed it offers
+to install it (via the official `get.docker.com` script, needs sudo). It
+generates the session secret,
 binds to all interfaces, asks which radio to poll (default
 `http://127.0.0.1:8080`), and picks a free web port (starting at 8000, walking
 up if it's taken) — the installer prints the URL. It's already ingesting;

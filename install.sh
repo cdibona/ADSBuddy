@@ -3,16 +3,42 @@
 #   curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/install.sh | sh
 #
 # Installs the latest release in "open" mode (no login — for a trusted appliance
-# like an adsb-im Pi). Generates the session secret, picks a free web port, asks
-# which radio to poll, binds 0.0.0.0, and starts the stack. Re-running keeps your
-# .env. Override the port with ADSBUDDY_PORT=NNNN (or edit .env later).
+# like an adsb-im Pi). Installs Docker if missing (with your OK), generates the
+# session secret, picks a free web port, asks which radio to poll, binds 0.0.0.0,
+# and starts the stack. Re-running keeps your .env.
 set -eu
 
 REPO_RAW="https://raw.githubusercontent.com/cdibona/ADSBuddy/main"
 DIR="${ADSBUDDY_DIR:-adsbuddy}"
 say() { printf '%s\n' "$*"; }
 
-command -v docker >/dev/null 2>&1 || { say "Docker is required — install Docker first."; exit 1; }
+# Docker: install via the official convenience script if it's missing.
+if ! command -v docker >/dev/null 2>&1; then
+  if [ -r /dev/tty ]; then
+    printf 'Docker is not installed. Install it now (https://get.docker.com, needs sudo)? [Y/n]: ' > /dev/tty
+    read -r _ans < /dev/tty || _ans=""
+    case "$_ans" in
+      [Nn]*) say "Install Docker, then re-run this script."; exit 1 ;;
+    esac
+    say "Installing Docker ..."
+    if [ "$(id -u)" -eq 0 ]; then curl -fsSL https://get.docker.com | sh
+    else curl -fsSL https://get.docker.com | sudo sh; fi
+    # Enable + start the service on systemd hosts (no-op elsewhere).
+    if command -v systemctl >/dev/null 2>&1; then sudo systemctl enable --now docker >/dev/null 2>&1 || true; fi
+  else
+    say "Docker is required. Install it with:  curl -fsSL https://get.docker.com | sh"
+    exit 1
+  fi
+fi
+
+# How to call docker: a fresh install needs sudo until the 'docker' group applies.
+DOCKER="docker"
+if ! docker info >/dev/null 2>&1; then
+  if sudo docker info >/dev/null 2>&1; then
+    DOCKER="sudo docker"
+    say "Using sudo for docker (add yourself to the 'docker' group and re-login to avoid this)."
+  fi
+fi
 
 # True if a TCP port already has a listener (best-effort across ss/lsof/nc).
 port_in_use() {
@@ -75,7 +101,7 @@ EOF
 fi
 
 say "Pulling + starting ADSBuddy ..."
-docker compose -f docker-compose.ghcr.yml up -d
+$DOCKER compose -f docker-compose.ghcr.yml up -d
 
 say ""
 say "ADSBuddy is up in OPEN mode (no login). Open:  http://localhost:${PORT}"
