@@ -19,8 +19,12 @@ curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/install.sh | 
 That installs the **latest release** and starts it in **open mode** (no login —
 for a trusted appliance like an adsb-im Pi). It generates the session secret,
 binds to all interfaces, asks which radio to poll (default
-`http://127.0.0.1:8080`), and brings up the stack. Then open
-**http://localhost:8000** — it's already ingesting; configure everything in the app.
+`http://127.0.0.1:8080`), and picks a free web port (starting at 8000, walking
+up if it's taken) — the installer prints the URL. It's already ingesting;
+configure everything in the app. To force a port, pipe into an env-prefixed
+shell — `curl -fsSL …/install.sh | ADSBUDDY_PORT=8090 sh` — or edit
+`ADSBUDDY_PORT` in `adsbuddy/.env` and re-run
+`docker compose -f docker-compose.ghcr.yml up -d`.
 
 Want logins (guest / user / admin)? Set `ADSBUDDY_MODE=MultiUser` in
 `adsbuddy/.env`, re-run `docker compose -f docker-compose.ghcr.yml up -d`, and
