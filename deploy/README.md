@@ -46,18 +46,40 @@ docker compose -f docker-compose.ghcr.yml logs -f app     # watch it come up
 Pin a version with `ADSBUDDY_IMAGE_TAG` (omit to track `:latest`). Upgrade by
 bumping the tag and re-running `up -d`.
 
-### Updating
+### How to update your Docker container
 
-- **One-liner installs:** re-run the install line — it pulls the latest image
-  and recreates in place (keeping your `.env` and data):
-  `curl -fsSL …/install.sh | sh`.
-- **Automatic:** the installer also runs a **Watchtower** sidecar
-  (`docker-compose.autoupdate.yml`) that polls GHCR hourly and updates the app
-  in place when a new release ships. Only the app is touched (it's
-  label-enabled), never Postgres. Opt out with `ADSBUDDY_NO_AUTOUPDATE=1 sh`,
-  or change the cadence with `WATCHTOWER_POLL_INTERVAL` (seconds) in `.env`.
-- The app's footer/menu shows an **"update available"** badge when the running
-  version is behind the latest GitHub release.
+When the app's menu shows an **"⬆ update available"** badge (or you just want the
+newest release), pick whichever path matches how you installed:
+
+**1. Re-run the one-line installer (easiest).** It pulls the latest image and
+recreates in place, keeping your `.env` and database:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/install.sh | sh
+```
+
+**2. By hand with Docker Compose.** From your install directory (the one with
+`.env`):
+
+```bash
+docker compose -f docker-compose.ghcr.yml pull      # fetch the new image
+docker compose -f docker-compose.ghcr.yml up -d     # recreate the app
+docker image prune -f                               # (optional) drop the old image
+```
+
+Pinning a specific version? Set `ADSBUDDY_IMAGE_TAG=1.2.4` in `.env` (or omit to
+track `:latest`) before the `up -d`. Your Postgres data lives in the
+`adsbuddy_pgdata` volume and is untouched by updates; the app runs
+`alembic upgrade head` on start, so schema migrations apply automatically.
+
+**3. Automatic.** The installer also runs a **Watchtower** sidecar
+(`docker-compose.autoupdate.yml`) that polls GHCR hourly and updates the app in
+place when a new release ships — only the app (it's label-enabled), never
+Postgres. Opt out with `ADSBUDDY_NO_AUTOUPDATE=1`, or change the cadence with
+`WATCHTOWER_POLL_INTERVAL` (seconds) in `.env`.
+
+See the [release notes](https://github.com/cdibona/ADSBuddy/releases) for what
+changed in each version.
 
 ### Uninstalling
 

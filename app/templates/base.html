@@ -51,8 +51,8 @@
         <a href="/firings" {% if path.startswith("/firings") %}aria-current="page"{% endif %}>Firings</a>
         {% set _upd = app_update_available() %}
         {% if _upd %}
-        <a class="nav-update" href="{{ app_releases_url }}" target="_blank" rel="noopener"
-           title="A newer ADSBuddy release ({{ _upd }}) is available — re-run the installer or pull the new image">⬆ {{ _upd }}</a>
+        <a class="nav-update" href="{{ app_update_docs_url }}" target="_blank" rel="noopener"
+           title="ADSBuddy {{ _upd }} is available — click for how to update your Docker container">⬆ {{ _upd }}</a>
         {% endif %}
         {% endif %}
         <button type="button" class="theme-switch" onclick="__toggleTheme()"
@@ -123,7 +123,7 @@
     {% set _upd = app_update_available() %}
     {% if _upd %}
     <span class="footer-sep">·</span>
-    <span class="footer-item"><a href="{{ app_releases_url }}" target="_blank" rel="noopener" class="footer-update">⬆ {{ _upd }} available</a></span>
+    <span class="footer-item"><a href="{{ app_update_docs_url }}" target="_blank" rel="noopener" class="footer-update" title="How to update your Docker container">⬆ {{ _upd }} available</a></span>
     {% endif %}
     <span class="footer-sep">·</span>
     <span class="footer-item" title="Since the app process last started">uptime {{ app_uptime() }}</span>

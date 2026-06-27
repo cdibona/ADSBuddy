@@ -13,6 +13,8 @@ from fastapi.templating import Jinja2Templates
 
 GITHUB_REPO = "https://github.com/cdibona/ADSBuddy"
 GITHUB_API_LATEST = "https://api.github.com/repos/cdibona/ADSBuddy/releases/latest"
+# "How to update your Docker container" section in the deployment notes.
+UPDATE_DOCS_URL = f"{GITHUB_REPO}/blob/main/deploy/README.md#how-to-update-your-docker-container"
 
 GIT_SHA = (os.environ.get("ADSBUDDY_GIT_SHA") or "dev").strip() or "dev"
 # Release version (e.g. "1.2.3"), baked from the git tag at build time. "dev"
@@ -110,6 +112,7 @@ def register(templates: Jinja2Templates) -> None:
         app_started_at=STARTED_AT,
         app_update_available=update_available,
         app_releases_url=f"{GITHUB_REPO}/releases/latest",
+        app_update_docs_url=UPDATE_DOCS_URL,
         ephemeral_db=get_settings().ephemeral_db,
         open_mode=get_settings().open_mode,
     )
