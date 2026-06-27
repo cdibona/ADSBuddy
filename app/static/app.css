@@ -816,3 +816,13 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
   border-bottom: 1px solid var(--info); color: var(--ink);
   font-size: 0.85em; text-align: center; padding: 0.4rem 1rem;
 }
+
+/* "Update available" indicators */
+.nav-update {
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 45%, transparent);
+  border-radius: 99px; padding: 0.1rem 0.55rem; font-size: 0.8em; font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+.nav-update:hover { text-decoration: none; opacity: 0.85; }
+.footer-update { color: var(--ok); font-weight: var(--fw-bold); }

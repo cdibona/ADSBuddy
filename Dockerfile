@@ -23,6 +23,10 @@ COPY app ./app
 # changing it doesn't bust the pip/dependency layers above.
 ARG ADSBUDDY_GIT_SHA=dev
 ENV ADSBUDDY_GIT_SHA=${ADSBUDDY_GIT_SHA}
+# Release version (e.g. 1.2.3), baked from the git tag by the release workflow;
+# "dev" for local builds. Drives the "update available" check.
+ARG ADSBUDDY_VERSION=dev
+ENV ADSBUDDY_VERSION=${ADSBUDDY_VERSION}
 
 EXPOSE 8000
 

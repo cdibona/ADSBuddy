@@ -76,4 +76,5 @@ class TestFooterRendering:
         )
         assert 'class="site-footer"' in out
         assert "uptime" in out
-        assert "version" in out
+        from app.version import GIT_SHA
+        assert GIT_SHA in out  # footer renders the deployed version/sha

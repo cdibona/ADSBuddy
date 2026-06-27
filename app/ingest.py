@@ -21,7 +21,7 @@ import httpx
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import flight_routes, notifications, triggers as trigger_engine
+from app import flight_routes, notifications, triggers as trigger_engine, version
 from app.database import SessionLocal
 from app.models import Aircraft, NotificationDelivery, RadioSource, Sighting, TriggerFiring
 from app.settings_store import get as get_setting
@@ -535,6 +535,7 @@ async def run_forever(stop_event: asyncio.Event) -> None:
             await _maybe_cleanup_sightings()
             await _maybe_cleanup_deliveries()
             await _maybe_send_summary(client)
+            await _maybe_check_release(client)
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=interval)
             except asyncio.TimeoutError:
@@ -549,3 +550,17 @@ async def _maybe_send_summary(client: httpx.AsyncClient) -> None:
             await notifications.deliver_summaries(session, client)
     except Exception:
         log.warning("Airspace summary push failed; will retry next cycle.", exc_info=True)
+
+
+_RELEASE_CHECK_INTERVAL = 6 * 3600  # seconds
+_last_release_check = 0.0
+
+
+async def _maybe_check_release(client: httpx.AsyncClient) -> None:
+    """Refresh the latest-release cache at most every ~6h (drives the UI badge)."""
+    global _last_release_check
+    now = asyncio.get_event_loop().time()
+    if _last_release_check and now - _last_release_check < _RELEASE_CHECK_INTERVAL:
+        return
+    _last_release_check = now
+    await version.refresh_latest_release(client)

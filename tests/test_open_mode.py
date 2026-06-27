@@ -21,9 +21,14 @@ def test_mode_parsing():
     assert _settings(ADSBUDDY_MODE="MultiUser").open_mode is False
 
 
-def test_alias_accepts_literal_name():
-    # The user's literal "ADSBuddyMode" works too.
-    assert _settings(ADSBuddyMode="open").open_mode is True
+def test_alias_accepts_literal_name(monkeypatch):
+    # The user's literal "ADSBuddyMode" env var works too (the real path).
+    from app.config import Settings
+    for k in ("POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB",
+              "ADSBUDDY_SECRET_KEY", "ADSBUDDY_ADMIN_USERNAME", "ADSBUDDY_ADMIN_PASSWORD"):
+        monkeypatch.setenv(k, "x")
+    monkeypatch.setenv("ADSBuddyMode", "open")
+    assert Settings().open_mode is True
 
 
 def test_current_user_optional_returns_admin_in_open_mode(monkeypatch):
