@@ -31,12 +31,19 @@ if ! command -v docker >/dev/null 2>&1; then
   fi
 fi
 
-# How to call docker: a fresh install needs sudo until the 'docker' group applies.
+# How to call docker. If you can't reach the daemon directly (no 'docker' group
+# / fresh install), fall back to sudo — which will prompt for your password.
 DOCKER="docker"
 if ! docker info >/dev/null 2>&1; then
-  if sudo docker info >/dev/null 2>&1; then
+  if command -v sudo >/dev/null 2>&1; then
     DOCKER="sudo docker"
-    say "Using sudo for docker (add yourself to the 'docker' group and re-login to avoid this)."
+    if ! sudo -n true 2>/dev/null; then
+      say "You don't have permission to use Docker directly — using sudo (you'll be prompted for your password)."
+    fi
+  else
+    say "Can't access the Docker daemon and 'sudo' isn't available."
+    say "Add yourself to the 'docker' group (and re-login), or run this as root."
+    exit 1
   fi
 fi
 
@@ -101,7 +108,15 @@ EOF
 fi
 
 say "Pulling + starting ADSBuddy ..."
-$DOCKER compose -f docker-compose.ghcr.yml up -d
+if ! $DOCKER compose -f docker-compose.ghcr.yml up -d; then
+  say ""
+  say "Startup failed. If the error above says 'unauthorized' pulling the image,"
+  say "the GHCR package is private — either ask the maintainer to make"
+  say "  ghcr.io/cdibona/adsbuddy  public, or authenticate this machine:"
+  say "  echo <YOUR_GH_TOKEN> | docker login ghcr.io -u <your-github-user> --password-stdin"
+  say "then re-run:  $DOCKER compose -f docker-compose.ghcr.yml up -d"
+  exit 1
+fi
 
 say ""
 say "ADSBuddy is up in OPEN mode (no login). Open:  http://localhost:${PORT}"
