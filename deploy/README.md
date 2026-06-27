@@ -51,8 +51,10 @@ bumping the tag and re-running `up -d`.
 When the app's menu shows an **"⬆ update available"** badge (or you just want the
 newest release), pick whichever path matches how you installed:
 
-**1. Re-run the one-line installer (easiest).** It pulls the latest image and
-recreates in place, keeping your `.env` and database:
+**1. Re-run the one-line installer (easiest).** It finds your existing install
+(by asking Docker where the running container's compose project lives), reuses
+that directory and its `.env`, pulls the latest image, and recreates in place —
+no duplicate directory, your database untouched:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/install.sh | sh

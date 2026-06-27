@@ -5,11 +5,11 @@
 # Installs the latest release in "open" mode (no login — for a trusted appliance
 # like an adsb-im Pi). Installs Docker if missing (with your OK), generates the
 # session secret, picks a free web port, asks which radio to poll, binds 0.0.0.0,
-# and starts the stack. Re-running keeps your .env.
+# and starts the stack. Re-running locates your existing install (from the running
+# container) and updates it in place, reusing its .env — no duplicate directory.
 set -eu
 
 REPO_RAW="https://raw.githubusercontent.com/cdibona/ADSBuddy/main"
-DIR="${ADSBUDDY_DIR:-adsbuddy}"
 say() { printf '%s\n' "$*"; }
 
 # Docker: install via the official convenience script if it's missing.
@@ -44,6 +44,30 @@ if ! docker info >/dev/null 2>&1; then
     say "Can't access the Docker daemon and 'sudo' isn't available."
     say "Add yourself to the 'docker' group (and re-login), or run this as root."
     exit 1
+  fi
+fi
+
+# Locate an existing ADSBuddy install by asking Docker where its compose project
+# lives (the dir holding .env), so a re-run updates it in place instead of
+# creating a fresh ./adsbuddy. Prints the dir, or nothing.
+find_existing_dir() {
+  _cid=$($DOCKER ps -a --format '{{.ID}} {{.Image}}' 2>/dev/null \
+         | awk '/ghcr.io\/cdibona\/adsbuddy/{print $1; exit}')
+  [ -z "$_cid" ] && return 1
+  _wd=$($DOCKER inspect "$_cid" \
+        --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}' 2>/dev/null)
+  [ -n "$_wd" ] && [ -d "$_wd" ] && printf '%s' "$_wd"
+}
+
+# Pick the install dir: explicit ADSBUDDY_DIR wins; else reuse a detected
+# existing install; else default to ./adsbuddy.
+DIR="${ADSBUDDY_DIR:-}"
+if [ -z "$DIR" ]; then
+  DIR="$(find_existing_dir 2>/dev/null || true)"
+  if [ -n "$DIR" ]; then
+    say "Found existing ADSBuddy install at ${DIR} — updating it in place."
+  else
+    DIR="adsbuddy"
   fi
 fi
 
