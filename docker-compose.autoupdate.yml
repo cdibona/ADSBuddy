@@ -1,0 +1,20 @@
+# Auto-update overlay: a Watchtower sidecar that polls GHCR and updates the
+# ADSBuddy app in place when a new image is published. Layered on top of
+# docker-compose.ghcr.yml — the installer wires this in via COMPOSE_FILE.
+#
+#   docker compose -f docker-compose.ghcr.yml -f docker-compose.autoupdate.yml up -d
+#
+# Only containers labelled watchtower.enable=true are touched (the app), so your
+# Postgres is never auto-restarted out from under you. Poll interval defaults to
+# 1 hour; set WATCHTOWER_POLL_INTERVAL (seconds) to change it.
+services:
+  app:
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --label-enable --cleanup --include-restarting --interval ${WATCHTOWER_POLL_INTERVAL:-3600}

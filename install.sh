@@ -62,11 +62,19 @@ port_in_use() {
 }
 
 mkdir -p "$DIR"; cd "$DIR"
-say "Fetching docker-compose.ghcr.yml ..."
+say "Fetching compose files ..."
 curl -fsSL "$REPO_RAW/docker-compose.ghcr.yml" -o docker-compose.ghcr.yml
+# Auto-update sidecar (Watchtower) unless ADSBUDDY_NO_AUTOUPDATE=1.
+CF="-f docker-compose.ghcr.yml"
+if [ "${ADSBUDDY_NO_AUTOUPDATE:-0}" != "1" ]; then
+  curl -fsSL "$REPO_RAW/docker-compose.autoupdate.yml" -o docker-compose.autoupdate.yml
+  CF="$CF -f docker-compose.autoupdate.yml"
+fi
 
+UPDATING=0
 if [ -f .env ]; then
-  say "Existing .env found — keeping your settings."
+  say "Existing install found — updating to the latest release (keeping your .env)."
+  UPDATING=1
   PORT="$(awk -F= '/^ADSBUDDY_PORT=/{print $2}' .env 2>/dev/null | tr -d '[:space:]')"
   PORT="${PORT:-8000}"
 else
@@ -107,19 +115,34 @@ EOF
   say "  radio: ${RADIO}  (bind: 0.0.0.0 — reachable on localhost, LAN, tailnet)"
 fi
 
-say "Pulling + starting ADSBuddy ..."
-if ! $DOCKER compose -f docker-compose.ghcr.yml up -d; then
+say "Pulling latest image + starting ADSBuddy ..."
+$DOCKER compose $CF pull 2>/dev/null || true
+if ! $DOCKER compose $CF up -d; then
   say ""
   say "Startup failed. If the error above says 'unauthorized' pulling the image,"
   say "the GHCR package is private — either ask the maintainer to make"
   say "  ghcr.io/cdibona/adsbuddy  public, or authenticate this machine:"
   say "  echo <YOUR_GH_TOKEN> | docker login ghcr.io -u <your-github-user> --password-stdin"
-  say "then re-run:  $DOCKER compose -f docker-compose.ghcr.yml up -d"
+  say "then re-run this installer."
   exit 1
+fi
+
+if [ "$UPDATING" = "1" ]; then
+  say ""
+  say "ADSBuddy updated to the latest release. Open:  http://localhost:${PORT}"
+  if [ "${ADSBUDDY_NO_AUTOUPDATE:-0}" != "1" ]; then
+    say "Auto-updates are on (Watchtower checks hourly). Re-run this line anytime to update now."
+  fi
+  exit 0
 fi
 
 say ""
 say "ADSBuddy is up in OPEN mode (no login). Open:  http://localhost:${PORT}"
 say "It's already pointed at your radio; configure everything else in the app."
-say "Want logins? Set ADSBUDDY_MODE=MultiUser in ${DIR}/.env, re-run 'docker compose"
-say "-f docker-compose.ghcr.yml up -d', and sign in as admin / AdminChangeMe."
+if [ "${ADSBUDDY_NO_AUTOUPDATE:-0}" != "1" ]; then
+  say "Auto-updates are ON — Watchtower checks hourly and the menu shows a badge"
+  say "when an update lands. Re-run this install line anytime to update immediately."
+fi
+say "Want logins? Set ADSBUDDY_MODE=MultiUser in ${DIR}/.env and re-run this installer;"
+say "sign in as admin / AdminChangeMe."
+say "Uninstall:  curl -fsSL ${REPO_RAW}/uninstall.sh | sh"

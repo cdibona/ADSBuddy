@@ -46,6 +46,31 @@ docker compose -f docker-compose.ghcr.yml logs -f app     # watch it come up
 Pin a version with `ADSBUDDY_IMAGE_TAG` (omit to track `:latest`). Upgrade by
 bumping the tag and re-running `up -d`.
 
+### Updating
+
+- **One-liner installs:** re-run the install line — it pulls the latest image
+  and recreates in place (keeping your `.env` and data):
+  `curl -fsSL …/install.sh | sh`.
+- **Automatic:** the installer also runs a **Watchtower** sidecar
+  (`docker-compose.autoupdate.yml`) that polls GHCR hourly and updates the app
+  in place when a new release ships. Only the app is touched (it's
+  label-enabled), never Postgres. Opt out with `ADSBUDDY_NO_AUTOUPDATE=1 sh`,
+  or change the cadence with `WATCHTOWER_POLL_INTERVAL` (seconds) in `.env`.
+- The app's footer/menu shows an **"update available"** badge when the running
+  version is behind the latest GitHub release.
+
+### Uninstalling
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cdibona/ADSBuddy/main/uninstall.sh | sh
+```
+
+Stops and removes the containers, network, and the auto-updater, but **keeps
+your database volume and `.env`** so you can reinstall without data loss. To
+delete the database too (irreversible), run `… | PURGE=1 sh`. By hand:
+`docker compose -f docker-compose.ghcr.yml -f docker-compose.autoupdate.yml down`
+(add `-v` to drop the data volume).
+
 ### Build from source
 
 ```bash
