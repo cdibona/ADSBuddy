@@ -42,7 +42,7 @@ _SUMMARY_KEYS = frozenset({
     "summary_to_trmnl", "summary_to_vestaboard", "summary_news_lookback_hours",
 })
 # App-managed bookkeeping — not shown on any admin tab.
-_INTERNAL_KEYS = frozenset({"baseload_applied", "summary_last_run"})
+_INTERNAL_KEYS = frozenset({"baseload_applied", "summary_last_run", "map_source_id"})
 
 
 def setting_category(key: str) -> str:
@@ -181,6 +181,14 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         key="receiver_alt_m",
         default="",
         description="Station altitude in meters (informational; env: FEEDER_ALT_M / ADSBUDDY_ALT_M).",
+    ),
+    SettingSpec(
+        key="map_source_id",
+        default="",
+        description=(
+            "Internal: id of the radio source whose tar1090 map is embedded on the "
+            "Map page. Managed via the 'Show on map' pin in Admin → Sources."
+        ),
     ),
     SettingSpec(
         key="receiver_label",

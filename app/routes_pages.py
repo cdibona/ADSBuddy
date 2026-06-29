@@ -85,17 +85,41 @@ async def home(
 ):
     if user is None:
         return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-    radio_base_url = await get_required(db, "radio_base_url")
     site_title = await get_required(db, "site_title")
     return templates.TemplateResponse(
         request,
         "index.html",
         {
             "user": user,
-            "radio_base_url": radio_base_url.rstrip("/"),
+            "radio_base_url": await _map_radio_url(db),
             "site_title": site_title,
         },
     )
+
+
+async def _map_radio_url(db: AsyncSession) -> str:
+    """tar1090 URL embedded on the Map page: the pinned source (Admin → Sources
+    'Show on map') wins; else the legacy radio_base_url; else the first active
+    poll source with a URL."""
+    from app.settings_store import get as get_setting
+
+    pinned = (await get_setting(db, "map_source_id") or "").strip()
+    if pinned.isdigit():
+        src = await db.get(RadioSource, int(pinned))
+        if src is not None and src.url:
+            return src.url.rstrip("/")
+    base = (await get_setting(db, "radio_base_url") or "").strip()
+    if base:
+        return base.rstrip("/")
+    row = (
+        await db.execute(
+            select(RadioSource)
+            .where(RadioSource.kind == "poll", RadioSource.is_active.is_(True), RadioSource.url.isnot(None))
+            .order_by(RadioSource.id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    return row.url.rstrip("/") if (row and row.url) else ""
 
 
 @router.get("/aircraft", response_class=HTMLResponse)

@@ -609,6 +609,7 @@ async def admin_sources(
     sources = (
         await db.execute(select(RadioSource).order_by(RadioSource.created_at))
     ).scalars().all()
+    pinned = (await get_setting(db, "map_source_id") or "").strip()
     return templates.TemplateResponse(
         request,
         "admin_sources.html",
@@ -616,8 +617,29 @@ async def admin_sources(
             "user": user,
             "sources": sources,
             "base_url": (await get_setting(db, "site_base_url")) or "",
+            "map_source_id": int(pinned) if pinned.isdigit() else None,
         },
     )
+
+
+@router.post("/sources/{source_id}/pin-map")
+async def admin_sources_pin_map(
+    source_id: int,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Pin which source's tar1090 map shows on the Map page (or unpin if it's
+    already the pinned one)."""
+    from app.settings_store import set_value
+
+    src = await _load_source(db, source_id)
+    if src.kind != "poll" or not src.url:
+        raise HTTPException(status_code=400, detail="Only poll sources with a URL can be shown on the map.")
+    current = (await get_setting(db, "map_source_id") or "").strip()
+    new = "" if current == str(source_id) else str(source_id)  # toggle
+    await set_value(db, "map_source_id", new)
+    await db.commit()
+    return RedirectResponse(url="/admin/sources", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/sources")

@@ -27,7 +27,9 @@
   <tbody>
     {% for s in sources %}
     <tr>
-      <td data-label="Name"><strong>{{ s.name }}</strong></td>
+      <td data-label="Name"><strong>{{ s.name }}</strong>
+        {% if s.id == map_source_id %}<span class="badge-active" title="Embedded on the Map page">📍 Map</span>{% endif %}
+      </td>
       <td data-label="Kind">{{ s.kind }}</td>
       <td data-label="Endpoint">
         {% if s.kind == "poll" %}
@@ -53,6 +55,11 @@
         {% if s.kind == "poll" %}
         <button type="button" class="btn-small" onclick="__testSource({{ s.id }}, this)">Test</button>
         <span class="src-test muted" id="src-test-{{ s.id }}"></span>
+        {% if s.url %}
+        <form method="post" action="/admin/sources/{{ s.id }}/pin-map" class="inline">
+          <button type="submit" class="btn-small">{{ "Unpin map" if s.id == map_source_id else "Show on map" }}</button>
+        </form>
+        {% endif %}
         {% endif %}
         <form method="post" action="/admin/sources/{{ s.id }}/toggle" class="inline">
           <button type="submit">{{ "Disable" if s.is_active else "Enable" }}</button>
