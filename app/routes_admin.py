@@ -103,6 +103,22 @@ async def admin_deactivate_user(
     return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@router.post("/users/{user_id}/reactivate")
+async def admin_reactivate_user(
+    user_id: int,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    target = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404)
+    target.is_active = True
+    await db.commit()
+    return RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.post("/users/{user_id}/password")
 async def admin_reset_password(
     user_id: int,
