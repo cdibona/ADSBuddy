@@ -132,6 +132,7 @@
       <th>Year</th>
       <th>Route</th>
       <th>Altitude</th>
+      <th>Squawk</th>
     </tr></thead>
     <tbody>
       {% for f, t in firings_rows %}
@@ -149,6 +150,11 @@
         <td data-label="Year">{{ f.year or "—" }}</td>
         <td data-label="Route">{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
         <td data-label="Altitude">{{ (f.altitude_baro|string ~ " ft") if f.altitude_baro else "—" }}</td>
+        <td data-label="Squawk">
+          {% if f.squawk %}<code>{{ f.squawk }}</code>{% endif %}
+          {% if f.emergency and f.emergency not in ("none", "") %}<span class="emerg" title="ADS-B emergency status">{{ f.emergency }}</span>{% endif %}
+          {% if not f.squawk and not (f.emergency and f.emergency not in ("none", "")) %}—{% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>

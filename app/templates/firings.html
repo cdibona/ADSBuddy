@@ -33,6 +33,7 @@
     <th>Year</th>
     <th>Route</th>
     <th>Altitude</th>
+    <th>Squawk</th>
     <th>Notified</th>
     <th>Actions</th>
   </tr></thead>
@@ -64,6 +65,10 @@
       <td data-label="Year">{{ f.year or "" }}</td>
       <td data-label="Route">{{ (f.origin_icao or "?") }} &rarr; {{ (f.destination_icao or "?") }}</td>
       <td data-label="Altitude">{{ f.altitude_baro or "" }}</td>
+      <td data-label="Squawk">
+        {% if f.squawk %}<code>{{ f.squawk }}</code>{% endif %}
+        {% if f.emergency and f.emergency not in ("none", "") %}<span class="emerg" title="ADS-B emergency status">{{ f.emergency }}</span>{% endif %}
+      </td>
       <td data-label="Notified">
         {% if dlabel == "na" %}
           <span class="badge-na" title="No notification channels configured">N/A</span>
@@ -75,10 +80,25 @@
         <a href="/aircraft/{{ f.icao_hex }}" class="btn-small">Detail</a>
         {% set tpurl = trigger_prefill_url(f.icao_hex, f.registration, f.type_code, f.year) %}
         {% if tpurl %}<a href="{{ tpurl }}" class="btn-small">+ Trigger</a>{% endif %}
+        <details class="packet">
+          <summary class="btn-small">Packet</summary>
+          <div class="packet-body">
+            <span class="muted">ADS-B snapshot when it fired</span>
+            <span>squawk: <code>{{ f.squawk or "—" }}</code></span>
+            <span>emergency: <code>{{ f.emergency or "—" }}</code></span>
+            <span>callsign: <code>{{ f.callsign or "—" }}</code></span>
+            <span>type: <code>{{ f.type_code or "—" }}</code></span>
+            <span>category: <code>{{ f.category or "—" }}</code></span>
+            <span>altitude: <code>{{ f.altitude_baro if f.altitude_baro is not none else "—" }}</code> ft</span>
+            <span>position: <code>{% if f.lat is not none %}{{ "%.4f"|format(f.lat) }}, {{ "%.4f"|format(f.lon) }}{% else %}—{% endif %}</code></span>
+            <span>route: <code>{{ f.origin_icao or "?" }} → {{ f.destination_icao or "?" }}</code></span>
+            <span>fired: <code>{{ f.fired_at | localdt }}</code></span>
+          </div>
+        </details>
       </td>
     </tr>
     {% else %}
-    <tr><td colspan="10" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
+    <tr><td colspan="11" class="muted">No firings yet. Create an active trigger, then wait for a matching aircraft.</td></tr>
     {% endfor %}
   </tbody>
 </table>

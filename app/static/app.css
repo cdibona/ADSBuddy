@@ -826,3 +826,19 @@ td.cell-actions > * + * { margin-left: 0.35rem; }
 }
 .nav-update:hover { text-decoration: none; opacity: 0.85; }
 .footer-update { color: var(--ok); font-weight: var(--fw-bold); }
+
+/* Trigger-firing squawk / emergency + the "packet" snapshot disclosure */
+.emerg {
+  display: inline-block; padding: 0.05rem 0.4rem; border-radius: 99px;
+  font-size: 0.75em; font-weight: var(--fw-bold); white-space: nowrap; text-transform: uppercase;
+  background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 50%, transparent);
+}
+details.packet { display: inline-block; }
+details.packet > summary { cursor: pointer; list-style: none; }
+details.packet > summary::-webkit-details-marker { display: none; }
+.packet-body {
+  display: flex; flex-direction: column; gap: 0.15rem; margin-top: 0.4rem; padding: 0.5rem 0.6rem;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: var(--radius);
+  font-family: var(--font-data); font-size: 0.85em; white-space: nowrap;
+}
