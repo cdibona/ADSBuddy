@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import IntegrityError
@@ -656,6 +656,37 @@ async def _load_source(db: AsyncSession, source_id: int) -> RadioSource:
     if src is None:
         raise HTTPException(status_code=404)
     return src
+
+
+@router.get("/sources/{source_id}/test")
+async def admin_sources_test(
+    source_id: int,
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Probe a poll source's aircraft.json and report what came back (JSON, for
+    the inline 'Test' button on the Sources tab)."""
+    import httpx
+
+    src = await _load_source(db, source_id)
+    if src.kind != "poll":
+        return JSONResponse({"ok": False, "message": "Push source — it POSTs to /ingest/<token>; nothing to poll."})
+    if not src.url:
+        return JSONResponse({"ok": False, "message": "No URL configured for this source."})
+    url = src.url.rstrip("/") + "/data/aircraft.json"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, timeout=8.0)
+    except Exception as e:  # noqa: BLE001
+        return JSONResponse({"ok": False, "message": f"Can't reach it — {type(e).__name__}: {e}"[:200]})
+    if resp.status_code != 200:
+        return JSONResponse({"ok": False, "status": resp.status_code, "message": f"HTTP {resp.status_code} from {url}"})
+    try:
+        count = len(resp.json().get("aircraft") or [])
+    except Exception:  # noqa: BLE001
+        return JSONResponse({"ok": False, "status": 200, "message": "Reached it, but the response isn't aircraft.json."})
+    return JSONResponse({"ok": True, "status": 200, "count": count,
+                         "message": f"OK — {count} aircraft right now"})
 
 
 @router.post("/sources/{source_id}/edit")

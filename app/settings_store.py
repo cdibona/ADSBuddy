@@ -166,15 +166,21 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         key="receiver_lat",
         default="",
         description=(
-            "Latitude of the receiving station, shown as the 'found here' marker "
-            "on the aircraft-detail map. Auto-filled by the ingester from the "
-            "radio's /data/receiver.json when blank; override here if needed."
+            "Latitude of the receiving station ('buddy' location) — the map center "
+            "and 'found here' marker. Set FEEDER_LAT (or ADSBUDDY_LAT) in the env to "
+            "orient it adsb-im-style; that value is re-applied on every boot and "
+            "overrides edits here. Otherwise edit freely."
         ),
     ),
     SettingSpec(
         key="receiver_lon",
         default="",
-        description="Longitude of the receiving station (see receiver_lat).",
+        description="Longitude of the station (see receiver_lat; env: FEEDER_LONG / ADSBUDDY_LON).",
+    ),
+    SettingSpec(
+        key="receiver_alt_m",
+        default="",
+        description="Station altitude in meters (informational; env: FEEDER_ALT_M / ADSBUDDY_ALT_M).",
     ),
     SettingSpec(
         key="receiver_label",

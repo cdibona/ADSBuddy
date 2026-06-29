@@ -45,6 +45,13 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("ADSBUDDY_MODE", "ADSBuddyMode"),
     )
 
+    # Station ("buddy") location, using adsb-feeder-image's env names so the same
+    # values can be shared when co-deploying. Applied to the receiver_lat/lon/alt
+    # settings on every boot when set (env wins); blank = manage in the admin UI.
+    feeder_lat: str = Field(default="", validation_alias=AliasChoices("FEEDER_LAT", "ADSBUDDY_LAT"))
+    feeder_lon: str = Field(default="", validation_alias=AliasChoices("FEEDER_LONG", "ADSBUDDY_LON", "ADSBUDDY_LONG"))
+    feeder_alt_m: str = Field(default="", validation_alias=AliasChoices("FEEDER_ALT_M", "ADSBUDDY_ALT_M"))
+
     @property
     def open_mode(self) -> bool:
         return self.mode.strip().lower() == "open"

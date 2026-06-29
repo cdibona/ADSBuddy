@@ -50,6 +50,10 @@
           <button type="submit">Save</button>
         </form>
         {% endif %}
+        {% if s.kind == "poll" %}
+        <button type="button" class="btn-small" onclick="__testSource({{ s.id }}, this)">Test</button>
+        <span class="src-test muted" id="src-test-{{ s.id }}"></span>
+        {% endif %}
         <form method="post" action="/admin/sources/{{ s.id }}/toggle" class="inline">
           <button type="submit">{{ "Disable" if s.is_active else "Enable" }}</button>
         </form>
@@ -65,4 +69,19 @@
   </tbody>
 </table>
 </div>
+<script>
+function __testSource(id, btn) {
+  var out = document.getElementById('src-test-' + id);
+  btn.disabled = true;
+  out.textContent = 'testing…'; out.className = 'src-test muted';
+  fetch('/admin/sources/' + id + '/test', {headers: {'Accept': 'application/json'}})
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      out.textContent = (d.ok ? '✓ ' : '✗ ') + (d.message || '');
+      out.className = 'src-test ' + (d.ok ? 'status-sent' : 'status-failed');
+    })
+    .catch(function (e) { out.textContent = '✗ ' + e; out.className = 'src-test status-failed'; })
+    .finally(function () { btn.disabled = false; });
+}
+</script>
 {% endblock %}

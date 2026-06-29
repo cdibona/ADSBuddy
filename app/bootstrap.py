@@ -134,8 +134,30 @@ async def seed_baseload_triggers(session: AsyncSession) -> None:
         log.info("Seeded %d new baseload trigger(s).", added)
 
 
+async def sync_location_from_env(session: AsyncSession) -> None:
+    """Orient the station from env (adsb-im style): when FEEDER_LAT/FEEDER_LONG
+    (or ADSBUDDY_LAT/LON) are set, apply them to the receiver_lat/lon/alt settings
+    on every boot so the location follows the env if it changes. No env → leave
+    the admin-managed settings untouched."""
+    cfg = get_settings()
+    if _coerce_float(cfg.feeder_lat) is None or _coerce_float(cfg.feeder_lon) is None:
+        return
+    pairs = [("receiver_lat", cfg.feeder_lat.strip()), ("receiver_lon", cfg.feeder_lon.strip())]
+    if cfg.feeder_alt_m.strip():
+        pairs.append(("receiver_alt_m", cfg.feeder_alt_m.strip()))
+    changed = False
+    for key, val in pairs:
+        if (await get_setting(session, key)) != val:
+            await set_value(session, key, val)
+            changed = True
+    if changed:
+        await session.commit()
+        log.info("Station location set from env: %s, %s", cfg.feeder_lat, cfg.feeder_lon)
+
+
 async def run(session: AsyncSession) -> None:
     await seed_defaults(session)
+    await sync_location_from_env(session)
     await seed_default_source(session)
     await ensure_admin(session)
     await seed_baseload_triggers(session)

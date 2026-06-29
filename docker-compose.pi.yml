@@ -50,6 +50,9 @@ services:
       ADSBUDDY_TEST_MODE: ${ADSBUDDY_TEST_MODE:-0}
       ADSBUDDY_MODE: ${ADSBUDDY_MODE:-MultiUser}
       ADSBUDDY_RADIO_URL: ${ADSBUDDY_RADIO_URL:-}
+      FEEDER_LAT: ${FEEDER_LAT:-}
+      FEEDER_LONG: ${FEEDER_LONG:-}
+      FEEDER_ALT_M: ${FEEDER_ALT_M:-}
       ADSBUDDY_EPHEMERAL_DB: "1"     # drives the in-memory warning banner
     ports:
       # Where to bind the web port. Default 127.0.0.1 (localhost only; reach the
