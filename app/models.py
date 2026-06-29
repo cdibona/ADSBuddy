@@ -254,6 +254,7 @@ class Trigger(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
+    hex_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     tail_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     flight_patterns: Mapped[str] = mapped_column(Text, nullable=False, default="")
     type_codes: Mapped[str] = mapped_column(Text, nullable=False, default="")

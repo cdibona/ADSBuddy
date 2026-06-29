@@ -185,10 +185,10 @@ async def _maybe_cleanup_sightings() -> None:
 
 
 async def downsample_estimate(session: AsyncSession, interval: int) -> tuple[int, int]:
-    """(total_sightings, rows_that_would_be_deleted) keeping ~1 per (hex, source,
-    ``interval``-second bucket). Only rows older than one interval are eligible
-    (so the estimate matches what ``downsample_run`` actually removes — the live
-    bucket is protected). Read-only dry run."""
+    """(total_sightings, rows_that_would_be_deleted) keeping ~1 per (hex,
+    ``interval``-second bucket) across all radios. Only rows older than one
+    interval are eligible (so the estimate matches what ``downsample_run``
+    actually removes — the live bucket is protected). Read-only dry run."""
     if interval <= 0:
         raise ValueError("interval must be > 0")
     row = (
@@ -196,7 +196,7 @@ async def downsample_estimate(session: AsyncSession, interval: int) -> tuple[int
             text(
                 "SELECT count(*) AS total, "
                 "count(*) FILTER (WHERE seen_at < now() - make_interval(secs => :iv)) "
-                "- count(DISTINCT (icao_hex, source, floor(extract(epoch from seen_at) / :iv))) "
+                "- count(DISTINCT (icao_hex, floor(extract(epoch from seen_at) / :iv))) "
                 "  FILTER (WHERE seen_at < now() - make_interval(secs => :iv)) AS would_del "
                 "FROM sightings"
             ),
@@ -207,8 +207,8 @@ async def downsample_estimate(session: AsyncSession, interval: int) -> tuple[int
 
 
 async def downsample_run(session: AsyncSession, interval: int) -> int:
-    """Delete redundant sightings, keeping the earliest row in each
-    (hex, source, ``interval``-second bucket). Batched per hex (uses the
+    """Delete redundant sightings, keeping the earliest row in each (hex,
+    ``interval``-second bucket) across all radios. Batched per hex (uses the
     icao_hex index); commits per hex. Rows newer than one interval are left
     untouched so a concurrent ingest tick can't have its fresh position deleted.
     Irreversible. Returns rows deleted."""
@@ -223,7 +223,7 @@ async def downsample_run(session: AsyncSession, interval: int) -> int:
             text(
                 "DELETE FROM sightings s USING ("
                 " SELECT id, row_number() OVER ("
-                "   PARTITION BY source, floor(extract(epoch from seen_at) / :iv)"
+                "   PARTITION BY floor(extract(epoch from seen_at) / :iv)"
                 "   ORDER BY seen_at) AS rn"
                 " FROM sightings WHERE icao_hex = :hex) r"
                 " WHERE s.id = r.id AND r.rn > 1"
@@ -357,14 +357,16 @@ async def _trigger_context(session: AsyncSession) -> tuple[list, bool, bool, int
 
 
 async def _recent_sighting_times(
-    session: AsyncSession, source_name: str, hexes: list[str]
+    session: AsyncSession, hexes: list[str]
 ) -> dict[str, datetime]:
-    """Most-recent stored sighting time per hex for this source (for de-dup)."""
+    """Most-recent stored sighting time per hex across ALL radios — so the same
+    aircraft seen by multiple sources is de-duplicated, not stored once per radio.
+    (Sources commit before the next runs, so this sees same-tick siblings.)"""
     if not hexes:
         return {}
     rows = await session.execute(
         select(Sighting.icao_hex, func.max(Sighting.seen_at))
-        .where(Sighting.icao_hex.in_(hexes), Sighting.source == source_name)
+        .where(Sighting.icao_hex.in_(hexes))
         .group_by(Sighting.icao_hex)
     )
     return {hx: ts for hx, ts in rows.all()}
@@ -383,10 +385,11 @@ async def process_entries(
     """Upsert aircraft, store sightings (tagged ``source_name``), enrich routes,
     and evaluate triggers for one batch of aircraft.json entries. Caller commits.
 
-    De-dup: when ``min_interval`` > 0, store at most one sighting per
-    (aircraft, source) per ``min_interval`` seconds (the first after a gap is
-    always stored). Trigger evaluation still runs for every entry. Shared by the
-    poll tick and the push endpoint. Returns (new_firings, blocked).
+    De-dup: when ``min_interval`` > 0, store at most one sighting per aircraft
+    per ``min_interval`` seconds **across all radios** (the first after a gap is
+    always stored), so connecting multiple sources doesn't multiply rows for a
+    plane several of them can see. Trigger evaluation still runs for every entry.
+    Shared by the poll tick and the push endpoint. Returns (new_firings, blocked).
     """
     new_firings: list[TriggerFiring] = []
     blocked_total = 0
@@ -395,7 +398,7 @@ async def process_entries(
     last_seen: dict[str, datetime] = {}
     if min_interval > 0:
         hexes = [h for h in (_strip(e.get("hex"), 8) for e in entries) if h]
-        last_seen = await _recent_sighting_times(session, source_name, [h.lower() for h in hexes])
+        last_seen = await _recent_sighting_times(session, [h.lower() for h in hexes])
 
     for entry in entries:
         hex_id = _strip(entry.get("hex"), 8)

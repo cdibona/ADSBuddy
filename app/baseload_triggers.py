@@ -82,7 +82,7 @@ BASELOAD_TRIGGERS: list[dict] = [
 # Fields a trigger spec may carry (everything else uses Trigger column defaults).
 # Mirrors the keys above and is used to serialize a user's trigger for sharing.
 SPEC_STR_FIELDS = (
-    "tail_patterns", "flight_patterns", "type_codes", "owner_patterns",
+    "hex_patterns", "tail_patterns", "flight_patterns", "type_codes", "owner_patterns",
     "squawk_patterns", "categories", "exclude_tail_patterns",
     "exclude_flight_patterns", "exclude_type_codes", "exclude_owner_patterns",
     "origin_icaos", "destination_icaos", "geofence_center", "notes",

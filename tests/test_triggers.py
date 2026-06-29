@@ -35,6 +35,7 @@ def _make_trigger(**kw) -> SimpleNamespace:
         id=1,
         name="test-trigger",
         cooldown_seconds=300,
+        hex_patterns="",
         tail_patterns="",
         flight_patterns="",
         type_codes="",
@@ -586,3 +587,22 @@ class TestCategoryAndAltitude:
         assert not matches(t, far, NOW_YEAR)     # outside radius
         assert not matches(t, high, NOW_YEAR)    # too high
         assert not matches(t, plane, NOW_YEAR)   # not a helicopter
+
+
+class TestHexMatch:
+    def test_exact_hex_matches_case_insensitive(self):
+        t = _make_trigger(hex_patterns="A1B2C3")
+        assert matches(t, _make_facts(), NOW_YEAR)        # facts hex is a1b2c3
+
+    def test_wrong_hex_no_match(self):
+        t = _make_trigger(hex_patterns="ffffff")
+        assert not matches(t, _make_facts(), NOW_YEAR)
+
+    def test_multi_hex_csv(self):
+        t = _make_trigger(hex_patterns="ffffff, a1b2c3")
+        assert matches(t, _make_facts(), NOW_YEAR)
+
+    def test_hex_anded_with_other_fields(self):
+        # hex matches but tail doesn't -> overall no match (AND semantics)
+        t = _make_trigger(hex_patterns="a1b2c3", tail_patterns="N00000")
+        assert not matches(t, _make_facts(), NOW_YEAR)

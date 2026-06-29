@@ -42,6 +42,11 @@
 
   <fieldset>
     <legend>Aircraft identity (any match)</legend>
+    <label>ICAO hex codes
+      <input name="hex_patterns" placeholder="e.g. a1b2c3, 4ca8e7"
+             value="{{ trigger.hex_patterns if trigger else (prefill.get('hex') or '') }}">
+      <small class="muted">Comma-separated 24-bit ICAO addresses (exact match, case-insensitive).</small>
+    </label>
     <label>Tail numbers (registrations)
       <input name="tail_patterns" placeholder="e.g. N123AB, N9*FN"
              value="{{ trigger.tail_patterns if trigger else (prefill.get('tail') or '') }}">

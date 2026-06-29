@@ -68,7 +68,7 @@ class TestProcessEntriesDedup:
         async def fake_upsert(session, entry):
             return _t.SimpleNamespace(registration=None, type_code=None, owner_op=None, year=None)
 
-        async def fake_recent(session, source_name, hexes):
+        async def fake_recent(session, hexes):
             return dict(recent_map)
 
         monkeypatch.setattr(ingest, "_upsert_aircraft", fake_upsert)

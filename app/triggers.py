@@ -122,6 +122,8 @@ def _within_geofence(trigger: Trigger, facts: AircraftFacts) -> bool:
 
 def matches(trigger: Trigger, facts: AircraftFacts, now_year: int) -> bool:
     """Pure predicate. All non-empty fields must match (AND)."""
+    if not _any_exact(_csv(trigger.hex_patterns), facts.icao_hex):
+        return False
     if not _any_pattern(_csv(trigger.tail_patterns), facts.registration):
         return False
     if not _any_pattern(_csv(trigger.flight_patterns), facts.callsign):

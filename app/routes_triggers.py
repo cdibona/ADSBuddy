@@ -184,6 +184,8 @@ def trigger_condition_items(t: Trigger) -> list[tuple[str, str]]:
     summarize the rest as '+N more'.
     """
     items: list[tuple[str, str]] = []
+    if t.hex_patterns:
+        items.append(("hex", t.hex_patterns))
     if t.tail_patterns:
         items.append(("tail", t.tail_patterns))
     if t.flight_patterns:
@@ -410,6 +412,7 @@ def _apply_form_to_trigger(trigger: Trigger, form: dict[str, str]) -> None:
     trigger.notes = _strip_or_empty(form.get("notes"))
     trigger.is_active = form.get("is_active") == "true"
     trigger.summary_priority = form.get("summary_priority") == "true"
+    trigger.hex_patterns = _strip_or_empty(form.get("hex_patterns"))
     trigger.tail_patterns = _strip_or_empty(form.get("tail_patterns"))
     trigger.flight_patterns = _strip_or_empty(form.get("flight_patterns"))
     trigger.type_codes = _strip_or_empty(form.get("type_codes"))
