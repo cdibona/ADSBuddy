@@ -280,6 +280,20 @@ async def aircraft_detail(
         {"lat": r.receiver_lat, "lon": r.receiver_lon, "label": r.name} for r in recv_rows
     ]
 
+    # Guests shouldn't see the operator's casual source names — relabel them
+    # generically ("Source" / "Source 1", "Source 2", … when there's more than one),
+    # consistently across the legend, point popups, and receiver markers.
+    if getattr(user, "is_guest", False):
+        names = list(dict.fromkeys(
+            [*color_by_source.keys(), *(r["label"] for r in receivers)]
+        ))
+        multi = len(names) > 1
+        alias = {n: (f"Source {i}" if multi else "Source") for i, n in enumerate(names, 1)}
+        for p in map_points:
+            p["source"] = alias.get(p["source"], "Source")
+        map_sources = [{"source": alias.get(s["source"], "Source"), "color": s["color"]} for s in map_sources]
+        receivers = [{**r, "label": alias.get(r["label"], "Source")} for r in receivers]
+
     return templates.TemplateResponse(
         request,
         "aircraft_detail.html",

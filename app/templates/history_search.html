@@ -125,7 +125,7 @@
       </td>
       <td data-label="Last position">
         {% if s and s.lat is not none and s.lon is not none %}
-          <span title="At {{ s.seen_at | localdt('%Y-%m-%d %H:%M:%S %Z') }} via {{ s.source }}">
+          <span title="At {{ s.seen_at | localdt('%Y-%m-%d %H:%M:%S %Z') }} via {{ 'Source' if user.is_guest else s.source }}">
             {{ "%.4f"|format(s.lat) }}, {{ "%.4f"|format(s.lon) }}
           </span>
         {% else %}
