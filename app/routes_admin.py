@@ -300,6 +300,34 @@ async def admin_diagnostics_purge(
     )
 
 
+@router.post("/diagnostics/purge-failed")
+async def admin_diagnostics_purge_failed(
+    actor: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_session),
+):
+    """Delete every failed delivery-log row (e.g. a dead webhook's backlog),
+    regardless of age. Batched so a huge backlog doesn't lock the table."""
+    total = 0
+    while True:
+        ids = (
+            await db.execute(
+                select(NotificationDelivery.id)
+                .where(NotificationDelivery.status == "failed")
+                .limit(10000)
+            )
+        ).scalars().all()
+        if not ids:
+            break
+        res = await db.execute(
+            delete(NotificationDelivery).where(NotificationDelivery.id.in_(ids))
+        )
+        total += res.rowcount
+        await db.commit()
+    return RedirectResponse(
+        url=f"/admin/diagnostics?purged={total}", status_code=status.HTTP_303_SEE_OTHER
+    )
+
+
 @router.get("/system", response_class=HTMLResponse)
 async def admin_system(
     request: Request,

@@ -17,6 +17,11 @@
   <button type="submit" class="btn-small">Purge old log now</button>
   <span class="muted">Removes rows past <code>delivery_retention_days</code>; auto-prune also runs hourly.</span>
 </form>
+<form method="post" action="/admin/diagnostics/purge-failed" class="purge-bar"
+      onsubmit="return confirm('Delete ALL failed delivery-log rows, regardless of age?');">
+  <button type="submit" class="btn-small danger">Purge failed deliveries</button>
+  <span class="muted">Clears every <code>failed</code> row (e.g. a dead webhook's backlog).</span>
+</form>
 
 <div class="diag-cards">
   <div class="diag-card"><span class="diag-num">{{ firings_24h }}</span><span class="diag-label">firings (24h)</span></div>
