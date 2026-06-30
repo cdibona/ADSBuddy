@@ -236,7 +236,13 @@ async def channel_edit_submit(
     channel = await _load_channel(db, channel_id, user)
     form = dict(await request.form())
     channel.name = _strip(form.get("name")) or channel.name
+    was_active = channel.is_active
     channel.is_active = form.get("is_active") == "true"
+    # Re-enabling (or any successful re-save while active) clears the auto-disable
+    # streak so it gets a fresh start.
+    if channel.is_active and (not was_active or channel.disabled_reason):
+        channel.consecutive_failures = 0
+        channel.disabled_reason = None
     channel.config = _build_config(channel.kind, form)
     channel.mode = _channel_mode(form.get("mode"))
     channel.summary_interval_minutes = _summary_interval(form.get("summary_interval_minutes"))

@@ -115,6 +115,15 @@ DEFAULT_SETTINGS: tuple[SettingSpec, ...] = (
         ),
     ),
     SettingSpec(
+        key="channel_disable_after_failures",
+        default="10",
+        description=(
+            "Auto-disable a notification channel after this many consecutive failed "
+            "deliveries (a dead webhook won't hammer forever). The counter resets on "
+            "any success. 0 = never auto-disable. Re-enabling the channel clears it."
+        ),
+    ),
+    SettingSpec(
         key="smtp_host",
         default="",
         description="SMTP server host for the 'email' channel kind (blank = email disabled).",

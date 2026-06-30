@@ -651,6 +651,9 @@ async def _dispatch_one(
         elif channel.kind == "trmnl":
             await _send_trmnl(session, client, channel, trigger, firing)
         await _record(session, channel, firing, "sent", None, is_test)
+        if channel.consecutive_failures or channel.disabled_reason:
+            channel.consecutive_failures = 0
+            channel.disabled_reason = None
         return True
     except ChannelNotConfigured as e:
         # Not a real failure — the transport/channel just isn't set up.
@@ -666,6 +669,23 @@ async def _dispatch_one(
             channel.id, channel.kind, trigger.id, e,
         )
         await _record(session, channel, firing, "failed", str(e), is_test)
+        # Auto-disable a channel that keeps failing (a dead webhook shouldn't
+        # hammer forever). Tests don't count toward the streak.
+        if not is_test:
+            channel.consecutive_failures = (channel.consecutive_failures or 0) + 1
+            threshold = _int_setting(
+                await get_setting(session, "channel_disable_after_failures"), 10
+            )
+            if threshold and channel.is_active and channel.consecutive_failures >= threshold:
+                channel.is_active = False
+                channel.disabled_reason = (
+                    f"Auto-disabled after {channel.consecutive_failures} consecutive "
+                    f"failures. Last error: {str(e)[:300]}"
+                )
+                log.warning(
+                    "Auto-disabled channel %s (%s) after %d failures: %s",
+                    channel.id, channel.kind, channel.consecutive_failures, e,
+                )
         return False
 
 

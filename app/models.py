@@ -385,6 +385,9 @@ class NotificationChannel(Base):
     mode: Mapped[str] = mapped_column(String(16), nullable=False, default="everything")
     summary_interval_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=15)
     last_summary_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Auto-disable bookkeeping: consecutive failed deliveries; reset on success.
+    consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    disabled_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=_utcnow
     )

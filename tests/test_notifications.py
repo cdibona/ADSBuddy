@@ -58,7 +58,8 @@ def _channel(id: int = 1, user_id: int = 1, kind: str = "discord", name: str = "
     cfg: dict = {}
     if kind == "discord":
         cfg["webhook_url"] = "https://discord.example.com/webhook/test"
-    return SimpleNamespace(id=id, user_id=user_id, kind=kind, name=name, config=cfg)
+    return SimpleNamespace(id=id, user_id=user_id, kind=kind, name=name, config=cfg,
+                           is_active=True, consecutive_failures=0, disabled_reason=None)
 
 
 # ---------------------------------------------------------------------------
@@ -373,7 +374,8 @@ class TestDiscordDefaultFallback:
         firing = _firing(trigger_id=1)
         email = _channel(id=3, user_id=2, kind="email", name="mail")
         webhook = SimpleNamespace(id=4, user_id=2, kind="webhook", name="hook",
-                                  config={"url": "https://sink.example.com/hook"})
+                                  config={"url": "https://sink.example.com/hook"},
+                                  is_active=True, consecutive_failures=0, disabled_reason=None)
 
         posts = []
         client = MagicMock()

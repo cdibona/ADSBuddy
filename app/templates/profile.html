@@ -61,7 +61,10 @@
           {% elif c.kind == "sms_twilio" %}<code>{{ c.config.get("to_phone") }}</code>
           {% endif %}
         </td>
-        <td data-label="Active">{{ "yes" if c.is_active else "no" }}</td>
+        <td data-label="Active">
+          {% if c.is_active %}yes{% else %}<span class="badge-paused">no</span>{% endif %}
+          {% if c.disabled_reason %}<br><span class="emerg" style="text-transform:none" title="{{ c.disabled_reason }}">auto-disabled</span>{% endif %}
+        </td>
         <td data-label="Last delivery">
           {% if last %}
             <span class="status status-{{ last.status }}">{{ last.status }}</span>
