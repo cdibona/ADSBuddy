@@ -20,6 +20,15 @@ GIT_SHA = (os.environ.get("ADSBUDDY_GIT_SHA") or "dev").strip() or "dev"
 # Release version (e.g. "1.2.3"), baked from the git tag at build time. "dev"
 # for local/source builds — we only show the update badge for real versions.
 VERSION = (os.environ.get("ADSBUDDY_VERSION") or "dev").strip() or "dev"
+# Release/build date (YYYY-MM-DD), baked by the release workflow.
+BUILD_DATE = (os.environ.get("ADSBUDDY_BUILD_DATE") or "").strip()
+
+
+def release_url() -> str | None:
+    """Link to this version's GitHub release page (None for source/dev builds)."""
+    if _semver(VERSION) is None:
+        return None
+    return f"{GITHUB_REPO}/releases/tag/v{VERSION}"
 
 # Captured at import (≈ process start), used to compute uptime.
 STARTED_AT = datetime.now(timezone.utc)
@@ -112,6 +121,8 @@ def register(templates: Jinja2Templates) -> None:
         app_started_at=STARTED_AT,
         app_update_available=update_available,
         app_releases_url=f"{GITHUB_REPO}/releases/latest",
+        app_release_url=release_url(),
+        app_build_date=BUILD_DATE,
         app_update_docs_url=UPDATE_DOCS_URL,
         ephemeral_db=get_settings().ephemeral_db,
         open_mode=get_settings().open_mode,

@@ -27,6 +27,9 @@ ENV ADSBUDDY_GIT_SHA=${ADSBUDDY_GIT_SHA}
 # "dev" for local builds. Drives the "update available" check.
 ARG ADSBUDDY_VERSION=dev
 ENV ADSBUDDY_VERSION=${ADSBUDDY_VERSION}
+# Release/build date (YYYY-MM-DD), set by the release workflow; shown in the footer.
+ARG ADSBUDDY_BUILD_DATE=
+ENV ADSBUDDY_BUILD_DATE=${ADSBUDDY_BUILD_DATE}
 
 EXPOSE 8000
 

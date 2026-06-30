@@ -113,7 +113,9 @@
   </main>
   <footer class="site-footer">
     <span class="footer-item">
-      {% if app_version and app_version != "dev" %}<code>v{{ app_version }}</code> · {% endif %}
+      {% if app_version and app_version != "dev" %}
+        {% if app_release_url %}<a href="{{ app_release_url }}" target="_blank" rel="noopener" title="Release notes"><code>v{{ app_version }}</code></a>{% else %}<code>v{{ app_version }}</code>{% endif %}{% if app_build_date %} <span class="muted">({{ app_build_date }})</span>{% endif %} ·
+      {% endif %}
       {% if app_commit_url %}
         <a href="{{ app_commit_url }}" target="_blank" rel="noopener"><code>{{ app_git_sha }}</code></a>
       {% else %}
