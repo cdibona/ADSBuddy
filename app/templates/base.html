@@ -95,7 +95,9 @@
   </header>
   {% if open_mode is defined and open_mode %}
   <div class="open-banner">🔓 <strong>Open mode</strong> — no login required; everyone has full admin.
-    Run this only on a trusted single appliance reachable on your tailnet/LAN.</div>
+    Run this only on a trusted single appliance reachable on your tailnet/LAN.
+    {% set _upd = app_update_available() %}
+    {% if _upd %}<a href="{{ app_update_docs_url }}" target="_blank" rel="noopener" class="footer-update" style="margin-left:.4rem">⬆ {{ _upd }} update available</a>{% endif %}</div>
   {% endif %}
   {% if ephemeral_db is defined and ephemeral_db %}
   <div class="ephemeral-banner">⚠ <strong>In-memory database</strong> — all data (triggers, settings, history) lives in RAM and is
