@@ -70,8 +70,24 @@
         {% if f.emergency and f.emergency not in ("none", "") %}<span class="emerg" title="ADS-B emergency status">{{ f.emergency }}</span>{% endif %}
       </td>
       <td data-label="Notified">
+        {% set dets = (delivery_details|default({})).get(f.id) %}
         {% if dlabel == "na" %}
           <span class="badge-na" title="No notification channels configured">N/A</span>
+        {% elif dets %}
+          <details class="packet">
+            <summary><span class="badge-{{ dlabel }}">{{ dlabel | capitalize }}</span></summary>
+            <div class="packet-body">
+              <span class="muted">Delivery attempts</span>
+              {% for d in dets %}
+              <span>
+                <span class="badge-{{ 'sent' if d.status == 'sent' else ('failed' if d.status == 'failed' else 'paused') }}">{{ d.status }}</span>
+                {{ d.channel }} <span class="muted">({{ d.kind }}{% if d.active is false %}, now disabled{% endif %})</span>
+                <span class="muted">· {{ d.at | localdt("%Y-%m-%d %H:%M") }}</span>
+                {% if d.error %}<br><span class="emerg" style="text-transform:none">{{ d.error }}</span>{% endif %}
+              </span>
+              {% endfor %}
+            </div>
+          </details>
         {% else %}
           <span class="badge-{{ dlabel }}">{{ dlabel | capitalize }}</span>
         {% endif %}

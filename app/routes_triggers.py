@@ -698,6 +698,42 @@ async def firings_list(
                 ds.has_sent, ds.has_failed, ds.has_skipped
             )
 
+    # Per-channel delivery detail (channel name/kind, current active state, error,
+    # time) so a "Failed" firing can show exactly what failed and why.
+    delivery_details: dict[int, list[dict]] = {}
+    if firing_ids:
+        det_rows = (
+            await db.execute(
+                select(
+                    NotificationDelivery.firing_id,
+                    NotificationDelivery.status,
+                    NotificationDelivery.error,
+                    NotificationDelivery.created_at,
+                    NotificationChannel.name,
+                    NotificationChannel.kind,
+                    NotificationChannel.is_active,
+                )
+                .outerjoin(
+                    NotificationChannel,
+                    NotificationChannel.id == NotificationDelivery.channel_id,
+                )
+                .where(
+                    NotificationDelivery.firing_id.in_(firing_ids),
+                    NotificationDelivery.is_test.is_(False),
+                )
+                .order_by(NotificationDelivery.created_at)
+            )
+        ).all()
+        for fid, st, err, at, cname, ckind, cactive in det_rows:
+            delivery_details.setdefault(fid, []).append({
+                "channel": cname or "(deleted channel)",
+                "kind": ckind or "?",
+                "active": bool(cactive) if cactive is not None else None,
+                "status": st,
+                "error": err,
+                "at": at,
+            })
+
     # Mark "n/a" when the firing's owner has no notification channels at all —
     # there's nothing to deliver through, so it isn't "pending".
     owner_ids = {t.owner_id for _f, t in rows}
@@ -723,6 +759,7 @@ async def firings_list(
             "user": user,
             "rows": rows,
             "delivery_status": delivery_status,
+            "delivery_details": delivery_details,
             "total": total,
             "page": page,
             "per_page": per_page,
